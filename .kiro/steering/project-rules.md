@@ -1,86 +1,56 @@
-# NecroCode — Project Rules & Architecture Guidelines
+# NecroCode — Engineering Conventions
 
-> **Superseded for theme/UI details by `horror-rules.md` (Haunted Code Exorcist).**
-> This file remains for general engineering conventions; `horror-rules.md` is
-> authoritative for palette, layout, analyzer, and SSE contracts.
+> General engineering rules for every change in this repository.
+> Theme, layout, analyzer, and SSE details live in `#[[file:horror-rules.md]]`.
+> 3D/WebGL rules live in `#[[file:3d-horror-rules.md]]`.
+> The feature spec lives in `.kiro/specs/necrocode-exorcist/`.
 
-> Steering context for all AI interactions within this repository.
-> These rules keep NecroCode clean, typed, and deploy-ready at all times.
+## Stack
 
-## Mission
+| Layer | Choice |
+| --- | --- |
+| Framework | Next.js 15 App Router (route handlers for SSE and the sandbox proxy) |
+| UI | React 19, Tailwind CSS 3 (tokens in `tailwind.config.ts`), Framer Motion 11 |
+| 3D | three, @react-three/fiber 9, @react-three/drei 10 (client-only) |
+| Icons | lucide-react only |
+| Language | TypeScript `strict: true`, no `any` |
+| Lint | ESLint `next/core-web-vitals` |
+| Deploy | Vercel (Node.js runtime routes) |
 
-NecroCode is a **Cyberpunk Dark-Themed AI Visual Agent Studio** — a multi-pane
-HUD dashboard that visualizes an AI agent reasoning through a workflow in real
-time, streaming its thoughts to a translucent terminal while glowing nodes light
-up across an execution canvas.
+## Code organization
 
-## Tech Stack (authoritative)
+- `app/` — page shell (`page.tsx`), layout, and route handlers
+  (`api/agent/stream`, `api/run`).
+- `components/` — UI panes and controls; `components/three/` holds R3F scenes.
+- `lib/` — shared types (`types.ts`), server logic (`analyzer.ts`,
+  `liveEngine.ts`, `runner.ts`), and client hooks (`use*.ts`).
+- Shared types are defined once in `lib/types.ts` and imported by server and
+  client.
+- Server-only modules (`analyzer.ts`, `liveEngine.ts`, `runner.ts`,
+  `cursedCode.ts`) must not import React, DOM APIs, or icon packages.
+- Client components start with `"use client"`.
 
-| Layer          | Choice                                   | Notes                                     |
-| -------------- | ---------------------------------------- | ----------------------------------------- |
-| Framework      | **Next.js 15** (App Router)              | Server + client components, route handlers |
-| Language       | **TypeScript** (`strict: true`)          | No `any`; all public functions typed      |
-| Styling        | **Tailwind CSS 3**                       | Design tokens live in `tailwind.config.ts` |
-| Animation      | **Framer Motion**                        | Canvas nodes, buttons, transitions        |
-| Icons          | **lucide-react**                         | Single icon source — no inline SVG icons  |
-| Streaming      | **Server-Sent Events** via route handler | `app/api/agent/stream/route.ts`           |
-| Runtime        | **Node.js** (route runtime)              | Deploy target: Vercel                     |
+## Runtime rules
 
-## Design System
+- Route handlers set `dynamic = "force-dynamic"` and `runtime = "nodejs"`.
+- No secrets in code or env by default. BYOK keys stay in browser
+  `localStorage` and travel only as `x-necro-*-key` headers.
+  `PAIZA_API_BASE` / `PAIZA_API_KEY` are optional server env vars.
+- Browser persistence uses versioned `localStorage` keys
+  (`necrocode.api-sigils.v1`, `necrocode.grimoire-history.v1`).
+- Code sent to the remote runner leaves the browser; keep the warning in the UI.
 
-- **Background:** deep dark navy/black — `#080B13` (`void`), `#0D111D` (`abyss`),
-  `#0F1524` (`panel`). Use glassmorphism (`.glass` / `.glass-strong`) for panes.
-- **Accents:** Electric Blue `#00F0FF` (`neon.blue`), Neon Purple `#A855F7`
-  (`neon.purple`), Emerald Green `#10B981` (`neon.green`, used for success/complete).
-- **Glow:** prefer the `shadow-glow-*` utilities and `.text-glow-*` helpers over
-  ad-hoc box-shadows so glow stays consistent.
-- **Typography:** monospace for terminal/HUD readouts, sans for prose; body/code
-  uses `11px–12px`, labels/badges use `10px`, the brand title uses
-  `text-xl font-extrabold tracking-[0.16em] text-white`, and panel headings use
-  `text-xs font-bold uppercase tracking-[0.15em]`.
+## Quality gate
 
-## Layout Contract (HUD)
+- `npm run lint`, `npx tsc --noEmit`, and `npm run build` must pass with zero
+  errors before a commit is pushed.
+- When a change touches the SSE contract, aura mapping, or phase labels,
+  update `.kiro/specs/necrocode-exorcist/design.md` in the same commit.
+- Mark a task `[x]` in `tasks.md` only when the code exists.
 
-A three-pane responsive dashboard:
+## Non-functional requirements
 
-1. **Left Sidebar** — Agent Control Panel & Preset Workflows.
-2. **Center** — Live animated Agent Execution Canvas (4 ordered nodes).
-3. **Right Sidebar** — Translucent cyberpunk terminal streaming live logs.
-
-Desktop grid: `repeat(3, minmax(0, 1fr))` with `gap-3.5`; stacked on mobile.
-
-Flush equal-height contract: the desktop grid uses `items-stretch` and a
-`flex-1 min-h-0` middle region; panel cards use `h-full min-h-0 flex
-flex-col justify-between rounded-2xl`; the center graph area uses
-`min-h-0 flex-1`; side panels fill their full height without bottom gaps.
-
-Header pill fit: top status pills use `text-[9.5px] px-2.5 py-1 gap-1.5` and
-must not clip at the right viewport edge.
-
-Header branding: `NECROCODE // AI CODE EXORCIST`.
-
-Final judge polish:
-- `AUTO DEMO` starts a complete one-click exorcism workflow.
-- Completed-exorcism timeline scrubbers support stage inspection and replay.
-- `GEN TEST` runs lightweight purified-artifact assertions in the sandbox.
-
-The canonical, ordered workflow stages are the **single source of truth** in
-`lib/types.ts` → `WORKFLOW_STAGES`:
-`Input Parsing → Context Scanning → Kiro Hook Trigger → Code Generation`.
-
-## Coding Conventions
-
-- Shared types live in `lib/types.ts` and are imported by both server and client.
-- Client components are marked with `"use client"`; keep them lean.
-- The SSE route must set `dynamic = "force-dynamic"` and stream with proper
-  `text/event-stream` headers — never cache it.
-- No external network calls at runtime: the agent run is **simulated** server-side
-  so the app deploys with zero configuration or secrets.
-- Keep the project installable + buildable with `npm install && npm run build`
-  with **zero errors** — this is a hard requirement.
-
-## Non-Functional Requirements
-
-- **Responsive:** panes collapse gracefully on mobile (stacked) and expand on `lg+`.
-- **Accessible:** interactive controls are real `<button>`s with labels.
-- **Resilient:** the UI handles SSE disconnects and lets the user re-run safely.
+- **Responsive:** panes stack on mobile and become three equal columns on `lg+`.
+- **Accessible:** real `<button>`s with `aria-label` / `aria-pressed`;
+  the terminal uses `role="log"` and `aria-live="polite"`.
+- **Resilient:** abortable streams, safe reset, and a WebGL loader fallback.

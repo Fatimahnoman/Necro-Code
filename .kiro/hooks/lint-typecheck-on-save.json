@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Lint and typecheck on save",
+      "description": "After the agent saves a TypeScript file, run ESLint and the TypeScript compiler so the build stays at zero errors.",
+      "trigger": "PostFileSave",
+      "matcher": "\\.(ts|tsx)$",
+      "action": {
+        "type": "command",
+        "command": "npm run lint && npx tsc --noEmit"
+      },
+      "timeout": 180,
+      "enabled": true
+    }
+  ]
+}

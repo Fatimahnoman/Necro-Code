@@ -15,7 +15,7 @@ state.
 
 | Token | Hex | Role |
 | --- | --- | --- |
-| `void` | `#030508` | WebGL clear/background, fog |
+| `void` | `#06060c` | Page background, WebGL clear color (alpha 0), relic sockets |
 | `crimson` | `#FF003C` | Processing bugs, corruption aura, error seals |
 | `purple` | `#A855F7` | Channeling, reasoning, interactive hover |
 | `neon` | `#00FF66` | Exorcised code, purified aura, completed seals |
@@ -92,13 +92,13 @@ Two dedicated, dynamically imported client-only canvases:
   clicks. Use `will-change: transform` and direct style writes, not state.
 - Labels sit inside the graph viewport. On narrow canvases, inset the outer
   labels and derive `--label-max` from the canvas width so they never clip.
-- Keep labels under ~12 words; the long reasoning stage may wrap to three lines
-  on mobile.
-- Label tone: `font-mono uppercase tracking-wider border backdrop-blur`; base `9.5px`,
-  responsive `10px`. No solid white cards.
-- Compact single-line HUD tags use `text-[9.5px] leading-none tracking-[0.14em] px-2 py-1
-  whitespace-nowrap rounded bg-black/75 border border-white/15 backdrop-blur-md`; the
-  3D graph scale/camera stay tuned for a clean single-viewport fit.
+- Labels are compact single-line HUD tags: `font-mono text-[9.5px] uppercase
+  leading-none tracking-[0.14em] px-2 py-1 whitespace-nowrap rounded bg-black/75
+  border border-white/15 backdrop-blur-md`, capped by `max-w-[var(--label-max,158px)]`.
+  No solid white cards.
+- Camera is `[0, 0.18, 7.2]` with `fov: 45`. The graph scale adapts to the
+  canvas aspect ratio: `min(1, max(0.55, 6.3 * aspect / 8.1))`. Keep the whole
+  ritual square visible in one viewport.
 
 ## Interaction contract
 
@@ -108,10 +108,12 @@ Two dedicated, dynamically imported client-only canvases:
 | Click a 3D seal | Select stage + show inspection card |
 | Click empty graph space | Clear selection |
 | Hover a seal | Scale up, cursor pointer, stronger glow |
-| Click `EXORCISE CODE` in the left spellbook | Start real SSE run |
-| Hover `EXORCISE CODE` | Blood pulse + sheen sweep |
-| Toggle `HORROR BGM` | Looped `/audio/horror-bgm.mp3` only; never mutes 3D FX |
-| Toggle `3D AUDIO FX` | Stereo-panned oscillator blips (incl. DHUM slam) only; never silences BGM |
+| Click `Exorcise Code` in the left spellbook | Start real SSE run (plays `dhum` if 3D Audio FX is on) |
+| Hover `Exorcise Code` | Crimson glow brightens, slight scale-up |
+| Click `AUTO DEMO` in the header | Load `async-memory-leak`, run, then open Spectral Diff and run the sandbox |
+| Click a timeline step (after `complete`) | Select that stage's seal and show its inspection card |
+| Toggle `Horror BGM` | Looped `/audio/horror-bgm.mp3` only; never mutes 3D FX |
+| Toggle `3D Audio FX` | Stereo-panned oscillator SFX (incl. `dhum`) only; never silences BGM |
 | Toggle CRT / fog icons | CSS atmosphere layers only |
 
 ## Stage → visual mapping

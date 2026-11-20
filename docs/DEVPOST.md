@@ -1,7 +1,7 @@
 # 🕯️ NecroCode — Kiroween 2026 Devpost Submission
 
 > **3D Horror AI Code Exorcist Studio** · UI/UX Track (Costume Contest)
-> Built with **Kiro** · Next.js 15 · React Three Fiber · Tailwind CSS · SSE
+> Refined with **Kiro** · Next.js 15 · React Three Fiber · Tailwind CSS · SSE
 
 | | |
 | --- | --- |
@@ -27,9 +27,9 @@ purified. Running the analyzer is framed as an **exorcism**; the cursed code is
 the patient, the deterministic engine is the rite, and the 3D graph is the
 ritual circle.
 
-We also wanted the project to be a genuine **Kiro-native** showcase — not just an
-app built with an AI assistant, but an app whose architecture is shaped by
-Kiro's **Specs**, **Steering Docs**, and **Agent Hooks**.
+We also wanted the repository to document itself honestly, so we used Kiro's
+**Specs**, **Steering Docs**, and **Agent Hooks** to capture, check, and guard
+the architecture.
 
 ---
 
@@ -159,23 +159,34 @@ into 3D seal states, terminal lines, progress, and optional SFX.
 
 ---
 
-## 🛠️ How we built it with Kiro
+## 🛠️ How we used Kiro
 
-We leaned on all three of Kiro's core primitives and committed them to the repo
-as first-class artifacts.
+We used Kiro's three core primitives to document, audit, and refine
+NecroCode's architecture, SSE-to-3D state mapping, and cyber-gothic UI: EARS
+specs in `.kiro/specs/necrocode-exorcist/`, steering rules in
+`.kiro/steering/`, and v1 agent hooks in `.kiro/hooks/`. All of these
+artifacts are committed to the repo.
 
-### 📋 Specs — we designed before we built
+### 📋 Specs — we wrote down what the code really does
 
-- [`.kiro/specs/necrocode-exorcist/requirements.md`](../.kiro/specs/necrocode-exorcist/requirements.md) formalizes
-  the multi-LLM fallback, four ritual stages, `AgentEvent` contract, analyzer
-  rules, safe-fix policy, UI behaviour, and acceptance criteria.
-- [`.kiro/specs/necrocode-exorcist/design.md`](../.kiro/specs/necrocode-exorcist/design.md) is the
-  3D studio design: aura state machine, WebGL component contracts, SSE-to-node
-  animation mapping, performance constraints, fallback pipeline, and acceptance
-  criteria.
+We audited the code module by module and captured it in Kiro's three-file spec
+format in [`.kiro/specs/necrocode-exorcist/`](../.kiro/specs/necrocode-exorcist/):
 
-Both specs link to the shared `lib/types.ts` via Kiro's `#[[file:…]]` syntax so
-the server route and the React client never drift.
+- [`requirements.md`](../.kiro/specs/necrocode-exorcist/requirements.md) — eight
+  requirements with EARS acceptance criteria (analyzer, multi-LLM fallback, SSE
+  stream, 3D Ritual Graph, Spectral Diff, sandbox, adaptive audio, judge tools).
+- [`design.md`](../.kiro/specs/necrocode-exorcist/design.md) — architecture,
+  the SSE phase → UI label and aura mapping, component interfaces, fallback
+  pipeline, and error handling.
+- [`tasks.md`](../.kiro/specs/necrocode-exorcist/tasks.md) — a checklist linked
+  to requirement IDs. A box is ticked only when the code exists; automated
+  tests are still open.
+
+The audit caught real drift. Older docs claimed a `thinking → dormant` mapping,
+a side-by-side diff, and timeline "replay". The code actually labels
+`thinking` as *Channelling*, renders a unified diff, and uses the timeline to
+select stages. The spec now matches the code, and the design links to
+`lib/types.ts` and `lib/aura.ts` with Kiro's `#[[file:…]]` syntax.
 
 ### 🧭 Steering Docs — we kept Kiro on-brand
 
@@ -187,23 +198,33 @@ the server route and the React client never drift.
   authoritative horror covenant: palette, fog/scanline/rune/glass primitives,
   three-pane layout, analyzer contract, SSE contract, and zero-error build rule.
 
-Because steering is injected into every interaction, Kiro consistently produced
-code that matched the 3D horror system without us re-explaining it each turn.
+- [`.kiro/steering/project-rules.md`](../.kiro/steering/project-rules.md) holds
+  the general engineering conventions and the quality gate.
 
-### 🪝 Agent Hooks — we modeled the transitions
+We synced all three files with the current UI: the equal three-column grid, the
+`#06060c` void, header controls, label styles, camera settings, and the BYOK
+live-engine contract. Kiro loads steering into every interaction, so later
+changes start from the real design rules.
 
-[`.kiro/hooks/agent-execution.json`](../.kiro/hooks/agent-execution.json) maps
-every stage transition to a 3D aura, seal animation, terminal effect, and
-stereo-panned SFX: `crimson-heartbeat`, `relic-ring-spin`, `neon-heal-flash`,
-`complete-pulse`, and more.
+### 🪝 Agent Hooks — guardrails on every save
 
-### ⚙️ Implementation
+- [`.kiro/hooks/lint-typecheck-on-save.json`](../.kiro/hooks/lint-typecheck-on-save.json)
+  runs `npm run lint && npx tsc --noEmit` after the agent saves a `.ts`/`.tsx` file.
+- [`.kiro/hooks/sse-contract-sync.json`](../.kiro/hooks/sse-contract-sync.json)
+  asks the agent to update the SSE-to-3D mapping in `design.md` whenever
+  `lib/types.ts`, `lib/aura.ts`, or the phase-label maps change.
 
-With the specs and steering in place, Kiro scaffolded the Next.js 15 App Router
-project, the deterministic analyzer, the SSE route, the `useAgentStream` POST
-stream client, the React Three Fiber scene, the horror UI system, and the
-Web Audio engine — iterating pane by pane and polishing the 3D interactions
-last.
+Both hooks use Kiro's v1 JSON hook format and replace older hook files that
+were descriptive only and could not run.
+
+### ⚙️ Workflow
+
+1. Audit every module (Next.js 15 shell, analyzer, SSE route, live engine,
+   React Three Fiber scene, sandbox, audio engine) against the docs in Kiro.
+2. Write the EARS requirements, the design with the exact SSE-to-3D mapping,
+   and the task list from what the code really does.
+3. Fix the steering files so they describe the current UI, not earlier builds.
+4. Add hooks so lint, typecheck, and spec sync happen automatically from now on.
 
 ---
 
@@ -309,8 +330,8 @@ last.
 - **On screen:** The full NecroCode studio at rest — drifting embers, the giant
   wireframe relic, the central 3D skull altar, crimson/purple/neon palette.
 - **Narration:** "Most AI agents hide their thinking behind a spinner. NecroCode
-  drags the ritual into the open: a 3D horror code-exorcist studio built with
-  Kiro, where every real bug leaves a mark on the room."
+  drags the ritual into the open: a 3D horror code-exorcist studio, specified
+  and verified with Kiro, where every real bug leaves a mark on the room."
 
 ### `0:20 – 0:45` — The three panes
 
@@ -363,17 +384,15 @@ last.
   The panel always tells you whether the run was local or remote. The history
   drawer keeps the last ten runs in this browser and restores one with a click."
 
-### `2:00 – 2:35` — How Kiro built it
+### `2:00 – 2:35` — How we used Kiro
 
 - **On screen:** Open `.kiro/specs/necrocode-exorcist/design.md`, then
-  `.kiro/steering/3d-horror-rules.md`, then `.kiro/hooks/agent-execution.json`.
-- **Narration:** "This is a Kiro-native project. We started with a Spec: the
-  aura state machine, the WebGL component contracts, the SSE-to-node mapping,
-  and acceptance criteria. A 3D Steering Doc locked the palette, performance
-  rules, and SSR safety. Agent Hooks map every stage transition to a seal
-  animation, aura, terminal effect, and synth blip. Kiro scaffolded the Next.js
-  app, the analyzer, the SSE route, the React Three Fiber scene, and the audio
-  engine from these artifacts."
+  `.kiro/steering/3d-horror-rules.md`, then `.kiro/hooks/sse-contract-sync.json`.
+- **Narration:** "We used Kiro to refine and verify NecroCode. We audited the
+  code and wrote an EARS spec, a design with the exact SSE-to-3D mapping, and a
+  task list that only ticks what really exists. Steering docs lock the palette,
+  layout, and 3D rules to the current UI. Two agent hooks lint and typecheck
+  every save and keep the spec in sync when the SSE contract changes."
 
 ### `2:35 – 3:00` — Close / call to action
 

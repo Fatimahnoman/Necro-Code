@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Keep SSE-to-3D spec in sync",
+      "description": "When the shared SSE contract, the aura state machine, or the phase labels change, ask the agent to update the spec so the documented mapping matches the code.",
+      "trigger": "PostFileSave",
+      "matcher": "(lib/types\\.ts|lib/aura\\.ts|components/StatusPill\\.tsx|components/ControlPanel\\.tsx)$",
+      "action": {
+        "type": "agent",
+        "prompt": "A file that defines the SSE-to-3D contract was just saved. Compare AgentPhase, StageId, NodeStatus and AgentEvent in lib/types.ts, auraFromState in lib/aura.ts, and the PHASE_LABEL / PHASE_META maps in components/ControlPanel.tsx and components/StatusPill.tsx against the 'SSE-to-3D state mapping' and 'Components and interfaces' sections of .kiro/specs/necrocode-exorcist/design.md. If they differ, update design.md (and requirements.md if an acceptance criterion changed). Do not change application code."
+      },
+      "enabled": true
+    }
+  ]
+}

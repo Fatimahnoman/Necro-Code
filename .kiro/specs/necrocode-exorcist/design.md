@@ -1,219 +1,223 @@
-# Design — NecroCode Exorcist
+# Design Document — NecroCode Exorcist
 
-Status: **Implemented**
-Owner: NecroCode
-Track: Kiroween 2026 · Costume Contest
+Requirements: `#[[file:requirements.md]]`
+Shared contract: `#[[file:../../../lib/types.ts]]`
+Aura state machine: `#[[file:../../../lib/aura.ts]]`
 
-## 1. Overview
+## Overview
 
-NecroCode is a premium 3D horror cyber-gothic AI code exorcist studio. The
-product turns a user-supplied source artifact into a real exorcism: a
-deterministic static analyzer hunts corruption, an optional BYOK live engine
-attempts a rewrite, and the SSE stream drives a synchronized 3D ritual graph,
-terminal, progress, aura, adaptive horror BGM, synthesized SFX, and final
-artifact delivery.
+NecroCode is a Next.js 15 App Router application. One SSE route performs the
+exorcism. A React 19 client renders a three-pane HUD with two React Three
+Fiber canvases. The server owns analysis and the optional LLM rewrite. The
+client owns visualization, audio, the sandbox, and browser-local persistence.
 
-## 2. System architecture
-
-### 2.0 Architecture diagram
+## Architecture
 
 ```text
-┌─────────────────────┐
-│        Client        │
-│  Next.js 15 App      │
-│  - app/page.tsx      │
-│  - components/*      │
-│  - components/three/ │
-│  - lib/useAgentStream│
-└──────────┬──────────┘
-           │ POST /api/agent/stream (SSE; x-necro-*-key headers)
-           ▼
-┌─────────────────────┐
-│   API Route          │
-│   app/api/.../stream│
-│   - analyzer.ts       │
-│   - liveEngine.ts    │
-│   - AgentEvent frames│
-└──────────┬──────────┘
-           │ event: agent
-           ▼
-┌─────────────────────┐
-│  React Three Fiber  │
-│  ExecutionGraph3D +  │
-│  AgentCanvas        │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  UI panes:           │
-│  ControlPanel,       │
-│  Terminal, Backdrop │
-└─────────────────────┘
+Browser (React 19 client)                          Server (Node.js runtime)
+┌────────────────────────────────────────┐        ┌───────────────────────────────┐
+│ app/page.tsx  (HUD shell, orchestration)│       │ app/api/agent/stream/route.ts │
+│  ├─ ControlPanel   (Spellbook)          │ POST  │  ├─ lib/analyzer.ts  (Heuristic)
+│  ├─ AgentCanvas    (Ritual Graph pane)  │──────▶│  ├─ lib/liveEngine.ts (BYOK)   │
+│  │   └─ three/ExecutionGraph3D (R3F)    │ SSE   │  └─ AgentEvent frames          │
+│  ├─ Terminal       (Grimoire Terminal)  │◀──────│                               │
+│  ├─ three/HorrorBackdrop (R3F, fixed)   │       │ app/api/run/route.ts          │
+│  ├─ ApiSigilsModal / HistoryDrawer      │ POST  │  └─ lib/runner.ts → Paiza.IO   │
+│  └─ hooks: useAgentStream, useCodeSandbox│─────▶│                               │
+│     useHorrorAudio, useCyberSound,      │       └───────────────────────────────┘
+│     useApiSigils, useGrimoireHistory,   │
+│     useUiSettings                       │
+└────────────────────────────────────────┘
 ```
 
-### 2.1 Client layer
+### Stack
 
-- `app/page.tsx` composes the three-pane HUD and orchestrates state through
-  focused hooks.
-- `components/ControlPanel.tsx` owns the spellbook: presets, upload, directive,
-  line-numbered editor, progress, summary chips, and `EXORCISE CODE`.
-- `components/AgentCanvas.tsx` owns the 3D canvas wrapper, inspection card,
-  duration telemetry, and the `SSE ↔ 3D SYNC` indicator.
-- `components/three/ExecutionGraph3D.tsx` owns seals, screen-space labels,
-  central relic, edges, and flowing orbs.
-- `components/three/HorrorBackdrop.tsx` owns atmosphere, embers, fog, and relic.
-- `components/Terminal.tsx` owns logs, spectral diff, sandbox controls,
-  export, and copy.
-- Supporting components: `StatusPill`, `NeonButton`, `ToggleButton`,
-  `HistoryDrawer`, and `ApiSigilsModal`.
-
-### 2.2 Server layer
-
-- `app/api/agent/stream/route.ts` exposes `POST /api/agent/stream` and
-  `GET /api/agent/stream?code=…`, streams `text/event-stream` frames named
-  `agent`.
-- `app/api/run/route.ts` proxies curated remote sandbox executions through the
-  Paiza.IO guest runner.
-
-### 2.3 Shared contract
-
-- `lib/types.ts` is the single source of truth for `AgentPhase`,
-  `StageId`, `NodeStatus`, `LogLevel`, `AgentEvent`, `ExorcismReport`, and
-  `WORKFLOW_STAGES`.
-
-### 2.4 Dashboard layout and typography
-
-- Desktop dashboard grid uses three equal columns:
-  `repeat(3, minmax(0, 1fr))` with `gap-3.5`; stacked on mobile.
-- Flush equal-height panel symmetry: the grid uses `items-stretch` and a
-  `flex-1 min-h-0` middle region; panel roots use `h-full min-h-0 flex
-  flex-col justify-between rounded-2xl`; the center graph area uses
-  `min-h-0 flex-1`; side panels fill their full height without bottom gaps.
-- Brand title: `NECROCODE` uses `text-xl font-extrabold tracking-[0.16em] text-white`.
-- Panel headings: `SPELLBOOK`, `RITUAL GRAPH`, and `GRIMOIRE TERMINAL` share
-  `text-xs font-bold uppercase tracking-[0.15em]`.
-- Body/code text: `11px–12px`; labels/badges: `10px`.
-- Header pill fit: top status pills use `text-[9.5px] px-2.5 py-1 gap-1.5` and
-  must fit without right-edge clipping.
-
-## 2.5 Final judge polish
-
-### 2.5.1 One-click judge auto demo
-
-- The header exposes a compact `AUTO DEMO` control in the top status bar.
-- Activation loads a curated multi-bug async/memory-leak artifact into the
-  spellbook editor, sets a ritual directive, and starts the full exorcism.
-- The run fires the `DHUM!` FX and synchronizes the 3D Ritual Graph and unified
-  side-by-side Spectral Diff with streamed events.
-- The isolated sandbox test runs automatically once the purified artifact is
-  emitted, so a judge can experience the complete workflow from one click.
-
-### 2.5.2 Completed-exorcism timeline scrubber
-
-- Once the frontend phase reaches `complete`, the Ritual Graph panel renders a
-  compact four-step timeline scrubber.
-- Steps: `DORMANT` → `SCANNING` → `EXORCISING` → `PURIFIED`.
-- Buttons inspect and replay the corresponding 3D orb transitions.
-
-### 2.5.3 Purified artifact unit test
-
-- The Grimoire Terminal action bar exposes a compact `GEN TEST` control.
-- Activation generates a lightweight assertion suite for the purified function.
-- The suite executes in the isolated Web Worker sandbox and reports clean
-  `PASS` / `FAIL` badges.
-
-## 3. SSE-to-3D state mapping
-
-The backend SSE phase and the frontend 3D Ritual Graph UI state are explicitly
-bidirectionally aligned.
-
-| Backend SSE phase | Frontend Ritual UI state |
+| Layer | Choice |
 | --- | --- |
-| `idle` | `dormant` |
-| `thinking` | `dormant` |
-| `tool_call` | `scanning` |
-| `executing` | `exorcising` |
-| `complete` | `purified` |
+| Framework | Next.js 15 (App Router, route handlers) |
+| UI | React 19, Tailwind CSS 3, Framer Motion 11, lucide-react |
+| 3D | three 0.187, @react-three/fiber 9, @react-three/drei 10 |
+| Language | TypeScript (`strict`) |
+| Audio | HTML5 Audio (BGM) + Web Audio API (synthesized SFX) |
 
-Reverse mapping:
+## SSE-to-3D state mapping
 
-| Frontend Ritual UI state | Backend SSE phase |
+### Backend phases
+
+The route emits five `AgentPhase` values (`lib/types.ts`). It emits them in
+this order during a run:
+
+| Phase | When the route emits it |
 | --- | --- |
-| `dormant` | `idle` |
-| `scanning` | `tool_call` |
-| `exorcising` | `executing` |
-| `purified` | `complete` |
+| `idle` | First "séance online" line |
+| `thinking` | Artifact received, directive/warnings, Corrupted Code stage start |
+| `tool_call` | Spectral Scanner invocation (`scan_for_corruption()`) |
+| `executing` | Findings, reasoning, applied fixes, purified code lines |
+| `complete` | Final event with `summary` and `finalCode` |
 
-The 3D seals derive from real `nodeStatus` events; no fake progress is rendered.
-The central relic aura derives from `lib/aura.ts` and follows the aggregate run
-state.
+### Frontend ritual states
 
-## 4. Component contracts
+The UI has two separate mappings. Both come from code, not from the hooks.
 
-### `ExecutionGraph3D`
+**1. Phase label** (`PHASE_LABEL` in `ControlPanel.tsx`, `PHASE_META` in
+`StatusPill.tsx`), one-to-one:
+
+| Backend phase | UI label |
+| --- | --- |
+| `idle` | Dormant |
+| `thinking` | Channelling |
+| `tool_call` | Scanning |
+| `executing` | Exorcising |
+| `complete` | Purified |
+
+**2. Relic aura** (`auraFromState(phase, bugCount, summary)` in `lib/aura.ts`):
+
+| Condition | Aura | Label |
+| --- | --- | --- |
+| `phase === "idle"` | `idle` (`#7C3AED`) | DORMANT |
+| running and `bugCount > 0` | `crimson` (`#FF003C`) | CORRUPTION |
+| running and `bugCount === 0` | `purple` (`#A855F7`) | CHANNELLING |
+| `complete` and `unresolved > 0` | `crimson` | CORRUPTION |
+| `complete` and `unresolved === 0` | `green` (`#00FF66`) | PURIFIED |
+
+The reverse direction (UI → backend) does not exist at runtime. The UI only
+reads streamed events. The completed-run timeline maps its four buttons to
+**stages**, not phases:
+
+| Timeline step | Selects stage |
+| --- | --- |
+| `DORMANT` | `input_code` |
+| `SCANNING` | `glitch_scanner` |
+| `EXORCISING` | `exorcism_reasoning` |
+| `PURIFIED` | `clean_code_output` |
+
+### Seal status
+
+Each seal reads `nodes[stageId]` from `useAgentStream`, which updates only from
+streamed `nodeStatus` values:
+
+| `NodeStatus` | Inspection label | Color |
+| --- | --- | --- |
+| `pending` | DORMANT | `#64748B` |
+| `active` | CHANNELLING | purple aura |
+| `done` | SEALED | green aura |
+| `error` | CURSED | crimson aura |
+
+The Spectral Scanner seal goes to `error` while findings stream and to `done`
+after the reasoning stage clears them. No progress is fabricated on the client.
+
+## Components and interfaces
+
+### `AgentEvent` (shared, `lib/types.ts`)
 
 ```ts
-interface ExecutionGraph3DProps {
-  nodes: NodeStatusMap;
-  activeStage: StageId | null;
-  bugCount: number;
-  aura: AuraState;
-  selected: StageId | null;
-  onSelect: (stage: StageId) => void;
-  onClear: () => void;
+interface AgentEvent {
+  seq: number;
+  phase: AgentPhase;            // idle | thinking | tool_call | executing | complete
+  stage: StageId | null;        // input_code | glitch_scanner | exorcism_reasoning | clean_code_output
+  nodeStatus: NodeStatus | null; // pending | active | done | error
+  level: LogLevel;              // info | success | warn | error | system | code
+  message: string;
+  progress: number;             // 0..100
+  ts: string;                   // ISO timestamp
+  bug?: BugFinding;
+  summary?: ExorcismSummary;    // final event
+  finalCode?: string;           // final event
+  originalCode?: string;        // final event
+  findings?: BugFinding[];      // final event
+  appliedFixes?: AppliedFix[];  // final event
+  engine?: EngineInfo;          // Gemini | Groq | OpenRouter | Heuristic
 }
 ```
 
-Responsibilities:
+### `AgentCanvas` (`components/AgentCanvas.tsx`)
 
-- Render four seals in ritual-square positions.
-- Project screen-space labels from 3D node anchors every frame.
-- Keep labels accessible and readable: `font-mono uppercase tracking-wider border
-  backdrop-blur`; base `9.5px`, responsive `10px`. Compact single-line HUD tags use
-  `text-[9.5px] leading-none tracking-[0.14em] px-2 py-1 whitespace-nowrap rounded
-  bg-black/75 border border-white/15 backdrop-blur-md`; the graph scale is tuned to
-  `~0.78` with camera `[0, 0.18, 7.2]` and fov `45` for a clean single-viewport fit, and
-  the inspection HUD keeps clean `pb-3` padding.
-- Render the bug badge, flowing edge orbs, and central relic.
-- Orbit only; no pan or zoom; click empty space clears selection.
+```ts
+interface AgentCanvasProps {
+  nodes: NodeStatusMap;
+  activeStage: StageId | null;
+  bugCount?: number;
+  aura: AuraState;
+  progress: number;
+  running: boolean;
+  phase: AgentPhase;
+  summary: ExorcismSummary | null;
+  logs: AgentEvent[];
+  engine: EngineInfo;
+  scanlines?: boolean;
+}
+```
 
-### `AgentCanvas`
+- Dynamically imports `ExecutionGraph3D` with `ssr: false` and a rune-spinner fallback.
+- Owns the selected stage, the inspection card (status, engine, stage duration in ms, severity counts), and the completed-run timeline.
 
-- Accepts stream state, aura, progress, summary, logs, and engine.
-- Dynamically imports `ExecutionGraph3D` with `ssr: false`.
-- Owns selection state and inspection card.
+### `ExecutionGraph3D` (`components/three/ExecutionGraph3D.tsx`)
 
-## 5. Fallback pipeline
+- `Canvas` with camera `[0, 0.18, 7.2]`, `fov: 45`, `dpr: [1, 1.8]`, transparent clear color.
+- Four seals, a central relic, Drei `Line` edges, and flowing orbs on the active edge.
+- Graph scale adapts to aspect ratio: `min(1, max(0.55, 6.3 * aspect / 8.1))`.
+- `OrbitControls` with `enablePan={false}` and `enableZoom={false}`; `onPointerMissed` clears selection.
+- Stage labels are a DOM overlay projected from 3D anchors every frame (`text-[9.5px]`, `bg-black/75`, `backdrop-blur-md`, `whitespace-nowrap`).
 
-1. Deterministic analyzer runs first for JavaScript, TypeScript, and TSX.
-2. If BYOK sigils are configured, the live engine attempts Gemini → Groq →
-   OpenRouter in order, with an 8-second timeout per provider.
-3. If a live rewrite returns usable code, it becomes `finalCode` and the result
-   is re-analyzed for residual findings.
-4. If all live attempts fail, the deterministic `Heuristic` engine remains the
-   safety net.
-5. For non-JS/TS/TSX runtimes, the deterministic scanner is intentionally not
-   applied; the route emits an honest pass-through warning and relies on the live
-   engine or sandbox verification.
+### `HorrorBackdrop` (`components/three/HorrorBackdrop.tsx`)
 
-BYOK keys are transported through dedicated headers (`x-necro-gemini-key`,
-`x-necro-groq-key`, `x-necro-openrouter-key`) and never enter request bodies or
-SSE payloads.
+- Fixed, `pointer-events-none`, transparent canvas with `dpr: [1, 1.6]`.
+- 560 embers, 80 Drei `Sparkles`, a wireframe icosahedron relic tinted by the aura, pointer parallax.
 
-## 6. Limits and safety
+### `ControlPanel` (`components/ControlPanel.tsx`)
 
-- Source cap: 24,000 characters.
-- Provider timeout: 8 seconds.
-- Remote sandbox server deadline: 20 seconds; client deadline: 25 seconds.
-- Stream logs and fixes are capped; full artifact is delivered via `finalCode`.
-- Abortable fetch stream; quiet disconnect handling.
+- Cursed presets (`lib/cursedCode.ts`), file upload, runtime selector, ritual directive, line-numbered editor, progress bar, summary chips.
+- `Exorcise Code` button (crimson glow, hover scale) and `Banish ritual` reset.
 
-## 7. Acceptance criteria
+### `Terminal` (`components/Terminal.tsx`)
 
-- [x] SSE and 3D phases map through an explicit bidirectional contract.
-- [x] Live fallback pipeline ends at the deterministic engine.
-- [x] 3D labels remain readable at the finalized typography.
-- [x] Remote and local sandbox boundaries are enforced.
-- [x] Judge one-click `AUTO DEMO` completes the full workflow.
-- [x] Completed-exorcism timeline scrubber supports replay.
-- [x] Purified artifact unit test reports clean `PASS` / `FAIL` results.
+- Tabs: `Terminal` (color-coded log, `role="log"`) and `Spectral Diff` (unified diff with dual line gutters).
+- Actions: copy, download (`purified-artifact.ts`), `GEN TEST`, `Test sandbox`, `Export report` (`necrocode-exorcism-report.md`).
+- When `autoDemoNonce` changes and the run is complete, switches to the diff and starts the sandbox.
+
+### Header (`app/page.tsx`)
+
+- Brand `NECROCODE` (`text-xl font-extrabold tracking-[0.16em]`) with `// AI CODE EXORCIST`.
+- Controls: `AUTO DEMO`, `API Sigils`, `History`, `Horror BGM`, `3D Audio FX`, CRT toggle, fog toggle, `StatusPill`.
+
+## Fallback pipeline
+
+1. Use the default cursed artifact if the input is empty, cap the artifact at 24,000 characters, and cap the directive at 500 characters.
+2. If the language is JS/TS/TSX, run `exorciseCode()`. Otherwise build a pass-through report.
+3. If sigils exist, call `tryLiveExorcism()`:
+   - Providers in `API_SIGIL_META` order: Gemini → Groq → OpenRouter.
+   - Each request uses an `AbortController` with an 8-second timeout, `temperature: 0.1`, and an 8,192-token output limit.
+   - Output is accepted only if non-empty, under 160,000 chars, and code-like.
+4. On success, the live code becomes `finalCode`. For JS/TS/TSX it is re-analyzed for residual findings.
+5. On failure of every provider, the Heuristic result stands and the stream says so.
+
+## Sandbox design
+
+| Path | Languages | Limit | Module |
+| --- | --- | --- | --- |
+| Local Web Worker | JavaScript | 2 s, worker terminated | `lib/useCodeSandbox.ts` |
+| Remote runner | 28 others (TypeScript, TSX, Python, Java, …) | 20 s server / 25 s client | `app/api/run/route.ts`, `lib/runner.ts` |
+
+`PAIZA_API_BASE` and `PAIZA_API_KEY` are optional server-side env vars.
+
+## Audio design
+
+| Engine | Source | Behavior |
+| --- | --- | --- |
+| BGM (`lib/horrorAudio.ts`) | `public/audio/horror-bgm.mp3` | Loop; `0.22` idle, fades to `0.85` while running before the output stage; gesture unlock |
+| SFX (`lib/useCyberSound.ts`) | Synthesized oscillators | `dhum` on run start; per-event effects from `lib/sfxMap.ts`; off by default |
+
+## Error handling
+
+- Invalid JSON body → defaults (`javascript`, empty directive, default cursed artifact).
+- Unknown language id → `javascript`.
+- Provider errors are swallowed per provider and fall through to the next.
+- Client abort → silent stop.
+- Remote runner errors and timeouts are shown as sandbox lines with status `error` or `timeout`.
+- If WebGL fails, the dynamic loader fallback stays visible and the rest of the HUD keeps working.
+
+## Testing strategy
+
+- No automated test suite is committed.
+- Verification is `npx tsc --noEmit`, `npm run lint`, `npm run build`, plus the manual checklist in `README.md` (“How to Test the Running App”).
+- `GEN TEST` is a runtime smoke check for purified artifacts, not a project test suite.

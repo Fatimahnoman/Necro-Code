@@ -93,6 +93,7 @@ the costume; the analysis is real.
 - [🎨 Design System](#-design-system)
 - [☁️ Deploy to Vercel](#️-deploy-to-vercel)
 - [🏆 Kiroween 2026 Submission](#-kiroween-2026-submission)
+- [🎵 Audio Credits](#-audio-credits)
 - [🤝 Contributing](#-contributing)
 - [📄 License](#-license)
 
@@ -312,7 +313,7 @@ Full visual covenant: [`.kiro/steering/3d-horror-rules.md`](.kiro/steering/3d-ho
 │          └───────────┬──────────────┴──────────────────────────┘           │
 │                      │  useAgentStream()  (POST fetch + SSE parser)         │
 └──────────────────────┼──────────────────────────────────────────────────────┘
-                       │  POST /api/agent/stream  { code, directive }
+                       │  POST /api/agent/stream  { code, directive, language }
                        │  headers: x-necro-{gemini,groq,openrouter}-key
                ┌───────▼────────────────────────────────┐
                │  SSE Route Handler (text/event-stream)  │
@@ -323,13 +324,21 @@ Full visual covenant: [`.kiro/steering/3d-horror-rules.md`](.kiro/steering/3d-ho
 
 ### 🧠 Kiro Specs — _the blueprint_
 
-📋 [`.kiro/specs/necrocode-exorcist/design.md`](.kiro/specs/necrocode-exorcist/design.md) is the
-3D studio design: system architecture, SSE-to-3D state mapping, component
-contracts, fallback pipeline, and acceptance criteria.
+The feature spec follows Kiro's three-file format in
+[`.kiro/specs/necrocode-exorcist/`](.kiro/specs/necrocode-exorcist/):
 
-📋 [`.kiro/specs/necrocode-exorcist/requirements.md`](.kiro/specs/necrocode-exorcist/requirements.md) documents
-the multi-LLM fallback, ritual stages, `AgentEvent` contract, safe-fix policy,
-and acceptance criteria.
+- 📋 [`requirements.md`](.kiro/specs/necrocode-exorcist/requirements.md) — eight
+  requirements with user stories and EARS acceptance criteria (analyzer,
+  multi-LLM fallback, SSE stream, 3D Ritual Graph, Spectral Diff, sandbox,
+  adaptive audio, dashboard and judge tools).
+- 🧊 [`design.md`](.kiro/specs/necrocode-exorcist/design.md) — architecture,
+  SSE phase → UI label and aura mapping, component interfaces, fallback
+  pipeline, sandbox, audio, and error handling.
+- ✅ [`tasks.md`](.kiro/specs/necrocode-exorcist/tasks.md) — implementation
+  checklist linked to requirement IDs. Open items (automated tests) stay
+  unchecked.
+
+Earlier single-file specs are archived in [`docs/spec-history/`](docs/spec-history/).
 
 ### 🧭 Steering Docs — _the guardrails_
 
@@ -343,10 +352,14 @@ three-pane layout, analyzer contract, SSE contract, and zero-error build rule.
 
 ### 🪝 Agent Hooks — _the triggers_
 
-🪝 [`.kiro/hooks/agent-execution.json`](.kiro/hooks/agent-execution.json) maps
-every stage transition to a 3D aura, seal animation, terminal effect, and
-stereo-panned synthesized SFX: `crimson-heartbeat`, `relic-ring-spin`,
-`neon-heal-flash`, `complete-pulse`, and more.
+Hooks use Kiro's v1 JSON hook format (`version`, `hooks[]` with `trigger`,
+`matcher`, `action`):
+
+- 🪝 [`lint-typecheck-on-save.json`](.kiro/hooks/lint-typecheck-on-save.json) —
+  after the agent saves a `.ts`/`.tsx` file, runs `npm run lint && npx tsc --noEmit`.
+- 🪝 [`sse-contract-sync.json`](.kiro/hooks/sse-contract-sync.json) — after
+  `lib/types.ts`, `lib/aura.ts`, or the phase-label maps change, asks the agent
+  to update the SSE-to-3D mapping in `design.md`.
 
 ### 🔁 Runtime Flow
 
@@ -422,8 +435,8 @@ above remain the always-available safety floor.
 
 ```bash
 # 1️⃣  Clone the repository
-git clone https://github.com/Fatimahnoman/Kiro.git
-cd Kiro
+git clone https://github.com/Fatimahnoman/Necro-Code.git
+cd Necro-Code
 
 # 2️⃣  Install dependencies
 npm install
@@ -515,9 +528,9 @@ runner. 🎉
    `localStorage` no longer contains `necrocode.api-sigils.v1`, and confirm no
    key ever appears in the terminal, exported report, or history drawer.
 
-> The bundled automated verification exercises the BYOK UI, header plumbing, and
-> dummy-key fallback path. A real provider success requires a valid key and was
-> not part of the deterministic test suite.
+> The repository has no automated test suite. A real provider success requires
+> a valid key; without one, the dummy-key fallback path above is the
+> reproducible check.
 
 ### 4. Test the multi-language sandbox and grimoire history
 
@@ -630,7 +643,10 @@ The build must finish with **zero TypeScript/ESLint errors**. Open
 | ✍️ **Edit the artifact** | Paste your own snippet; the scanner reads exactly what is in the editor. |
 | 🪄 **RITUAL DIRECTIVE** | Optional instruction passed with the code to the live model (for example, convert to strict TypeScript). |
 | 🔮 **API SIGILS** | Optional BYOK modal for Gemini, Groq / Grok, and OpenRouter keys; stored in this browser only. |
-| 🩸 **EXORCISE CODE** | Opens the SSE ritual: binding → scanning → reasoning → optional live rewrite → purified output. Fires the `DHUM!` slam. |
+| 🩸 **EXORCISE CODE** | Opens the SSE ritual: binding → scanning → reasoning → optional live rewrite → purified output. Fires the `DHUM!` slam when **3D AUDIO FX** is on. |
+| 🎬 **AUTO DEMO** | Loads the `async-memory-leak` artifact with a demo directive, runs the ritual, then opens **SPECTRAL DIFF** and runs the sandbox. |
+| ⏱️ **Timeline** | After a run completes, the `DORMANT · SCANNING · EXORCISING · PURIFIED` buttons under the graph select each stage's seal for inspection. |
+| ✅ **GEN TEST** | Generates assertions that each function in the purified artifact exists, runs them in the sandbox, and shows a `PASS` / `FAIL` badge. |
 | 💀 **Click a 3D seal** | Opens an X-Ray HUD with engine, stage time in ms, severity breakdown, and status. |
 | 🖱️ **Drag the graph** | Orbits the ritual altar; page scroll stays intact. |
 | 🔍 **SPECTRAL DIFF** | Shows the original vs purified artifact line-by-line with `-` / `+` highlights. |
@@ -696,14 +712,16 @@ The build must finish with **zero TypeScript/ESLint errors**. Open
 │   └── 📄 useUiSettings.ts        # BGM / SFX / CRT / fog state
 ├── 📂 .kiro/
 │   ├── 📋 specs/necrocode-exorcist/requirements.md # 🧠 EARS requirements
-│   ├── 📋 specs/necrocode-exorcist/design.md      # 🧊 System / 3D design
-│   ├── 📋 specs/necrocode-exorcist/tasks.md      # ✅ Completed implementation tasks
-│   ├── 🧭 steering/horror-rules.md      # 🧭 Authoritative horror covenant
+│   ├── 📋 specs/necrocode-exorcist/design.md       # 🧊 System / 3D design
+│   ├── 📋 specs/necrocode-exorcist/tasks.md        # ✅ Implementation checklist
+│   ├── 🧭 steering/horror-rules.md      # 🧭 Theme, layout, analyzer, SSE covenant
 │   ├── 🧭 steering/3d-horror-rules.md   # 🧭 3D/WebGL covenant
 │   ├── 🧭 steering/project-rules.md     # General engineering conventions
-│   └── 🪝 hooks/agent-execution.json    # 🪝 3D stage-transition triggers
+│   ├── 🪝 hooks/lint-typecheck-on-save.json # Lint + typecheck after saves
+│   └── 🪝 hooks/sse-contract-sync.json      # Keep design.md in sync with the SSE contract
 └── 📂 docs/
-    └── 🏆 DEVPOST.md              # Submission story + demo script
+    ├── 🏆 DEVPOST.md              # Submission story + demo script
+    └── 📂 spec-history/           # Archived earlier single-file specs
 ```
 
 ---
@@ -714,7 +732,7 @@ The build must finish with **zero TypeScript/ESLint errors**. Open
 
 | Token | Hex | Preview | Role |
 | --- | --- | :---: | --- |
-| 🌑 **Void** | `#030508` | ![](https://img.shields.io/badge/-030508-030508?style=flat-square) | Pitch-black base / WebGL fog |
+| 🌑 **Void** | `#06060c` | ![](https://img.shields.io/badge/-06060c-06060c?style=flat-square) | Pitch-black base / WebGL clear color |
 | 🩸 **Crimson** | `#FF003C` | ![](https://img.shields.io/badge/-FF003C-FF003C?style=flat-square) | Bugs, corruption aura, error seals |
 | 🟣 **Haunt** | `#A855F7` | ![](https://img.shields.io/badge/-A855F7-A855F7?style=flat-square) | Reasoning, channeling, runes |
 | 🟢 **Neon** | `#00FF66` | ![](https://img.shields.io/badge/-00FF66-00FF66?style=flat-square) | Purified aura, fixed seals |
@@ -757,8 +775,47 @@ provider attempt has an 8-second timeout before fallback.
 
 </div>
 
-See 👉 [**`docs/DEVPOST.md`**](docs/DEVPOST.md) for the submission story and
+NecroCode is entered in the **Costume Contest**, which judges the UI/UX
+"costume" a project wears. The costume here is a haunted 3D séance; under it
+is a working code analyzer, so every visual change comes from a real event.
+
+**What judges can check in about a minute:**
+
+1. Click **AUTO DEMO** in the header. It loads a multi-bug async memory-leak
+   artifact, runs the full ritual, opens the **Spectral Diff**, and runs the
+   sandbox.
+2. Watch the **3D Ritual Graph**: seals turn crimson while bugs stream, and the
+   relic aura moves from purple to crimson to green as the SSE events arrive.
+3. After completion, use the **timeline** under the graph to inspect each stage,
+   and click **GEN TEST** for a `PASS` / `FAIL` smoke check.
+4. Turn on **3D AUDIO FX** to hear the `DHUM!` slam and per-stage SFX; the
+   **HORROR BGM** surges during the run and settles after it.
+
+**How Kiro was used:** the feature is specified in
+[`.kiro/specs/necrocode-exorcist/`](.kiro/specs/necrocode-exorcist/)
+(requirements → design → tasks), guided by three steering files in
+[`.kiro/steering/`](.kiro/steering/), and guarded by two agent hooks in
+[`.kiro/hooks/`](.kiro/hooks/).
+
+See 👉 [**`docs/DEVPOST.md`**](docs/DEVPOST.md) for the full submission story and
 demo script.
+
+---
+
+## 🎵 Audio Credits
+
+The background soundtrack `public/audio/horror-bgm.mp3` is royalty-free music
+from Pixabay.
+
+- **Track:** Kiravale Horror Music (Ambient Dark Synth)
+- **Artist / Source:** Pixabay Audio Community (Royalty-Free Music)
+- **URL:** [pixabay.com/music](https://pixabay.com/music/)
+- **License:** [Pixabay Content License](https://pixabay.com/service/license-summary/).
+  It allows free commercial and non-commercial use and does not require
+  attribution; we credit the source anyway.
+
+All other sounds are synthesized at runtime with the Web Audio API
+(`lib/useCyberSound.ts`); no other audio files are bundled.
 
 ---
 
