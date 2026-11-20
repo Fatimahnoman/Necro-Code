@@ -1,0 +1,34 @@
+---
+name: NecroCode 3D Exorcism Hooks
+description: Kiro-native hook for the NecroCode 3D exorcism ritual.
+version: v1
+renderer: react-three-fiber
+---
+
+# NecroCode 3D Exorcism Hooks
+
+## Phase ↔ Ritual UI State Mapping
+
+The backend SSE phase and the frontend 3D Ritual Graph UI state are kept in explicit bidirectional alignment.
+
+| Backend SSE phase | Frontend Ritual UI state |
+| --- | --- |
+| `idle` | `dormant` |
+| `thinking` | `dormant` |
+| `tool_call` | `scanning` |
+| `executing` | `exorcising` |
+| `complete` | `purified` |
+
+Reverse mapping:
+
+| Frontend Ritual UI state | Backend SSE phase |
+| --- | --- |
+| `dormant` | `idle` |
+| `scanning` | `tool_call` |
+| `exorcising` | `executing` |
+| `purified` | `complete` |
+
+## Execution contract
+
+- Run start, corruption, scan, reasoning, fix, purification, completion, and reset hooks map to the same phases and states.
+- The 3D seals, aura, and terminal remain synchronized through the shared SSE event contract.
