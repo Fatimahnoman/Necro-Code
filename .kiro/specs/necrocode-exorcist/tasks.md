@@ -71,5 +71,5 @@ when the code exists in this repository.
 - [ ] 12. Automated tests
   - No unit or end-to-end test suite exists yet. Candidates: analyzer rule fixtures, `diffLines`, `auraFromState`, live-engine fallback with mocked `fetch`.
 
-- [ ] 13. Build verification for submission
+- [x] 13. Build verification for submission
   - Run `npx tsc --noEmit`, `npm run lint`, and `npm run build` on a machine with npm registry access and tick this box once all three pass. The Kiro sandbox used for the spec audit had no npm registry access, so it could not run them.
