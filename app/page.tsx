@@ -60,6 +60,10 @@ const HorrorBackdrop = dynamic(
 const initialArtifact = findArtifact(DEFAULT_ARTIFACT_ID);
 const DEFAULT_CODE = initialArtifact?.code ?? DEFAULT_CURSED_CODE;
 const DEFAULT_FILENAME = "cursed-ouroboros-loop.js";
+/** Shared header pill: 11px, single line, never shrinks, so pills never clip. */
+const HEADER_PILL =
+  "inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 font-mono text-[11px] font-medium uppercase leading-none tracking-[0.14em] transition";
+
 const AUTO_DEMO_ARTIFACT_ID = "async-memory-leak";
 const AUTO_DEMO_DIRECTIVE =
   "Hunt the async ritual cache, quiet promise leakage, and the unquiet dead promise.";
@@ -259,7 +263,7 @@ export default function Home() {
         <div className="crt-overlay animate-flicker" aria-hidden />
       )}
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-3 py-3 sm:px-4 lg:h-screen lg:min-h-0 lg:px-6 lg:py-4">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-4 py-3 lg:h-screen lg:min-h-0 lg:py-4">
         <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-crimson/15 py-2">
           <div className="flex min-w-0 items-center gap-3">
             <div className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full border border-crimson/40 bg-black/70 shadow-[0_0_26px_rgba(255,0,60,0.22)]">
@@ -284,173 +288,187 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <StatusPill phase={state.phase} />
-            <button
-              type="button"
-              onClick={handleAutoDemo}
-              disabled={state.running}
-              aria-label="Run the one-click judge auto demo"
-              title="Load the cursed async memory leak and run the full exorcism"
-              className="inline-flex items-center gap-1.5 rounded-full border border-crimson/50 bg-crimson/10 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.2em] text-crimson transition hover:bg-crimson/15 hover:shadow-[0_0_18px_rgba(255,0,60,0.24)] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Sparkles className="h-3.5 w-3.5" aria-hidden />
-              <span className="whitespace-nowrap">AUTO DEMO</span>
-            </button>
-            <span
-              title={
-                liveKeys
-                  ? liveEngineActive
-                    ? "A live API sigil will be used on the next exorcism."
-                    : "A live sigil is configured, but the last run used the builtin safety net."
-                  : "No API sigil configured — the builtin deterministic engine is active."
-              }
-              className={[
-                "inline-flex items-center gap-1.5 rounded-full border bg-black/40 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.2em]",
-                liveEngineActive
-                  ? "border-neon/30 text-neon"
-                  : "border-white/10 text-slate-400",
-              ].join(" ")}
-            >
+          <div className="flex min-w-0 flex-col gap-1.5 sm:items-end">
+            {/* Tier 1 · live status readouts */}
+            <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+              <StatusPill phase={state.phase} />
               <span
-                className={`h-1.5 w-1.5 rounded-full ${
+                title={
+                  liveKeys
+                    ? liveEngineActive
+                      ? "A live API sigil will be used on the next exorcism."
+                      : "A live sigil is configured, but the last run used the builtin safety net."
+                    : "No API sigil configured — the builtin deterministic engine is active."
+                }
+                className={[
+                  HEADER_PILL,
+                  "bg-black/50",
                   liveEngineActive
-                    ? "animate-pulse bg-neon shadow-[0_0_8px_rgba(0,255,102,0.9)]"
-                    : "bg-slate-600"
-                }`}
-              />
-              <span className="hidden sm:inline">
-                {liveEngineActive ? "LIVE AI ENGINE" : "BUILTIN SAFETY NET"}
+                    ? "border-neon/40 text-neon"
+                    : "border-white/15 text-zinc-200",
+                ].join(" ")}
+              >
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    liveEngineActive
+                      ? "animate-pulse bg-neon shadow-[0_0_8px_rgba(0,255,102,0.9)]"
+                      : "bg-zinc-500"
+                  }`}
+                />
+                <span className="hidden sm:inline">
+                  {liveEngineActive ? "LIVE AI ENGINE" : "BUILTIN SAFETY NET"}
+                </span>
+                <span className="sm:hidden">
+                  {liveEngineActive ? "LIVE" : "SAFETY"}
+                </span>
               </span>
-              <span className="sm:hidden">
-                {liveEngineActive ? "LIVE" : "SAFETY"}
-              </span>
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                play("click");
-                setHistoryOpen(false);
-                setApiOpen(true);
-              }}
-              aria-haspopup="dialog"
-              aria-label="Open API sigils"
-              className="inline-flex items-center gap-1.5 rounded-full border border-haunt/30 bg-haunt/5 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.2em] text-haunt transition hover:bg-haunt/10 hover:shadow-[0_0_18px_rgba(147,51,234,0.16)]"
-            >
-              <KeyRound className="h-3.5 w-3.5" aria-hidden />
-              <span className="hidden sm:inline">API Sigils</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                play("click");
-                setApiOpen(false);
-                setHistoryOpen(true);
-              }}
-              aria-haspopup="dialog"
-              aria-label="Open grimoire history"
-              className="inline-flex items-center gap-1.5 rounded-full border border-spectral/25 bg-spectral/5 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.2em] text-spectral transition hover:bg-spectral/10 hover:shadow-[0_0_18px_rgba(6,182,212,0.14)]"
-            >
-              <History className="h-3.5 w-3.5" aria-hidden />
-              <span className="hidden sm:inline">History</span>
-              <span className="rounded border border-spectral/30 bg-black/40 px-1 font-mono text-[12px] text-spectral/80">
-                {entries.length}
-              </span>
-            </button>
-            <span className="hidden items-center gap-1.5 rounded-full border border-neon/25 bg-neon/5 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.2em] text-neon md:inline-flex">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neon shadow-[0_0_8px_rgba(0,255,102,0.9)]" />
-              SSE live
-            </span>
-            <span
-              className="hidden items-center gap-1.5 rounded-full border bg-black/40 px-2.5 py-1 font-mono text-[12px] uppercase tracking-[0.2em] md:inline-flex"
-              style={{
-                borderColor: `${AURA_HEX[aura]}55`,
-                color: AURA_HEX[aura],
-                boxShadow: `0 0 18px ${AURA_HEX[aura]}18`,
-              }}
-            >
               <span
-                className="h-1.5 w-1.5 rounded-full"
+                className={`${HEADER_PILL} hidden border-neon/30 bg-neon/5 text-neon md:inline-flex`}
+              >
+                <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-neon shadow-[0_0_8px_rgba(0,255,102,0.9)]" />
+                SSE live
+              </span>
+              <span
+                className={`${HEADER_PILL} hidden bg-black/50 md:inline-flex`}
                 style={{
-                  backgroundColor: AURA_HEX[aura],
-                  boxShadow: `0 0 8px ${AURA_HEX[aura]}`,
+                  borderColor: `${AURA_HEX[aura]}66`,
+                  color: AURA_HEX[aura],
+                  boxShadow: `0 0 18px ${AURA_HEX[aura]}18`,
                 }}
-              />
-              {AURA_LABEL[aura]}
-            </span>
+              >
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{
+                    backgroundColor: AURA_HEX[aura],
+                    boxShadow: `0 0 8px ${AURA_HEX[aura]}`,
+                  }}
+                />
+                {AURA_LABEL[aura]}
+              </span>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => toggle("bgmOn")}
-              aria-pressed={settings.bgmOn}
-              aria-label="Toggle horror background music"
-              title="Toggle the looped horror soundtrack"
-              className={[
-                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.2em] transition-all",
-                settings.bgmOn
-                  ? "border-blood/60 bg-blood/10 text-blood shadow-glow-blood"
-                  : "border-white/10 bg-black/35 text-slate-400 hover:border-white/20 hover:text-slate-300",
-              ].join(" ")}
-            >
-              <Music className="h-3.5 w-3.5" aria-hidden />
-              <span className="hidden sm:inline">Horror BGM</span>
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  settings.bgmOn ? "animate-pulse bg-blood" : "bg-slate-600"
-                }`}
-              />
-            </button>
+            {/* Tier 2 · controls */}
+            <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+              <button
+                type="button"
+                onClick={handleAutoDemo}
+                disabled={state.running}
+                aria-label="Run the one-click judge auto demo"
+                title="Load the cursed async memory leak and run the full exorcism"
+                className={`${HEADER_PILL} border-crimson/60 bg-crimson/10 text-crimson hover:bg-crimson/15 hover:shadow-[0_0_18px_rgba(255,0,60,0.24)] disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                AUTO DEMO
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  play("click");
+                  setHistoryOpen(false);
+                  setApiOpen(true);
+                }}
+                aria-haspopup="dialog"
+                aria-label="Open API sigils"
+                className={`${HEADER_PILL} border-haunt/45 bg-haunt/10 text-zinc-200 hover:border-haunt/70 hover:text-white hover:shadow-[0_0_18px_rgba(147,51,234,0.2)]`}
+              >
+                <KeyRound className="h-3.5 w-3.5 shrink-0 text-haunt-glow" aria-hidden />
+                <span className="hidden sm:inline">API Sigils</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  play("click");
+                  setApiOpen(false);
+                  setHistoryOpen(true);
+                }}
+                aria-haspopup="dialog"
+                aria-label="Open grimoire history"
+                className={`${HEADER_PILL} border-spectral/40 bg-spectral/10 text-zinc-200 hover:border-spectral/70 hover:text-white hover:shadow-[0_0_18px_rgba(6,182,212,0.18)]`}
+              >
+                <History className="h-3.5 w-3.5 shrink-0 text-spectral" aria-hidden />
+                <span className="hidden sm:inline">History</span>
+                <span className="rounded border border-spectral/40 bg-black/50 px-1 py-px text-[10px] leading-none text-spectral">
+                  {entries.length}
+                </span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (!settings.soundOn) play("click");
-                toggle("soundOn");
-              }}
-              aria-pressed={settings.soundOn}
-              aria-label="Toggle 3D audio effects"
-              className={[
-                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.2em] transition-all",
-                settings.soundOn
-                  ? "border-haunt/60 bg-haunt/10 text-haunt shadow-glow-haunt"
-                  : "border-white/10 bg-black/35 text-slate-400 hover:border-white/20 hover:text-slate-300",
-              ].join(" ")}
-            >
-              {settings.soundOn ? (
-                <Volume2 className="h-3.5 w-3.5" aria-hidden />
-              ) : (
-                <VolumeX className="h-3.5 w-3.5" aria-hidden />
-              )}
-              <span className="hidden sm:inline">3D Audio FX</span>
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  settings.soundOn ? "animate-pulse bg-haunt" : "bg-slate-600"
-                }`}
-              />
-            </button>
+              <span className="mx-0.5 hidden h-5 w-px bg-white/10 sm:block" aria-hidden />
 
-            <ToggleButton
-              label="CRT Haunting"
-              icon={ScanLine}
-              active={settings.scanlinesOn}
-              onToggle={() => {
-                play("click");
-                toggle("scanlinesOn");
-              }}
-              accent="spectral"
-              title="Toggle flickering CRT scanlines"
-            />
-            <ToggleButton
-              label="Eerie Fog"
-              icon={CloudFog}
-              active={settings.fogOn}
-              onToggle={() => {
-                play("click");
-                toggle("fogOn");
-              }}
-              accent="blood"
-              title="Toggle drifting fog and the animated rune grid"
-            />
+              <button
+                type="button"
+                onClick={() => toggle("bgmOn")}
+                aria-pressed={settings.bgmOn}
+                aria-label="Toggle horror background music"
+                title="Toggle the looped horror soundtrack"
+                className={[
+                  HEADER_PILL,
+                  settings.bgmOn
+                    ? "border-blood/60 bg-blood/10 text-blood shadow-glow-blood"
+                    : "border-white/15 bg-black/45 text-zinc-200 hover:border-white/30 hover:text-white",
+                ].join(" ")}
+              >
+                <Music className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="hidden sm:inline">Horror BGM</span>
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    settings.bgmOn ? "animate-pulse bg-blood" : "bg-zinc-500"
+                  }`}
+                />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!settings.soundOn) play("click");
+                  toggle("soundOn");
+                }}
+                aria-pressed={settings.soundOn}
+                aria-label="Toggle 3D audio effects"
+                className={[
+                  HEADER_PILL,
+                  settings.soundOn
+                    ? "border-haunt/60 bg-haunt/10 text-haunt-glow shadow-glow-haunt"
+                    : "border-white/15 bg-black/45 text-zinc-200 hover:border-white/30 hover:text-white",
+                ].join(" ")}
+              >
+                {settings.soundOn ? (
+                  <Volume2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                ) : (
+                  <VolumeX className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                )}
+                <span className="hidden sm:inline">3D Audio FX</span>
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    settings.soundOn ? "animate-pulse bg-haunt" : "bg-zinc-500"
+                  }`}
+                />
+              </button>
+
+              <ToggleButton
+                label="CRT Haunting"
+                shortLabel="CRT"
+                icon={ScanLine}
+                active={settings.scanlinesOn}
+                onToggle={() => {
+                  play("click");
+                  toggle("scanlinesOn");
+                }}
+                accent="spectral"
+                title="Toggle flickering CRT scanlines"
+              />
+              <ToggleButton
+                label="Eerie Fog"
+                shortLabel="Fog"
+                icon={CloudFog}
+                active={settings.fogOn}
+                onToggle={() => {
+                  play("click");
+                  toggle("fogOn");
+                }}
+                accent="blood"
+                title="Toggle drifting fog and the animated rune grid"
+              />
+            </div>
           </div>
         </header>
 
@@ -468,7 +486,7 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 py-3 lg:grid-cols-3 lg:gap-3.5 lg:items-stretch">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 py-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.35fr)_minmax(0,1.1fr)] lg:items-stretch xl:grid-cols-[minmax(340px,1.05fr)_minmax(440px,1.35fr)_minmax(360px,1.1fr)]">
           <div className="min-h-[580px] lg:min-h-0">
             <ControlPanel
               code={code}
@@ -486,7 +504,6 @@ export default function Home() {
               running={state.running}
               phase={state.phase}
               progress={state.progress}
-              summary={state.summary}
             />
           </div>
 

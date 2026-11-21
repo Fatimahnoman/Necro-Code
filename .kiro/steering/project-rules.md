@@ -50,7 +50,7 @@
 
 ## Non-functional requirements
 
-- **Responsive:** panes stack on mobile and become three equal columns on `lg+`.
+- **Responsive:** panes stack on mobile and become three proportional columns (center widest) on `lg+`.
 - **Accessible:** real `<button>`s with `aria-label` / `aria-pressed`;
   the terminal uses `role="log"` and `aria-live="polite"`.
 - **Resilient:** abortable streams, safe reset, and a WebGL loader fallback.

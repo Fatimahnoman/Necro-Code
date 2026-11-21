@@ -96,9 +96,18 @@ Two dedicated, dynamically imported client-only canvases:
   leading-none tracking-[0.14em] px-2 py-1 whitespace-nowrap rounded bg-black/75
   border border-white/15 backdrop-blur-md`, capped by `max-w-[var(--label-max,158px)]`.
   No solid white cards.
-- Camera is `[0, 0.18, 7.2]` with `fov: 45`. The graph scale adapts to the
-  canvas aspect ratio: `min(1, max(0.55, 6.3 * aspect / 8.1))`. Keep the whole
-  ritual square visible in one viewport.
+- Camera is `[0, 0.18, 6.2]` with `fov: 45`. Seals sit at `(±2.55, ±1.5)`
+  (`ORBIT_X`, `ORBIT_Y`).
+- Graph scale comes from `fitGraph(width, height, reserveTopPx,
+  reserveBottomPx)`: the largest scale up to `1.12` (floor `0.4`) that keeps
+  seals, their labels, and both HUD strips inside the canvas, plus a vertical
+  offset that centres the graph between the strips. `AgentCanvas` reserves
+  68px on top and 96px at the bottom once the timeline shows (44px before),
+  so the `Purified Output` label never overlaps the timeline.
+- Central relic: additive outer wireframe, back-face rim shell (pulsing
+  opacity), inner counter-rotating wireframe lattice, crisp dodecahedron
+  edge lines, and two rim point lights behind it (aura color + `AURA_HEX.purple`).
+  All geometry stays at icosahedron detail ≤ 1.
 
 ## Interaction contract
 

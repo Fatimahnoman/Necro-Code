@@ -157,9 +157,10 @@ interface AgentCanvasProps {
 
 ### `ExecutionGraph3D` (`components/three/ExecutionGraph3D.tsx`)
 
-- `Canvas` with camera `[0, 0.18, 7.2]`, `fov: 45`, `dpr: [1, 1.8]`, transparent clear color.
+- `Canvas` with camera `[0, 0.18, 6.2]`, `fov: 45`, `dpr: [1, 1.8]`, transparent clear color.
 - Four seals, a central relic, Drei `Line` edges, and flowing orbs on the active edge.
-- Graph scale adapts to aspect ratio: `min(1, max(0.55, 6.3 * aspect / 8.1))`.
+- Seals at `(±2.55, ±1.5)`. Scale and vertical offset come from `fitGraph()`: up to `1.12`, limited so seals, labels, and the reserved HUD strips (`reserveTopPx`, `reserveBottomPx` props, set by `AgentCanvas` to 68 / 96 when the timeline shows, 44 otherwise) fit the canvas.
+- Central relic: additive wireframe, back-face rim shell, inner wireframe lattice, edge lines, two rim point lights.
 - `OrbitControls` with `enablePan={false}` and `enableZoom={false}`; `onPointerMissed` clears selection.
 - Stage labels are a DOM overlay projected from 3D anchors every frame (`text-[9.5px]`, `bg-black/75`, `backdrop-blur-md`, `whitespace-nowrap`).
 
@@ -170,14 +171,14 @@ interface AgentCanvasProps {
 
 ### `ControlPanel` (`components/ControlPanel.tsx`)
 
-- Cursed presets (`lib/cursedCode.ts`), `GitHub` summon toggle, file upload, runtime selector, ritual directive, line-numbered editor, progress bar, summary chips.
+- Presets (`lib/cursedCode.ts`), `GitHub` summon toggle, file upload, runtime selector, ritual directive, code editor that takes the free height (`min-h-[260px] flex-1`), progress bar. The detected/fixed/residual counter is shown only in the Terminal footer; `ControlPanel` no longer takes a `summary` prop.
 - The `GitHub` toggle opens a form (`#github-summon`). Submit validates with `parseGitHubFileUrl()` first, then calls `POST /api/github`, and on success calls `onCodeChange`, `onFilenameChange(path)`, and `onLanguageChange(language)` when the language is known.
 - `Exorcise Code` button (crimson glow, hover scale) and `Banish ritual` reset.
 
 ### `Terminal` (`components/Terminal.tsx`)
 
 - Tabs: `Terminal` (color-coded log, `role="log"`) and `Spectral Diff` (unified diff with dual line gutters).
-- Actions: copy, download (`purified-artifact.ts`), `GEN TEST`, `Test sandbox`, `Export report` (`necrocode-exorcism-report.md`), `.patch` (`necrocode-fix.patch`).
+- Pinned action bar directly under the tabs (always rendered, outside the scroll area): `Gen test`, `Test sandbox`, `Copy purified code`, `Export report` (`necrocode-exorcism-report.md`), `.patch` (`necrocode-fix.patch`), test badge. The header keeps the download icon (`purified-artifact.ts`).
 - Header shows the health badge (`<before> → <after> /100`) when `summary.healthBefore` and `summary.healthAfter` exist.
 - New prop: `filename: string` (editor filename or GitHub path) — the patch target path.
 - When `autoDemoNonce` changes and the run is complete, switches to the diff and starts the sandbox.

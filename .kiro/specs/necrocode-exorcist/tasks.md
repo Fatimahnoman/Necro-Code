@@ -63,7 +63,7 @@ when the code exists in this repository.
 
 - [x] 11. Dashboard and judge tools (`app/page.tsx`)
   - [x] 11.1 `NECROCODE // AI CODE EXORCIST` header with status pill and toggles. _R8.1_
-  - [x] 11.2 Responsive grid: stacked on mobile, `lg:grid-cols-3` with `lg:gap-3.5` and `lg:items-stretch`. _R8.2_
+  - [x] 11.2 Responsive grid: stacked on mobile; proportional `1.05fr / 1.35fr / 1.1fr` from `lg`, with 340 / 440 / 360px minimums from `xl`; `gap-4`. _R8.2_
   - [x] 11.3 `AUTO DEMO` with the `async-memory-leak` artifact, auto diff and sandbox. _R8.3, R8.4_
   - [x] 11.4 Grimoire History drawer (last 10, `localStorage`). _R8.5, R8.6_
   - [x] 11.5 Markdown autopsy export (`lib/report.ts`). _R8.7_
@@ -100,3 +100,14 @@ when the code exists in this repository.
 - [ ] 18. Build and live-runtime verification for task 17
   - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build`. The sandbox still had no npm registry access; `lib/languages.ts`, `lib/smokeTest.ts`, and `lib/useCodeSandbox.ts` were typechecked with a stubbed `react`, but `Terminal.tsx` was not typechecked or linted.
   - Run `GEN TEST` once on Paiza for TypeScript, Python, and one compiled runtime (e.g. C++). The sandbox could not reach Paiza.
+
+- [x] 19. Cockpit layout polish
+  - [x] 19.1 Proportional grid and two-tier header with 11px, non-shrinking pills (`HEADER_PILL`). _R8.1, R8.2_
+  - [x] 19.2 `fitGraph()` scale (≤ 1.12), camera z 6.2, wider seal orbit, HUD-strip reserves; richer relic. _R4.1_
+  - [x] 19.3 Removed the duplicate counter from the Spellbook; taller editor.
+  - [x] 19.4 Pinned Terminal action bar under the tabs.
+  - [x] 19.5 Deeper panel glass; CRT alphas halved.
+
+- [ ] 20. Visual and build verification for task 19
+  - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build`. The sandbox still had no npm registry access; all files were typechecked against hand-written stubs for React, Next, three, and R3F, which cannot catch library-specific type errors. ESLint (including `react-hooks`) was not run.
+  - Check in a browser at 1280px, 1440px, and 1920px widths: no clipped header pills or terminal buttons, `Purified Output` label clear of the timeline after a run.

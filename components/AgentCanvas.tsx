@@ -273,6 +273,8 @@ export function AgentCanvas({
           selected={selected}
           onSelect={setSelected}
           onClear={() => setSelected(null)}
+          reserveTopPx={68}
+          reserveBottomPx={phase === "complete" ? 96 : 44}
         />
       </div>
 

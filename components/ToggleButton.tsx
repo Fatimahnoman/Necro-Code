@@ -7,6 +7,8 @@ import type { NeonAccent } from "@/components/NeonButton";
 
 interface ToggleButtonProps {
   label: string;
+  /** Visible text next to the icon (e.g. "CRT"); icon-only when omitted. */
+  shortLabel?: string;
   icon: LucideIcon;
   active: boolean;
   onToggle: () => void;
@@ -35,6 +37,7 @@ const ACCENT: Record<NeonAccent, { on: string; text: string }> = {
 
 export function ToggleButton({
   label,
+  shortLabel,
   icon: Icon,
   active,
   onToggle,
@@ -52,13 +55,15 @@ export function ToggleButton({
       aria-label={label}
       title={title ?? label}
       className={[
-        "grid h-8 w-8 place-items-center rounded-full border transition-all duration-300",
+        "inline-flex h-7 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border font-mono text-[11px] font-medium uppercase leading-none tracking-[0.14em] transition-all duration-300",
+        shortLabel ? "px-2.5" : "w-7",
         active
           ? `${style.on} ${style.text}`
-          : "border-white/10 bg-black/35 text-slate-400 hover:border-white/20 hover:text-slate-300",
+          : "border-white/15 bg-black/45 text-zinc-200 hover:border-white/30 hover:text-white",
       ].join(" ")}
     >
-      <Icon className="h-3.5 w-3.5" aria-hidden />
+      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      {shortLabel && <span>{shortLabel}</span>}
     </motion.button>
   );
 }

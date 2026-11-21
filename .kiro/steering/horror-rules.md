@@ -50,13 +50,19 @@ Three-pane HUD, responsive, zero horizontal scroll:
 
 0. **Header** (`app/page.tsx`)
    - `NECROCODE` + `// AI CODE EXORCIST`, `AUTO DEMO`, `API Sigils`, `History`,
-     `Horror BGM`, `3D Audio FX`, CRT and fog toggles, phase `StatusPill`
-     (`text-[9.5px] px-2.5 py-1 gap-1.5`, must not clip at the right edge).
+     `Horror BGM`, `3D Audio FX`, `CRT` and `Fog` toggles, phase `StatusPill`.
+   - Two tiers on the right: status readouts (phase, engine, SSE, aura) above
+     controls. Every pill is `h-7 shrink-0 whitespace-nowrap text-[11px]
+     leading-none tracking-[0.14em]` (`HEADER_PILL` in `page.tsx`); inactive
+     pills use `text-zinc-200 border-white/15`. Rows wrap; pills never shrink
+     or clip.
 1. **Left · Spellbook** (`ControlPanel`)
    - Cursed artifact presets, `GitHub` summon toggle (single-line URL form,
      `POST /api/github`) next to the upload button, runtime selector, ritual
-     directive, line-numbered code editor, progress bar, summary chips,
-     “Exorcise Code” and “Banish ritual”.
+     directive, code editor (`min-h-[260px] flex-1`, takes the free height),
+     progress bar, “Exorcise Code” and “Banish ritual”.
+   - No cursed/silenced/residual counter here; it lives only in the Grimoire
+     Terminal footer.
 2. **Center · 3D Ritual Graph** (`AgentCanvas` + `ExecutionGraph3D`)
    - Four interactive 3D seals: `Corrupted Code → Spectral Scanner →
      Kiro Exorcism Reasoning → Purified Output`.
@@ -67,17 +73,29 @@ Three-pane HUD, responsive, zero horizontal scroll:
      PURIFIED`) selects each stage for inspection.
 3. **Right · Grimoire Terminal** (`Terminal`)
    - `Terminal` / `Spectral Diff` tabs (unified diff with dual line gutters),
-     color-coded logs, copy, download, `GEN TEST`, `Test sandbox`, `Export
-     report`, `.patch` (`necrocode-fix.patch`), footer summary.
+     then a pinned action bar that is always rendered and never scrolls:
+     `Gen test`, `Test sandbox`, `Copy purified code`, `Export report`,
+     `.patch` (`necrocode-fix.patch`), and the test badge. Buttons share
+     `ACTION_BUTTON` (`h-8 whitespace-nowrap text-[11px]`) and disable until an
+     artifact exists. Below: scrolling log/diff, sandbox output, footer summary.
    - Header health badge `<before> → <after> /100`: crimson < 50, amber
      50–79, neon ≥ 80. Weights live only in `HEALTH_WEIGHTS` (`lib/report.ts`).
 4. **Atmosphere** (`HorrorBackdrop`)
    - Fixed full-screen WebGL fog/embers and a giant wireframe relic behind the
      glass dashboard, reacting to the same SSE aura.
 
-Grid: `grid-cols-1 gap-3` on mobile (stacked); `lg:grid-cols-3 lg:gap-3.5
-lg:items-stretch` on desktop (three equal columns). Panel roots use
-`h-full min-h-0 flex flex-col justify-between rounded-2xl`.
+Grid: `grid-cols-1 gap-4` on mobile (stacked); proportional columns on
+desktop so the 3D stage is the widest:
+- `lg` (1024–1279px): `minmax(0,1.05fr) minmax(0,1.35fr) minmax(0,1.1fr)`.
+- `xl+`: `minmax(340px,1.05fr) minmax(440px,1.35fr) minmax(360px,1.1fr)`.
+  The minimums total 1,140px + gaps, so they only apply from `xl`, where they
+  cannot cause horizontal scroll.
+Page padding `px-4`; `lg:items-stretch`. Panel roots use
+`h-full min-h-0 flex flex-col rounded-2xl`.
+
+Glass: panels are `rgba(10,11,20,0.88)` (`#0a0b14` at 88%) with a 12px
+backdrop blur, keeping the gradient rune border. CRT scanline and sweep alphas
+are half their earlier values (global `0.0125`, terminal `0.0175`).
 
 Typography: brand `text-xl font-extrabold tracking-[0.16em]`; panel headings
 (`Spellbook`, `Ritual Graph`, Terminal title) `text-xs font-bold uppercase

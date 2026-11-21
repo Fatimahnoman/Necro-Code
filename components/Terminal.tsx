@@ -102,6 +102,10 @@ function downloadText(content: string, filename: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
+/** Uniform pinned-toolbar button: single line, never shrinks or truncates. */
+const ACTION_BUTTON =
+  "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 font-mono text-[11px] font-medium uppercase leading-none tracking-[0.12em] transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-zinc-600 disabled:shadow-none";
+
 const SANDBOX_COLOR: Record<SandboxLineKind, string> = {
   log: "text-slate-300",
   info: "text-spectral",
@@ -511,6 +515,117 @@ export function Terminal({
         </div>
       </div>
 
+      {/* Pinned action bar: always visible under the tabs; buttons disable until an artifact exists. */}
+      <div
+        data-terminal-actions
+        className="relative z-30 shrink-0 border-b border-white/10 bg-[#0a0b14]/95 px-2.5 py-2 backdrop-blur-md"
+      >
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleGenerateTest}
+            disabled={!finalCode || testStatus === "running"}
+            title={
+              runnerLanguage.id === "python" ||
+              runnerLanguage.id === "javascript" ||
+              runnerLanguage.id === "typescript" ||
+              runnerLanguage.id === "tsx"
+                ? `Generate and run a native ${runnerLanguage.label} assertion suite for the purified functions`
+                : `Run a ${runnerLanguage.label} smoke check: passes when the purified artifact exits with code 0`
+            }
+            className={`${ACTION_BUTTON} border-spectral/45 bg-spectral/10 text-spectral hover:bg-spectral/15 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)]`}
+          >
+            {testStatus === "running" ? (
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+            ) : (
+              <FlaskConical className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            )}
+            {testStatus === "running" ? "Testing" : "Gen test"}
+          </button>
+          <button
+            type="button"
+            onClick={handleSandbox}
+            disabled={!finalCode || sandboxStatus === "running"}
+            title={
+              finalCode
+                ? runnerLanguage.local
+                  ? "Run the purified JavaScript in a 2-second sandboxed Web Worker"
+                  : `Run the purified ${runnerLanguage.label} on the remote 25-second sandbox`
+                : "The sandbox is sealed until the purified artifact arrives"
+            }
+            className={`${ACTION_BUTTON} border-haunt/45 bg-haunt/10 text-haunt-glow hover:bg-haunt/15 hover:shadow-[0_0_20px_rgba(147,51,234,0.22)]`}
+          >
+            {sandboxStatus === "running" ? (
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+            ) : (
+              <Play className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            )}
+            Test sandbox
+          </button>
+          <button
+            type="button"
+            onClick={handleCopy}
+            disabled={!hasCode}
+            title={hasCode ? "Copy the purified artifact" : "No artifact yet"}
+            className={`${ACTION_BUTTON} border-neon/45 bg-neon/10 text-neon hover:bg-neon/15 hover:shadow-[0_0_20px_rgba(0,255,102,0.2)]`}
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            ) : (
+              <Copy className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            )}
+            {copied ? "Sigil copied" : "Copy purified code"}
+          </button>
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={!hasCode || originalCode === null}
+            title={
+              originalCode === null
+                ? "The autopsy is sealed until the ritual completes"
+                : "Download the exorcism autopsy report"
+            }
+            className={`${ACTION_BUTTON} border-spectral/45 bg-spectral/10 text-zinc-100 hover:bg-spectral/15 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)]`}
+          >
+            <FileText className="h-3.5 w-3.5 shrink-0 text-spectral" aria-hidden />
+            Export report
+          </button>
+          <button
+            type="button"
+            onClick={handlePatch}
+            disabled={!patch}
+            title={
+              patch
+                ? `Download necrocode-fix.patch for ${patchPath(filename, runnerLanguage.extension)} — apply with: git apply necrocode-fix.patch`
+                : originalCode === null
+                  ? "The patch is sealed until the ritual completes"
+                  : "No changes to patch"
+            }
+            className={`${ACTION_BUTTON} border-neon/45 bg-neon/10 text-neon hover:bg-neon/15 hover:shadow-[0_0_20px_rgba(0,255,102,0.2)]`}
+          >
+            <FileDiff className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            .patch
+          </button>
+          <span
+            aria-live="polite"
+            className={[
+              "inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-full border px-2.5 font-mono text-[11px] font-medium uppercase leading-none tracking-[0.12em]",
+              testStatus === "passed"
+                ? "border-neon/50 bg-neon/10 text-neon"
+                : testStatus === "failed"
+                  ? "border-crimson/50 bg-crimson/10 text-crimson"
+                  : "border-white/15 text-zinc-300",
+            ].join(" ")}
+          >
+            {testHarness && (testStatus === "passed" || testStatus === "failed")
+              ? smokeLabel(testHarness, testStatus === "passed")
+              : testStatus === "running"
+                ? "…"
+                : "Test"}
+          </span>
+        </div>
+      </div>
+
       {view === "terminal" ? (
         <div
           ref={scrollRef}
@@ -750,115 +865,6 @@ export function Terminal({
         </div>
       )}
 
-      {hasCode && (
-        <div className="relative z-10 border-t border-white/5 bg-black/50 p-2.5">
-          <div className="flex flex-wrap items-stretch gap-1.5">
-            <span
-              className={[
-                "inline-flex items-center rounded-full border px-2.5 py-1 font-mono text-[12px] uppercase tracking-[0.18em]",
-                testStatus === "passed"
-                  ? "border-neon/40 text-neon"
-                  : testStatus === "failed"
-                    ? "border-crimson/40 text-crimson"
-                    : "border-white/10 text-slate-400",
-              ].join(" ")}
-            >
-              {testHarness && (testStatus === "passed" || testStatus === "failed")
-                ? smokeLabel(testHarness, testStatus === "passed")
-                : testStatus === "running"
-                  ? "…"
-                  : "TEST"}
-            </span>
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="group relative flex min-w-[120px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-lg border border-neon/40 bg-neon/5 px-2.5 py-2 font-mono text-[13px] uppercase tracking-[0.18em] text-neon transition hover:bg-neon/10 hover:shadow-[0_0_24px_rgba(0,255,102,0.2)]"
-            >
-              {copied ? (
-                <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              ) : (
-                <Copy className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              )}
-              <span className="truncate">
-                {copied ? "Sigil copied" : "Copy purified code"}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={handleGenerateTest}
-              disabled={!finalCode || testStatus === "running"}
-              title={
-                runnerLanguage.id === "python" ||
-                runnerLanguage.id === "javascript" ||
-                runnerLanguage.id === "typescript" ||
-                runnerLanguage.id === "tsx"
-                  ? `Generate and run a native ${runnerLanguage.label} assertion suite for the purified functions`
-                  : `Run a ${runnerLanguage.label} smoke check: passes when the purified artifact exits with code 0`
-              }
-              className="group relative flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-spectral/40 bg-spectral/5 px-2.5 py-2 font-mono text-[13px] uppercase tracking-[0.14em] text-spectral transition hover:bg-spectral/10 hover:shadow-[0_0_24px_rgba(6,182,212,0.18)] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-slate-700"
-            >
-              {testStatus === "running" ? (
-                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-              ) : (
-                <FlaskConical className="h-3.5 w-3.5 shrink-0" />
-              )}
-              <span className="whitespace-nowrap">
-                {testStatus === "running" ? "Testing" : "GEN TEST"}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={handleSandbox}
-              disabled={!finalCode || sandboxStatus === "running"}
-              title={
-                finalCode
-                  ? runnerLanguage.local
-                    ? "Run the purified JavaScript in a 2-second sandboxed Web Worker"
-                    : `Run the purified ${runnerLanguage.label} on the remote 25-second sandbox`
-                  : "The sandbox is sealed until the purified artifact arrives"
-              }
-              className="group relative flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-haunt/40 bg-haunt/5 px-2.5 py-2 font-mono text-[13px] uppercase tracking-[0.14em] text-haunt transition hover:bg-haunt/10 hover:shadow-[0_0_24px_rgba(147,51,234,0.18)] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-slate-700"
-            >
-              {sandboxStatus === "running" ? (
-                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
-              ) : (
-                <Play className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              )}
-              <span className="whitespace-nowrap">Test sandbox</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={originalCode === null}
-              title={
-                originalCode === null
-                  ? "The autopsy is sealed until the ritual completes"
-                  : "Download the exorcism autopsy report"
-              }
-              className="group relative flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-spectral/40 bg-spectral/5 px-2.5 py-2 font-mono text-[13px] uppercase tracking-[0.14em] text-spectral transition hover:bg-spectral/10 hover:shadow-[0_0_24px_rgba(6,182,212,0.18)] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-slate-700"
-            >
-              <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span className="whitespace-nowrap">Export report</span>
-            </button>
-            <button
-              type="button"
-              onClick={handlePatch}
-              disabled={!patch}
-              title={
-                patch
-                  ? `Download necrocode-fix.patch for ${patchPath(filename, runnerLanguage.extension)} — apply with: git apply necrocode-fix.patch`
-                  : originalCode === null
-                    ? "The patch is sealed until the ritual completes"
-                    : "No changes to patch"
-              }
-              className="group relative flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-neon/40 bg-neon/5 px-2.5 py-2 font-mono text-[13px] uppercase tracking-[0.14em] text-neon transition hover:bg-neon/10 hover:shadow-[0_0_24px_rgba(0,255,102,0.18)] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-slate-700"
-            >
-              <FileDiff className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span className="whitespace-nowrap">.patch</span>
-            </button>
-          </div>
-        </div>
-      )}
     </aside>
   );
 }

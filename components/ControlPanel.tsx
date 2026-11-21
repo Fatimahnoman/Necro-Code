@@ -30,7 +30,7 @@ import {
   RUNNER_LANGUAGES,
 } from "@/lib/languages";
 import { RITUAL_PRESETS } from "@/lib/presets";
-import type { AgentPhase, ExorcismSummary } from "@/lib/types";
+import type { AgentPhase } from "@/lib/types";
 
 interface ControlPanelProps {
   code: string;
@@ -48,7 +48,6 @@ interface ControlPanelProps {
   running: boolean;
   phase: AgentPhase;
   progress: number;
-  summary: ExorcismSummary | null;
 }
 
 const PHASE_LABEL: Record<AgentPhase, string> = {
@@ -58,25 +57,6 @@ const PHASE_LABEL: Record<AgentPhase, string> = {
   executing: "Exorcising",
   complete: "Purified",
 };
-
-function Stat({
-  label,
-  value,
-  className,
-}: {
-  label: string;
-  value: number;
-  className: string;
-}) {
-  return (
-    <div
-      className={`rounded-lg border px-2 py-1.5 text-center font-mono uppercase tracking-[0.16em] ${className}`}
-    >
-      <div className="text-[14px] font-semibold leading-none">{value}</div>
-      <div className="mt-1 text-[12px] text-slate-400">{label}</div>
-    </div>
-  );
-}
 
 export function ControlPanel({
   code,
@@ -94,7 +74,6 @@ export function ControlPanel({
   running,
   phase,
   progress,
-  summary,
 }: ControlPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const githubInputRef = useRef<HTMLInputElement>(null);
@@ -176,7 +155,7 @@ export function ControlPanel({
   };
 
   return (
-    <aside className="rune-border horror-panel relative flex h-full min-h-0 flex-col justify-between gap-2 overflow-x-hidden overflow-y-auto rounded-2xl p-4">
+    <aside className="rune-border horror-panel relative flex h-full min-h-0 flex-col gap-3 overflow-x-hidden overflow-y-auto rounded-2xl p-4">
       <header className="flex shrink-0 items-center gap-3 border-b border-white/5 pb-3">
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-crimson/40 bg-crimson/10 shadow-[0_0_22px_rgba(255,0,60,0.22)]">
           <Skull className="h-4.5 w-4.5 text-crimson" aria-hidden />
@@ -193,11 +172,11 @@ export function ControlPanel({
 
       {/* Template selector */}
       <div className="shrink-0 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="font-mono text-[13px] uppercase tracking-[0.24em] text-slate-400">
-            Cursed template
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="whitespace-nowrap font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-300">
+            Presets
           </span>
-          <span className="flex items-center gap-1.5">
+          <span className="flex shrink-0 items-center gap-1.5">
             <button
               type="button"
               onClick={() => setGithubOpen((open) => !open)}
@@ -205,22 +184,22 @@ export function ControlPanel({
               aria-controls="github-summon"
               title="Summon a file from a public GitHub repository"
               className={[
-                "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[13px] uppercase tracking-[0.18em] transition",
+                "inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2 font-mono text-[11px] font-medium uppercase leading-none tracking-[0.12em] transition",
                 githubOpen
-                  ? "border-haunt/50 bg-haunt/10 text-haunt-glow"
-                  : "border-haunt/25 text-haunt hover:bg-haunt/10",
+                  ? "border-haunt/60 bg-haunt/15 text-haunt-glow"
+                  : "border-haunt/40 bg-haunt/5 text-zinc-200 hover:bg-haunt/10 hover:text-white",
               ].join(" ")}
             >
-              <GitBranch className="h-2.5 w-2.5" aria-hidden />
+              <GitBranch className="h-3.5 w-3.5 shrink-0 text-haunt-glow" aria-hidden />
               GitHub
             </button>
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               title="Upload a cursed artifact in any supported language"
-              className="inline-flex items-center gap-1 rounded-md border border-spectral/25 px-1.5 py-0.5 font-mono text-[13px] uppercase tracking-[0.18em] text-spectral transition hover:bg-spectral/10"
+              className="inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-spectral/40 bg-spectral/5 px-2 font-mono text-[11px] font-medium uppercase leading-none tracking-[0.12em] text-zinc-200 transition hover:bg-spectral/10 hover:text-white"
             >
-              <Upload className="h-2.5 w-2.5" aria-hidden />
+              <Upload className="h-3.5 w-3.5 shrink-0 text-spectral" aria-hidden />
               Upload
             </button>
           </span>
@@ -298,7 +277,7 @@ export function ControlPanel({
                   onSelectPreset(event.target.value);
                 }
               }}
-              aria-label="Cursed template"
+              aria-label="Cursed preset"
               className="w-full appearance-none rounded-lg border border-white/10 bg-black/60 py-1.5 pl-2.5 pr-8 font-mono text-[13px] uppercase tracking-[0.12em] text-bone outline-none transition [color-scheme:dark] focus:border-haunt/50"
             >
               <option value="custom" disabled className="bg-crypt text-bone">
@@ -349,7 +328,7 @@ export function ControlPanel({
       </div>
 
       {/* Editor */}
-      <div className="flex flex-1 flex-col gap-2">
+      <div className="flex min-h-[260px] flex-1 flex-col gap-2">
         <div className="flex shrink-0 items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 font-mono text-[13px] uppercase tracking-[0.24em] text-slate-400">
             <Sparkles className="h-2.5 w-2.5 text-haunt" aria-hidden />
@@ -385,7 +364,7 @@ export function ControlPanel({
           </span>
         </div>
 
-        <div className="h-[140px] min-h-[140px] max-h-[140px] w-full shrink-0 overflow-hidden">
+        <div className="flex min-h-[220px] w-full flex-1">
           <textarea
             value={code}
             onChange={(event) => onCodeChange(event.target.value)}
@@ -394,7 +373,7 @@ export function ControlPanel({
             spellCheck={false}
             aria-label="Cursed code artifact"
             placeholder="// Paste a cursed artifact in any supported language…"
-            className="h-[140px] min-h-[140px] max-h-[140px] w-full shrink-0 resize-none overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-purple-800/50 bg-black/80 p-3 font-mono text-[14px] leading-relaxed text-purple-100 outline-none placeholder:text-purple-300/30"
+            className="h-full min-h-[220px] w-full flex-1 resize-none overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-purple-800/50 bg-black/80 p-3 font-mono text-[13px] leading-relaxed text-purple-100 outline-none transition placeholder:text-purple-300/30 focus:border-haunt/60 focus:shadow-[0_0_18px_rgba(147,51,234,0.12)]"
           />
         </div>
 
@@ -422,26 +401,6 @@ export function ControlPanel({
             />
           </div>
         </div>
-
-        {summary && (
-          <div className="grid grid-cols-3 gap-1.5">
-            <Stat
-              label="Cursed"
-              value={summary.detected}
-              className="border-crimson/25 bg-crimson/5 text-crimson"
-            />
-            <Stat
-              label="Silenced"
-              value={summary.fixed}
-              className="border-neon/25 bg-neon/5 text-neon"
-            />
-            <Stat
-              label="Residual"
-              value={summary.unresolved}
-              className="border-haunt/25 bg-haunt/5 text-haunt"
-            />
-          </div>
-        )}
 
         <motion.button
           type="button"

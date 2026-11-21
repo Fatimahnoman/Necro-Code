@@ -25,12 +25,68 @@ type LabelRefMap = Partial<Record<StageId, HTMLDivElement | null>>;
 const LABEL_OFFSET = new THREE.Vector3(0, -0.84, 0);
 const BADGE_OFFSET = new THREE.Vector3(0.52, 0.5, 0);
 
+/** Seal orbit: half-width / half-height of the ritual square (local units). */
+const ORBIT_X = 2.55;
+const ORBIT_Y = 1.5;
+
 const POSITIONS: Record<StageId, [number, number, number]> = {
-  input_code: [-2.25, 1.35, 0],
-  glitch_scanner: [2.25, 1.35, 0],
-  exorcism_reasoning: [2.25, -1.35, 0],
-  clean_code_output: [-2.25, -1.35, 0],
+  input_code: [-ORBIT_X, ORBIT_Y, 0],
+  glitch_scanner: [ORBIT_X, ORBIT_Y, 0],
+  exorcism_reasoning: [ORBIT_X, -ORBIT_Y, 0],
+  clean_code_output: [-ORBIT_X, -ORBIT_Y, 0],
 };
+
+const CAMERA_Z = 6.2;
+const CAMERA_FOV = 45;
+const MAX_GRAPH_SCALE = 1.12;
+const MIN_GRAPH_SCALE = 0.4;
+/** Seal ring radius × hover scale + float amplitude. */
+const SEAL_REACH = 0.82;
+/** Half the height of a projected stage label, in px. */
+const LABEL_HALF_HEIGHT_PX = 12;
+/** Gap kept between labels and the canvas edge, in px. */
+const EDGE_GAP_PX = 8;
+
+export function labelMaxPx(width: number): number {
+  return Math.min(158, Math.max(94, width * 0.29));
+}
+
+/**
+ * Largest graph scale (capped at `MAX_GRAPH_SCALE`) that keeps the seals,
+ * their HTML labels, and the reserved HUD strips inside the canvas, plus the
+ * vertical offset that centres the graph between those strips.
+ */
+export function fitGraph(
+  width: number,
+  height: number,
+  reserveTopPx: number,
+  reserveBottomPx: number,
+): { scale: number; offsetY: number } {
+  const h = Math.max(height, 1);
+  const halfH = CAMERA_Z * Math.tan(((CAMERA_FOV / 2) * Math.PI) / 180);
+  const halfW = halfH * (Math.max(width, 1) / h);
+  const unitsPerPx = (2 * halfH) / h;
+
+  const top = halfH - reserveTopPx * unitsPerPx;
+  const bottom = -halfH + (reserveBottomPx + LABEL_HALF_HEIGHT_PX) * unitsPerPx;
+  const localTop = ORBIT_Y + SEAL_REACH;
+  const localBottom = ORBIT_Y - LABEL_OFFSET.y;
+  const byHeight = (top - bottom) / (localTop + localBottom);
+
+  const edge = EDGE_GAP_PX * unitsPerPx;
+  const labelHalf = (labelMaxPx(width) / 2) * unitsPerPx;
+  const byWidth = Math.min(
+    (halfW - edge - labelHalf) / ORBIT_X,
+    (halfW - edge) / (ORBIT_X + SEAL_REACH),
+  );
+
+  const scale = Math.min(
+    MAX_GRAPH_SCALE,
+    Math.max(MIN_GRAPH_SCALE, Math.min(byHeight, byWidth)),
+  );
+  const offsetY = (top + bottom) / 2 - (scale * (localTop - localBottom)) / 2;
+  return { scale, offsetY };
+}
 
 const EDGES: Array<[StageId, StageId]> = [
   ["input_code", "glitch_scanner"],
@@ -193,7 +249,7 @@ function LabelProjector({
 
   useFrame(() => {
     const inset = size.width < 600 ? 14 : 0;
-    const labelMax = Math.min(158, Math.max(94, size.width * 0.29));
+    const labelMax = labelMaxPx(size.width);
     const labelMaxValue = `${labelMax}px`;
 
     for (const stage of WORKFLOW_STAGES) {
@@ -242,7 +298,19 @@ function CentralRelic({ aura }: { aura: AuraState }) {
   const wireMat = useRef<THREE.MeshBasicMaterial>(null);
   const coreMat = useRef<THREE.MeshStandardMaterial>(null);
   const ringMat = useRef<THREE.MeshBasicMaterial>(null);
+  const rimMat = useRef<THREE.MeshBasicMaterial>(null);
+  const innerWireMat = useRef<THREE.MeshBasicMaterial>(null);
+  const edgeMat = useRef<THREE.LineBasicMaterial>(null);
   const light = useRef<THREE.PointLight>(null);
+  const rimLight = useRef<THREE.PointLight>(null);
+
+  const coreEdges = useMemo(() => {
+    const source = new THREE.DodecahedronGeometry(0.96, 0);
+    const edges = new THREE.EdgesGeometry(source);
+    source.dispose();
+    return edges;
+  }, []);
+  useEffect(() => () => coreEdges.dispose(), [coreEdges]);
 
   const targetColor = useMemo(() => new THREE.Color(AURA_HEX[aura]), [aura]);
   const currentColor = useRef(new THREE.Color(AURA_HEX[aura]));
@@ -263,6 +331,12 @@ function CentralRelic({ aura }: { aura: AuraState }) {
 
     wireMat.current?.color.copy(currentColor.current);
     ringMat.current?.color.copy(currentColor.current);
+    rimMat.current?.color.copy(currentColor.current);
+    innerWireMat.current?.color.copy(currentColor.current);
+    edgeMat.current?.color.copy(currentColor.current);
+    if (rimMat.current) {
+      rimMat.current.opacity = 0.14 + (Math.sin(t * 1.7) * 0.5 + 0.5) * 0.12;
+    }
     if (coreMat.current) {
       coreMat.current.color.copy(currentColor.current);
       coreMat.current.emissive.copy(currentColor.current);
@@ -273,6 +347,9 @@ function CentralRelic({ aura }: { aura: AuraState }) {
     if (light.current) {
       light.current.color.copy(currentColor.current);
       light.current.intensity = aura === "crimson" ? 18 : 11;
+    }
+    if (rimLight.current) {
+      rimLight.current.color.copy(currentColor.current);
     }
   });
 
@@ -285,12 +362,50 @@ function CentralRelic({ aura }: { aura: AuraState }) {
           color={AURA_HEX[aura]}
           wireframe
           transparent
-          opacity={0.48}
+          opacity={0.62}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* Hologram rim: back faces glow at the silhouette edge. */}
+      <mesh scale={1.08}>
+        <icosahedronGeometry args={[0.96, 1]} />
+        <meshBasicMaterial
+          ref={rimMat}
+          color={AURA_HEX[aura]}
+          side={THREE.BackSide}
+          transparent
+          opacity={0.16}
+          blending={THREE.AdditiveBlending}
           depthWrite={false}
         />
       </mesh>
 
       <group ref={core} scale={0.64}>
+        {/* Inner counter-rotating wireframe lattice. */}
+        <mesh scale={0.78}>
+          <icosahedronGeometry args={[0.96, 1]} />
+          <meshBasicMaterial
+            ref={innerWireMat}
+            color={AURA_HEX[aura]}
+            wireframe
+            transparent
+            opacity={0.85}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+        <lineSegments geometry={coreEdges}>
+          <lineBasicMaterial
+            ref={edgeMat}
+            color={AURA_HEX[aura]}
+            transparent
+            opacity={0.95}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </lineSegments>
         <mesh>
           <dodecahedronGeometry args={[0.96, 0]} />
           <meshStandardMaterial
@@ -334,6 +449,20 @@ function CentralRelic({ aura }: { aura: AuraState }) {
         color={AURA_HEX[aura]}
         intensity={12}
         distance={7.5}
+      />
+      {/* Sharp rim lights behind the relic so its edges catch light. */}
+      <pointLight
+        ref={rimLight}
+        position={[1.4, 1.1, -1.3]}
+        color={AURA_HEX[aura]}
+        intensity={9}
+        distance={4.5}
+      />
+      <pointLight
+        position={[-1.4, -0.9, -1.2]}
+        color={AURA_HEX.purple}
+        intensity={6}
+        distance={4.5}
       />
 
       <mesh rotation={[Math.PI / 2, 0, 0]}>
@@ -452,6 +581,8 @@ function Graph({
   nodeRefs,
   labelRefs,
   badgeRef,
+  reserveTopPx,
+  reserveBottomPx,
 }: {
   nodes: NodeStatusMap;
   activeStage: StageId | null;
@@ -462,13 +593,19 @@ function Graph({
   nodeRefs: NodeRefMap;
   labelRefs: MutableRefObject<LabelRefMap>;
   badgeRef: MutableRefObject<HTMLDivElement | null>;
+  reserveTopPx: number;
+  reserveBottomPx: number;
 }) {
   const { size } = useThree();
-  const aspect = size.width / Math.max(size.height, 1);
-  const scale = Math.min(1, Math.max(0.55, (6.3 * aspect) / 8.1));
+  const { scale, offsetY } = fitGraph(
+    size.width,
+    size.height,
+    reserveTopPx,
+    reserveBottomPx,
+  );
 
   return (
-    <group scale={scale} position={[0, 0.05, 0]}>
+    <group scale={scale} position={[0, offsetY, 0]}>
       <mesh position={[0, 0, -1.4]}>
         <sphereGeometry args={[2.5, 32, 32]} />
         <meshBasicMaterial
@@ -530,6 +667,8 @@ export function ExecutionGraph3D({
   selected,
   onSelect,
   onClear,
+  reserveTopPx = 64,
+  reserveBottomPx = 44,
 }: {
   nodes: NodeStatusMap;
   activeStage: StageId | null;
@@ -538,6 +677,10 @@ export function ExecutionGraph3D({
   selected: StageId | null;
   onSelect: (stage: StageId) => void;
   onClear: () => void;
+  /** Height of the HUD strip over the top of the canvas, in px. */
+  reserveTopPx?: number;
+  /** Height of the HUD strip (footer or timeline) over the bottom, in px. */
+  reserveBottomPx?: number;
 }) {
   const nodeRefs = useRef<NodeRefMap>({
     input_code: { current: null },
@@ -551,7 +694,7 @@ export function ExecutionGraph3D({
   return (
     <div className="relative h-full w-full">
       <Canvas
-        camera={{ position: [0, 0.18, 7.2], fov: 45 }}
+        camera={{ position: [0, 0.18, CAMERA_Z], fov: CAMERA_FOV }}
         dpr={[1, 1.8]}
         gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
         onCreated={({ gl }) => gl.setClearColor(0x06060c, 0)}
@@ -576,6 +719,8 @@ export function ExecutionGraph3D({
             nodeRefs={nodeRefs.current}
             labelRefs={labelRefs}
             badgeRef={badgeRef}
+            reserveTopPx={reserveTopPx}
+            reserveBottomPx={reserveBottomPx}
           />
         </Suspense>
         <OrbitControls

@@ -9,9 +9,9 @@ const PHASE_META: Record<
 > = {
   idle: {
     label: "Dormant",
-    dot: "bg-slate-500",
-    text: "text-slate-400",
-    ring: "border-white/10",
+    dot: "bg-zinc-500",
+    text: "text-zinc-200",
+    ring: "border-white/15",
   },
   thinking: {
     label: "Channelling",
@@ -45,7 +45,7 @@ export function StatusPill({ phase }: { phase: AgentPhase }) {
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 rounded-full border bg-black/40 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.22em] backdrop-blur-md ${meta.ring} ${meta.text}`}
+      className={`inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border bg-black/50 px-2.5 font-mono text-[11px] font-medium uppercase leading-none tracking-[0.14em] backdrop-blur-md ${meta.ring} ${meta.text}`}
     >
       <span className="relative flex h-1.5 w-1.5">
         {animated && (

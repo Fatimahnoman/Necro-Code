@@ -134,7 +134,7 @@ so that I can evaluate it quickly.
 #### Acceptance criteria
 
 1. WHEN the header renders, THE dashboard SHALL display `NECROCODE` and `// AI CODE EXORCIST`.
-2. WHEN the viewport is `lg` or wider, THE dashboard SHALL lay out Spellbook, Ritual Graph, and Grimoire Terminal as three equal columns; on smaller viewports THE dashboard SHALL stack them.
+2. WHEN the viewport is `lg` or wider, THE dashboard SHALL lay out Spellbook, Ritual Graph, and Grimoire Terminal as three proportional columns (`1.05fr / 1.35fr / 1.1fr`, with 340 / 440 / 360px minimums from `xl`); on smaller viewports THE dashboard SHALL stack them.
 3. WHEN the user clicks `AUTO DEMO`, THE dashboard SHALL load the `async-memory-leak` artifact, set the demo directive, and start a run.
 4. WHEN an `AUTO DEMO` run completes with a purified artifact, THE Terminal SHALL switch to the Spectral Diff tab and SHALL start the sandbox run.
 5. WHEN a run completes, THE client SHALL save it to the Grimoire History in `localStorage` (`necrocode.grimoire-history.v1`), keeping the last 10 entries.
