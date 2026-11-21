@@ -647,7 +647,8 @@ The build must finish with **zero TypeScript/ESLint errors**. Open
 | 🩸 **EXORCISE CODE** | Opens the SSE ritual: binding → scanning → reasoning → optional live rewrite → purified output. Fires the `DHUM!` slam when **3D AUDIO FX** is on. |
 | 🎬 **AUTO DEMO** | Loads the `async-memory-leak` artifact with a demo directive, runs the ritual, then opens **SPECTRAL DIFF** and runs the sandbox. |
 | ⏱️ **Timeline** | After a run completes, the `DORMANT · SCANNING · EXORCISING · PURIFIED` buttons under the graph select each stage's seal for inspection. |
-| ✅ **GEN TEST** | Generates assertions that each function in the purified artifact exists, runs them in the sandbox, and shows a `PASS` / `FAIL` badge. |
+| ✅ **GEN TEST** | Builds a smoke test in the runtime's own language: JS/TS assert that each top-level function still exists, Python appends `assert callable(...)`, and every other runtime runs unchanged. Shows `PASS` / `FAIL`, or `PASS (Runtime Smoke Check)` when only the exit code (0) is checked. |
+| 🧭 **Runtime pre-flight** | Before **TEST SANDBOX** or **GEN TEST**, a signature check compares the code with the selected runtime. A clear mismatch (e.g. Python code with C++ selected) is stopped with `⚠ Language Mismatch: …` in the sandbox panel and nothing runs. |
 | 💀 **Click a 3D seal** | Opens an X-Ray HUD with engine, stage time in ms, severity breakdown, and status. |
 | 🖱️ **Drag the graph** | Orbits the ritual altar; page scroll stays intact. |
 | 🔍 **SPECTRAL DIFF** | Shows the original vs purified artifact line-by-line with `-` / `+` highlights. |

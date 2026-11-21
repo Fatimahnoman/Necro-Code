@@ -90,3 +90,13 @@ when the code exists in this repository.
 - [ ] 16. Build verification for tasks 14–15
   - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` with npm registry access and tick this box once all three pass. The Kiro sandbox still had no npm registry access; only the server-side and `lib/` files were typechecked there (TypeScript, `strict`, stubbed `next/server`). `ControlPanel.tsx`, `Terminal.tsx`, and `page.tsx` were not typechecked or linted.
   - Manually verify a live summon against a real public repo (the sandbox could not reach GitHub raw).
+
+- [x] 17. Runtime pre-flight and multi-language `GEN TEST`
+  - [x] 17.1 `detectCodeLanguage()` signature table and `checkRuntimeMatch()` in `lib/languages.ts`. _R11.1–R11.4_
+  - [x] 17.2 `reject()` and `exitCode` in `useCodeSandbox`; pre-flight in `Test sandbox` and `GEN TEST`. _R11.1, R11.2_
+  - [x] 17.3 `lib/smokeTest.ts`: JS, TS/TSX, Python, and unchanged-artifact harnesses; `smokePassed()` and `smokeLabel()`. _R11.5–R11.10_
+  - [x] 17.4 Terminal badge shows `PASS`, `FAIL`, or `PASS (Runtime Smoke Check)`. _R11.9, R11.10_
+
+- [ ] 18. Build and live-runtime verification for task 17
+  - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build`. The sandbox still had no npm registry access; `lib/languages.ts`, `lib/smokeTest.ts`, and `lib/useCodeSandbox.ts` were typechecked with a stubbed `react`, but `Terminal.tsx` was not typechecked or linted.
+  - Run `GEN TEST` once on Paiza for TypeScript, Python, and one compiled runtime (e.g. C++). The sandbox could not reach Paiza.

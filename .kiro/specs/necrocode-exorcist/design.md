@@ -272,6 +272,55 @@ reject such files up front).
 
 `PAIZA_API_BASE` and `PAIZA_API_KEY` are optional server-side env vars.
 
+## Runtime pre-flight and `GEN TEST` design
+
+### `detectCodeLanguage(code)` (`lib/languages.ts`)
+
+- A table of `[LanguageId, RegExp, weight]` signatures, mostly line-anchored.
+  Each matching signature adds its weight once. Examples: Python
+  `def f(...):` (3), `__name__ == "__main__"` (3); C++ `#include <iostream>`
+  (4), `std::` (3); C `#include <stdio.h>` (4); Java `System.out.print` (4);
+  Go `package main` (3), `fmt.Println` (4); Rust `fn name(` (3),
+  `println!(` (4); JS `console.log(` (3), `const`/`let`/`var` (2), `=>` (2).
+- JavaScript and TypeScript scores are merged; the family is TypeScript when
+  TS-only signatures (type annotations, `interface`, `as const`) score ≥ 2.
+  C++ absorbs C's shared signatures (`int main`, `printf`) when C++ markers
+  score ≥ 3.
+- Returns `{ id, label, score, runnerUp, scores }` or `null`.
+
+### `checkRuntimeMatch(code, selected)`
+
+Blocks only when all hold: `score ≥ 4`, `score > runnerUp`, the detected
+language cannot run on the selected runtime, and the selected runtime scored
+below 3. Compatible pairs: JS → JS/TS/TSX, TS → TS/TSX, C → C/C++/Objective-C.
+
+On a block, `useCodeSandbox().reject(lines)` sets the panel to status `error`
+with mode `null` and two lines: the `⚠ Language Mismatch: …` warning and a
+`Detected <lang> (signature score N). Nothing was executed.` note.
+
+Known limits: it is a heuristic. Short or ambiguous snippets (e.g. a lone
+`print("x")`, or R code scoring 3) are never blocked. Keywords inside strings
+can add score.
+
+### Harnesses (`lib/smokeTest.ts`)
+
+| Runtime | Harness | Pass rule |
+| --- | --- | --- |
+| JavaScript (local worker) | `__necroAssert` + async IIFE returning top-level functions; prints `ALL SMOKE TESTS PASSED` | completed and marker printed |
+| TypeScript / TSX (remote) | Typed `__necroRun()` + `.then` assertions; `.catch` sets `process.exitCode = 1` | completed, exit `0`, marker printed |
+| Python 3 (remote) | Artifact + `assert callable(<fn>)` per top-level `def` + `print("ALL SMOKE TESTS PASSED")` | completed, exit `0`, marker printed |
+| All other 25 runtimes (remote) | Artifact unchanged | completed, exit `0` |
+
+- Top-level `export` keywords are stripped for JS/TS because the artifact runs
+  inside a function body.
+- `smokeLabel()` returns `PASS` / `FAIL` when functions were asserted and
+  `PASS (Runtime Smoke Check)` / `FAIL (Runtime Smoke Check)` otherwise.
+- `useCodeSandbox` now exposes `exitCode` (string, `null` for local runs).
+- A plain `Test sandbox` click cancels grading of a pending `GEN TEST`.
+- Known limits: Python code that calls `sys.exit()` never prints the marker
+  and is reported `FAIL`; artifacts with top-level `import` statements still
+  fail in the local JS worker, as before.
+
 ## Audio design
 
 | Engine | Source | Behavior |
@@ -297,3 +346,10 @@ reject such files up front).
   file byte for byte. The script is not committed (see task 12).
 - Verification is `npx tsc --noEmit`, `npm run lint`, `npm run build`, plus the manual checklist in `README.md` (“How to Test the Running App”).
 - `GEN TEST` is a runtime smoke check for purified artifacts, not a project test suite.
+- The detector and harnesses were checked with a throwaway script: 19 sample
+  programs in 19 languages were detected correctly on their own runtime
+  except R (score 3, below the threshold, so never blocked); Python was blocked
+  on C++ and JavaScript; JS/TS/C compatible pairs and all presets (original and
+  purified) passed pre-flight. The JS, TS (compiled with `tsc`), and Python
+  harnesses were executed locally and printed the marker; a Python harness
+  with a missing function failed with exit code 1.

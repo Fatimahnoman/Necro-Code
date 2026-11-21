@@ -110,7 +110,7 @@ that I can confirm it executes.
 2. WHEN the user runs an artifact in any other supported language, THE sandbox SHALL send it to `POST /api/run`, which SHALL forward it to the Paiza.IO runner with a 20-second server deadline.
 3. WHEN a remote run exceeds 25 seconds on the client, THE sandbox SHALL report a timeout.
 4. WHEN the user starts the first remote run, THE sandbox SHALL warn that the code leaves the browser and is executed by Paiza.IO.
-5. WHEN the user clicks `GEN TEST` and a purified artifact exists, THE Terminal SHALL generate assertions that every declared function name exists as a function, SHALL run them through the sandbox, and SHALL show a `PASS` or `FAIL` badge.
+5. WHEN the user clicks `GEN TEST` and a purified artifact exists, THE Terminal SHALL build a smoke harness for the selected runtime (see Requirement 11) and SHALL run it through the sandbox.
 
 ### Requirement 7 — Adaptive horror audio
 
@@ -170,3 +170,22 @@ I can judge the risk of a file and ship the fix in my own repository.
 6. WHEN the patch is built, THE system SHALL use the editor filename or GitHub path as `<path>`, SHALL fall back to `artifact.<ext>` for absolute or `..` paths, and SHALL keep the original file's trailing-newline style.
 7. WHEN no lines changed, THE `.patch` button SHALL be disabled.
 8. WHEN the autopsy report is exported and both scores exist, THE report SHALL include the before → after score and the weights.
+
+### Requirement 11 — Runtime pre-flight and multi-language `GEN TEST`
+
+**User story:** As a developer, I want the sandbox to catch a wrong runtime and
+to test my code in its own language, so that a failure means my code failed,
+not the harness.
+
+#### Acceptance criteria
+
+1. WHEN the user clicks `Test sandbox` or `GEN TEST`, THE Terminal SHALL run `checkRuntimeMatch()` (`lib/languages.ts`) on the purified artifact before anything executes.
+2. WHEN `detectCodeLanguage()` finds a language with a signature score of at least 4, the score beats every other language, that language cannot run on the selected runtime, and the selected runtime's own score is below 3, THE Terminal SHALL NOT run the code and SHALL show in the Sandbox output panel: `⚠ Language Mismatch: Your code looks like <DetectedLanguage>, but <SelectedRuntime> is selected. Please switch the runtime selector next to the filename to <DetectedLanguage> and run again.`
+3. WHEN the detected language is JavaScript and the runtime is TypeScript or TSX, or the detected language is TypeScript and the runtime is TSX, or the detected language is C and the runtime is C++ or Objective-C, THE pre-flight SHALL allow the run.
+4. IF no signature reaches the threshold, THEN THE pre-flight SHALL allow the run.
+5. WHEN the runtime is JavaScript, THE `GEN TEST` harness SHALL wrap the artifact in an async function, assert with a JS `__necroAssert` that every top-level function (column-0 `function` declarations and arrow/function `const`/`let`/`var`) still exists, and print `ALL SMOKE TESTS PASSED`.
+6. WHEN the runtime is TypeScript or TSX, THE harness SHALL do the same with typed TypeScript and without top-level `await`, and SHALL set a non-zero exit code on failure.
+7. WHEN the runtime is Python 3, THE harness SHALL append `assert callable(<fn>)` for every top-level `def` and `print("ALL SMOKE TESTS PASSED")`, and SHALL NOT contain JavaScript syntax.
+8. WHEN the runtime is any other language, THE harness SHALL run the artifact unchanged.
+9. WHEN a JS/TS/Python harness finishes, THE Terminal SHALL show `PASS` only if the run completed, the remote exit code (if any) is `0`, and stdout contains `ALL SMOKE TESTS PASSED`; otherwise `FAIL`.
+10. WHEN an unchanged-artifact harness finishes, THE Terminal SHALL show `PASS (Runtime Smoke Check)` only if the run completed with exit code `0`; otherwise `FAIL (Runtime Smoke Check)`. A JS/TS/Python harness with no functions to assert SHALL use the same labels.

@@ -342,3 +342,233 @@ export function isAnalyzerLanguage(id: string): boolean {
 export function isLocalSandboxLanguage(id: string): boolean {
   return findLanguage(id).local;
 }
+
+// ── Language signature detection (sandbox pre-flight) ───────
+
+/**
+ * One signature: a pattern that, when present anywhere in the artifact, adds
+ * `weight` to that language's score. Presence counts once; repeats do not add.
+ * Patterns are mostly line-anchored (`m` flag) so a keyword inside a string
+ * or comment on another language's line rarely triggers them.
+ */
+type Signature = readonly [LanguageId, RegExp, number];
+
+const SIGNATURES: readonly Signature[] = [
+  // Python
+  ["python", /^\s*(async\s+)?def\s+\w+\s*\([^)]*\)\s*(->\s*[^:]+)?:\s*(#.*)?$/m, 3],
+  ["python", /^\s*(if|elif|else|for|while|with|try|except|finally|class)\b[^{};]*:\s*(#.*)?$/m, 2],
+  ["python", /__name__\s*==\s*["']__main__["']/, 3],
+  ["python", /^\s*from\s+[\w.]+\s+import\s+[\w*]/m, 2],
+  ["python", /^\s*import\s+[\w.]+(\s+as\s+\w+)?\s*$/m, 1],
+  ["python", /^\s*print\s*\([^;]*\)\s*$/m, 1],
+  ["python", /\bself\.\w+/, 1],
+  ["python", /\b(None|True|False)\b/, 1],
+
+  // JavaScript (TypeScript-only signatures are below)
+  ["javascript", /^\s*(export\s+)?(const|let|var)\s+[\w${[]/m, 2],
+  ["javascript", /\bfunction\b\s*\*?\s*[\w$]*\s*\(/, 2],
+  ["javascript", /=>/, 2],
+  ["javascript", /\bconsole\.(log|error|warn|info|debug)\s*\(/, 3],
+  ["javascript", /\b(require\s*\(|module\.exports|document\.|window\.)/, 2],
+  ["javascript", /^\s*import\s.+\sfrom\s+["']/m, 3],
+  ["javascript", /===|!==/, 2],
+
+  // TypeScript
+  ["typescript", /:\s*(string|number|boolean|void|unknown|never|any)\b(\[\])?\s*[,)=;{]/, 2],
+  ["typescript", /^\s*(export\s+)?(interface|type|enum)\s+\w+(<[^>]*>)?\s*(=|\{)/m, 3],
+  ["typescript", /\bas\s+(const|string|number|unknown)\b/, 2],
+  ["typescript", /\b(private|public|readonly|protected)\s+\w+\s*[:(]/, 2],
+
+  // C / C++ / Objective-C
+  ["c", /^\s*#include\s*<(stdio|stdlib|string|math|stdbool|stdint|ctype|time|assert|limits)\.h>/m, 4],
+  ["c", /\b(printf|scanf|malloc|free)\s*\(/, 2],
+  ["c", /\bint\s+main\s*\(/, 2],
+  ["cpp", /^\s*#include\s*<(iostream|vector|string|map|set|algorithm|memory|bits\/stdc\+\+\.h|unordered_map|sstream|fstream|cstdio|cstdlib)>/m, 4],
+  ["cpp", /\bstd::/, 3],
+  ["cpp", /\busing\s+namespace\s+std\b/, 4],
+  ["cpp", /\b(cout|cerr)\s*<<|\bcin\s*>>/, 3],
+  ["objectivec", /^\s*#import\s*[<"]/m, 4],
+  ["objectivec", /@(interface|implementation|autoreleasepool|property)\b/, 3],
+  ["objectivec", /\bNSLog\s*\(/, 3],
+
+  // JVM / .NET
+  ["java", /\bSystem\.out\.print/, 4],
+  ["java", /\bpublic\s+static\s+void\s+main\s*\(\s*String/, 4],
+  ["java", /^\s*import\s+java\./m, 4],
+  ["java", /^\s*package\s+[\w.]+\s*;/m, 2],
+  ["java", /\bpublic\s+(final\s+|abstract\s+)?class\s+\w+/, 2],
+  ["csharp", /\bConsole\.(Write|WriteLine|ReadLine)\s*\(/, 4],
+  ["csharp", /^\s*using\s+System(\.\w+)*\s*;/m, 4],
+  ["csharp", /\bstatic\s+(async\s+)?(void|int|Task)\s+Main\s*\(/, 4],
+  ["kotlin", /\bfun\s+\w+\s*\(/, 4],
+  ["kotlin", /^\s*val\s+\w+/m, 2],
+  ["scala", /^\s*object\s+\w+/m, 3],
+  ["scala", /\bextends\s+App\b/, 4],
+  ["scala", /\bdef\s+main\s*\(\s*args\s*:\s*Array\[String\]\s*\)/, 4],
+  ["scala", /\bdef\s+\w+\s*(\[[^\]]*\])?\s*\([^)]*\)\s*(:\s*[\w[\]]+)?\s*=\s/, 3],
+  ["fsharp", /\bprintfn\b/, 4],
+  ["vb", /^\s*Module\s+\w+/m, 4],
+  ["vb", /^\s*(Public\s+|Private\s+)?(Sub|Function)\s+\w+/m, 3],
+  ["vb", /\bDim\s+\w+\s+As\b/, 4],
+
+  // Systems
+  ["go", /^\s*package\s+\w+\s*$/m, 3],
+  ["go", /\bfmt\.(Print|Sprint|Fprint|Errorf)/, 4],
+  ["go", /^\s*import\s+(\(|")/m, 3],
+  ["go", /^\s*func\s+(\([^)]*\)\s*)?\w+\s*\(/m, 2],
+  ["go", /:=/, 2],
+  ["rust", /\bfn\s+\w+\s*(<[^>]*>)?\s*\(/, 3],
+  ["rust", /\b(println|format|vec|panic)!\s*[([]/, 4],
+  ["rust", /\blet\s+mut\b/, 3],
+  ["rust", /\buse\s+std::|\bimpl\b/, 3],
+  ["swift", /^\s*import\s+(Foundation|UIKit|SwiftUI|Swift)\s*$/m, 4],
+  ["swift", /\bfunc\s+\w+\s*\([^)]*\)\s*->/, 2],
+  ["swift", /\bguard\s+let\b/, 3],
+  ["d", /^\s*import\s+std\.\w+\s*;/m, 5],
+  ["d", /\bwriteln\s*\(/, 3],
+
+  // Scripting
+  ["ruby", /^\s*def\s+\w+[?!]?(\s*\([^)]*\))?\s*$/m, 2],
+  ["ruby", /^\s*end\s*$/m, 2],
+  ["ruby", /^\s*puts\b/m, 3],
+  ["ruby", /\bdo\s*\|\w+(,\s*\w+)*\|/, 3],
+  ["ruby", /^\s*require\s+["']/m, 2],
+  ["ruby", /\battr_(reader|writer|accessor)\b/, 3],
+  ["elixir", /^\s*defmodule\s+[A-Z]/m, 5],
+  ["elixir", /\bIO\.(puts|inspect)\b/, 4],
+  ["elixir", /\|>/, 2],
+  ["php", /<\?php/, 5],
+  ["php", /\$this->|\becho\s+\$/, 3],
+  ["perl", /^\s*use\s+(strict|warnings)\s*;/m, 5],
+  ["perl", /\bmy\s+[$@%]\w+/, 4],
+  ["bash", /^#!.*\b(ba|z|da)?sh\b/, 5],
+  ["bash", /^\s*(if|while)\s+\[\[?\s/m, 3],
+  ["bash", /^\s*(fi|done|esac)\s*$/m, 3],
+  ["bash", /^\s*echo\s/m, 2],
+  ["python", /^#!.*\bpython/, 5],
+  ["javascript", /^#!.*\bnode\b/, 5],
+  ["r", /\b\w+\s*<-\s*(c\(|function\s*\(|\w)/, 3],
+  ["r", /\blibrary\s*\(/, 4],
+  ["haskell", /^\s*main\s*::\s*IO\b/m, 5],
+  ["haskell", /^\s*\w+\s*::\s*[A-Z[(]/m, 3],
+  ["haskell", /\bputStrLn\b/, 4],
+  ["sql", /^\s*(SELECT\s+[\w*]|INSERT\s+INTO|CREATE\s+TABLE|UPDATE\s+\w+\s+SET|DELETE\s+FROM)\b/im, 4],
+  ["scheme", /^\s*\(define\s/m, 4],
+  ["scheme", /\(display\s/, 3],
+  ["commonlisp", /^\s*\(defun\s/m, 4],
+  ["commonlisp", /\(format\s+t\s/, 3],
+  ["coffeescript", /^\s*\w+\s*=\s*(\([^)]*\)\s*)?->/m, 4],
+  ["cobol", /\b(IDENTIFICATION|PROCEDURE)\s+DIVISION\b/i, 5],
+];
+
+/** Minimum score before a detection is trusted enough to block a run. */
+export const DETECTION_MIN_SCORE = 4;
+
+/**
+ * Runtimes that can still run code detected as a given language. Anything not
+ * listed only accepts itself.
+ */
+const COMPATIBLE: Partial<Record<LanguageId, readonly LanguageId[]>> = {
+  javascript: ["javascript", "typescript", "tsx"],
+  typescript: ["typescript", "tsx"],
+  c: ["c", "cpp", "objectivec"],
+};
+
+export interface LanguageDetection {
+  id: LanguageId;
+  label: string;
+  score: number;
+  /** Score of the second-best language (0 when none). */
+  runnerUp: number;
+  scores: Partial<Record<LanguageId, number>>;
+}
+
+/**
+ * Lightweight signature heuristic. Returns the most likely language, or
+ * `null` when no signature matched. It is a guess, not a parser: callers
+ * should only act on it when `score >= DETECTION_MIN_SCORE`.
+ */
+export function detectCodeLanguage(code: string): LanguageDetection | null {
+  const source = code.replace(/\r\n?/g, "\n");
+  if (source.trim().length === 0) return null;
+
+  const scores: Partial<Record<LanguageId, number>> = {};
+  for (const [id, pattern, weight] of SIGNATURES) {
+    if (pattern.test(source)) scores[id] = (scores[id] ?? 0) + weight;
+  }
+
+  // TypeScript is a JavaScript superset: merge the family, then pick one.
+  const js = scores.javascript ?? 0;
+  const ts = scores.typescript ?? 0;
+  if (js + ts > 0) {
+    if (ts >= 2) {
+      scores.typescript = js + ts;
+      delete scores.javascript;
+    } else {
+      scores.javascript = js + ts;
+      delete scores.typescript;
+    }
+  }
+
+  // C++ markers win over shared C signatures (`int main`, `printf`).
+  const cpp = scores.cpp ?? 0;
+  if (cpp >= 3 && scores.c) {
+    scores.cpp = cpp + scores.c;
+    delete scores.c;
+  }
+
+  const ranked = (Object.entries(scores) as Array<[LanguageId, number]>)
+    .filter(([, score]) => score > 0)
+    .sort((a, b) => b[1] - a[1]);
+  if (ranked.length === 0) return null;
+
+  const [id, score] = ranked[0];
+  return {
+    id,
+    label: findLanguage(id).label,
+    score,
+    runnerUp: ranked[1]?.[1] ?? 0,
+    scores,
+  };
+}
+
+export type RuntimeMatch =
+  | { ok: true; detected: LanguageDetection | null }
+  | {
+      ok: false;
+      detected: LanguageDetection;
+      selected: RunnerLanguage;
+      message: string;
+    };
+
+/**
+ * Pre-flight check before a sandbox run. Blocks only on a clear mismatch:
+ * the detection is confident (≥ `DETECTION_MIN_SCORE`), beats the runner-up,
+ * cannot run on the selected runtime, and the selected language itself scored
+ * below 3. Everything else is allowed through.
+ */
+export function checkRuntimeMatch(
+  code: string,
+  selectedId: string,
+): RuntimeMatch {
+  const detected = detectCodeLanguage(code);
+  const selected = findLanguage(selectedId);
+  if (!detected) return { ok: true, detected };
+
+  const allowed = COMPATIBLE[detected.id] ?? [detected.id];
+  const selectedScore = detected.scores[selected.id] ?? 0;
+  const clear =
+    detected.score >= DETECTION_MIN_SCORE &&
+    detected.score > detected.runnerUp &&
+    !allowed.includes(selected.id) &&
+    selectedScore < 3;
+
+  if (!clear) return { ok: true, detected };
+
+  return {
+    ok: false,
+    detected,
+    selected,
+    message: `⚠ Language Mismatch: Your code looks like ${detected.label}, but ${selected.label} is selected. Please switch the runtime selector next to the filename to ${detected.label} and run again.`,
+  };
+}

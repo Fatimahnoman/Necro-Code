@@ -31,6 +31,8 @@ export interface SandboxState {
   status: SandboxStatus;
   mode: SandboxMode | null;
   lines: SandboxLine[];
+  /** Remote runner exit code as a string (`"0"` = success); `null` locally. */
+  exitCode: string | null;
 }
 
 const TIMEOUT_MS = 2_000;
@@ -144,7 +146,12 @@ self.onmessage = async (event) => {
 };
 `;
 
-const IDLE: SandboxState = { status: "idle", mode: null, lines: [] };
+const IDLE: SandboxState = {
+  status: "idle",
+  mode: null,
+  lines: [],
+  exitCode: null,
+};
 
 function splitOutput(text: string): string[] {
   if (text.length === 0) return [];
@@ -214,6 +221,7 @@ export function useCodeSandbox() {
         setState({
           status: "running",
           mode: "local",
+          exitCode: null,
           lines: [
             {
               kind: "system",
@@ -309,6 +317,7 @@ export function useCodeSandbox() {
       setState({
         status: "running",
         mode: "remote",
+        exitCode: null,
         lines: [
           {
             kind: "system",
@@ -416,6 +425,11 @@ export function useCodeSandbox() {
             });
           }
 
+          const exitCode =
+            payload.exitCode === null || payload.exitCode === undefined
+              ? null
+              : String(payload.exitCode).trim();
+          setState((prev) => ({ ...prev, exitCode }));
           appendMany(
             lines,
             payload.ok
@@ -452,13 +466,27 @@ export function useCodeSandbox() {
     [append, appendMany, stop],
   );
 
+  /**
+   * Refuse a run before anything executes (e.g. a language mismatch) and show
+   * the reason in the sandbox output panel.
+   */
+  const reject = useCallback(
+    (lines: SandboxLine[]) => {
+      stop();
+      setState({ status: "error", mode: null, lines, exitCode: null });
+    },
+    [stop],
+  );
+
   useEffect(() => () => stop(), [stop]);
 
   return {
     status: state.status,
     mode: state.mode,
     lines: state.lines,
+    exitCode: state.exitCode,
     run,
+    reject,
     clear,
   };
 }

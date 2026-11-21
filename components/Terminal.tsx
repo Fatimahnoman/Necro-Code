@@ -20,7 +20,7 @@ import {
   diffStats,
   type DiffLine,
 } from "@/lib/diff";
-import { findLanguage } from "@/lib/languages";
+import { checkRuntimeMatch, findLanguage } from "@/lib/languages";
 import {
   buildAutopsyReport,
   buildUnifiedPatch,
@@ -29,6 +29,12 @@ import {
   healthTier,
   patchPath,
 } from "@/lib/report";
+import {
+  buildSmokeHarness,
+  type SmokeHarness,
+  smokeLabel,
+  smokePassed,
+} from "@/lib/smokeTest";
 import {
   type SandboxLineKind,
   useCodeSandbox,
@@ -138,30 +144,6 @@ function DiffRow({ line }: { line: DiffLine }) {
   );
 }
 
-function buildUnitTestSource(finalCode: string): string {
-  const functionNames = Array.from(
-    finalCode.matchAll(/(?:async\s+function|function)\s+([A-Za-z_$][\w$]*)/g),
-    (match) => match[1],
-  ).filter((name, index, names) => names.indexOf(name) === index);
-  const names = functionNames.length > 0 ? functionNames : ["purified"];
-  const assertions = names.map(
-    (name) =>
-      `assert(typeof api.${name} === "function", ${JSON.stringify(`${name} should exist after purification`)});`,
-  );
-
-  return [
-    "const assert = (condition, message) => {",
-    "  if (!condition) throw new Error(message);",
-    "};",
-    "const runPurified = async () => {",
-    finalCode,
-    `return { ${names.join(", ")} };`,
-    "};",
-    "const api = await runPurified();",
-    ...assertions,
-  ].join("\n");
-}
-
 export function Terminal({
   logs,
   running,
@@ -202,12 +184,15 @@ export function Terminal({
   const [testStatus, setTestStatus] = useState<
     "idle" | "running" | "passed" | "failed"
   >("idle");
+  const [testHarness, setTestHarness] = useState<SmokeHarness | null>(null);
   const runnerLanguage = findLanguage(language);
   const {
     status: sandboxStatus,
     mode: sandboxMode,
     lines: sandboxLines,
+    exitCode: sandboxExitCode,
     run: runSandbox,
+    reject: rejectSandbox,
     clear: clearSandbox,
   } = useCodeSandbox();
 
@@ -219,15 +204,30 @@ export function Terminal({
 
   useEffect(() => {
     clearSandbox();
+    setTestStatus("idle");
+    setTestHarness(null);
   }, [finalCode, language, clearSandbox]);
 
   useEffect(() => {
-    if (testStatus !== "running") return;
-    if (sandboxStatus === "complete") setTestStatus("passed");
-    if (sandboxStatus === "error" || sandboxStatus === "timeout") {
-      setTestStatus("failed");
-    }
-  }, [sandboxStatus, testStatus]);
+    if (testStatus !== "running" || !testHarness) return;
+    if (sandboxStatus === "idle" || sandboxStatus === "running") return;
+    const passed = smokePassed(testHarness, {
+      status: sandboxStatus,
+      exitCode: sandboxExitCode,
+      local: sandboxMode === "local",
+      stdoutLines: sandboxLines
+        .filter((line) => line.kind === "log")
+        .map((line) => line.text),
+    });
+    setTestStatus(passed ? "passed" : "failed");
+  }, [
+    sandboxExitCode,
+    sandboxLines,
+    sandboxMode,
+    sandboxStatus,
+    testHarness,
+    testStatus,
+  ]);
 
   const streamedCode = logs
     .filter((log) => log.level === "code")
@@ -340,17 +340,44 @@ export function Terminal({
   const healthBefore = summary?.healthBefore;
   const healthAfter = summary?.healthAfter;
 
+  /** Pre-flight: block a run whose code clearly belongs to another runtime. */
+  const preflight = useCallback(
+    (code: string): boolean => {
+      const match = checkRuntimeMatch(code, language);
+      if (match.ok) return true;
+      rejectSandbox([
+        { kind: "warn", text: match.message },
+        {
+          kind: "system",
+          text: `» Detected ${match.detected.label} (signature score ${match.detected.score}). Nothing was executed.`,
+        },
+      ]);
+      return false;
+    },
+    [language, rejectSandbox],
+  );
+
   const handleSandbox = useCallback(() => {
     if (!finalCode) return;
     onSandbox?.();
+    // A plain sandbox run must not be graded as a pending GEN TEST.
+    setTestStatus((status) => (status === "running" ? "idle" : status));
+    if (!preflight(finalCode)) return;
     runSandbox(finalCode, language);
-  }, [finalCode, language, onSandbox, runSandbox]);
+  }, [finalCode, language, onSandbox, preflight, runSandbox]);
 
   const handleGenerateTest = useCallback(() => {
     if (!finalCode) return;
+    if (!preflight(finalCode)) {
+      setTestStatus("idle");
+      setTestHarness(null);
+      return;
+    }
+    const harness = buildSmokeHarness(finalCode, language);
+    setTestHarness(harness);
     setTestStatus("running");
-    runSandbox(buildUnitTestSource(finalCode), language);
-  }, [finalCode, language, runSandbox]);
+    runSandbox(harness.source, language);
+  }, [finalCode, language, preflight, runSandbox]);
 
   useEffect(() => {
     if (!autoDemoNonce || !finalCode || running || !summary) return;
@@ -736,7 +763,11 @@ export function Terminal({
                     : "border-white/10 text-slate-400",
               ].join(" ")}
             >
-              {testStatus === "passed" ? "PASS" : testStatus === "failed" ? "FAIL" : "TEST"}
+              {testHarness && (testStatus === "passed" || testStatus === "failed")
+                ? smokeLabel(testHarness, testStatus === "passed")
+                : testStatus === "running"
+                  ? "…"
+                  : "TEST"}
             </span>
             <button
               type="button"
@@ -756,7 +787,14 @@ export function Terminal({
               type="button"
               onClick={handleGenerateTest}
               disabled={!finalCode || testStatus === "running"}
-              title="Generate and run a lightweight purified artifact assertion suite"
+              title={
+                runnerLanguage.id === "python" ||
+                runnerLanguage.id === "javascript" ||
+                runnerLanguage.id === "typescript" ||
+                runnerLanguage.id === "tsx"
+                  ? `Generate and run a native ${runnerLanguage.label} assertion suite for the purified functions`
+                  : `Run a ${runnerLanguage.label} smoke check: passes when the purified artifact exits with code 0`
+              }
               className="group relative flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-spectral/40 bg-spectral/5 px-2.5 py-2 font-mono text-[13px] uppercase tracking-[0.14em] text-spectral transition hover:bg-spectral/10 hover:shadow-[0_0_24px_rgba(6,182,212,0.18)] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-slate-700"
             >
               {testStatus === "running" ? (
