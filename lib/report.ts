@@ -1,11 +1,170 @@
+import { diffLines } from "@/lib/diff";
 import { findLanguage } from "@/lib/languages";
 import type {
   AgentEvent,
   AppliedFix,
   BugFinding,
+  BugSeverity,
   EngineInfo,
   ExorcismSummary,
 } from "@/lib/types";
+
+// ── Code Health & Security Score ─────────────────────────────
+
+/** Points deducted per finding. A clean artifact scores 100; the floor is 0. */
+export const HEALTH_WEIGHTS: Record<BugSeverity, number> = {
+  critical: 15,
+  warning: 6,
+  info: 2,
+};
+
+/** `100 − Σ weight(severity)`, clamped to 0–100. */
+export function healthScore(findings: Pick<BugFinding, "severity">[]): number {
+  let penalty = 0;
+  for (const finding of findings) penalty += HEALTH_WEIGHTS[finding.severity];
+  return Math.max(0, Math.min(100, 100 - penalty));
+}
+
+export type HealthTier = "cursed" | "haunted" | "pure";
+
+export function healthTier(score: number): HealthTier {
+  if (score >= 80) return "pure";
+  if (score >= 50) return "haunted";
+  return "cursed";
+}
+
+// ── git-apply compatible unified patch ───────────────────────
+
+const PATCH_CONTEXT = 3;
+const NO_EOL = "\\ No newline at end of file";
+
+/**
+ * Turn an editor filename or GitHub path into a safe repo-relative path.
+ * Rejects absolute paths and `..`; falls back to `artifact.<ext>`.
+ */
+export function patchPath(name: string, extension = "js"): string {
+  const parts = name
+    .replace(/\\/g, "/")
+    .split("/")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0 && part !== ".");
+  const safe =
+    parts.length > 0 &&
+    parts.every((part) => part !== ".." && !/[\u0000-\u001f"]/.test(part));
+  return safe ? parts.join("/") : `artifact.${extension}`;
+}
+
+interface PatchLine {
+  sign: " " | "-" | "+";
+  text: string;
+  /** This is the file's last line and it has no trailing newline. */
+  noEol: boolean;
+}
+
+function splitForPatch(value: string): { lines: string[]; endsWithNewline: boolean } {
+  const normalized = value.replace(/\r\n?/g, "\n");
+  if (normalized.length === 0) return { lines: [], endsWithNewline: true };
+  const endsWithNewline = normalized.endsWith("\n");
+  const body = endsWithNewline ? normalized.slice(0, -1) : normalized;
+  return { lines: body.split("\n"), endsWithNewline };
+}
+
+/**
+ * Build a unified diff that `git apply` accepts, with `a/` and `b/` prefixes
+ * and three lines of context. Returns `null` when nothing changed.
+ *
+ * The purified artifact keeps the original file's trailing-newline style, so
+ * a live model that trims the final newline does not add a spurious hunk.
+ */
+export function buildUnifiedPatch(
+  original: string,
+  purified: string,
+  path: string,
+): string | null {
+  const before = splitForPatch(original);
+  const afterRaw = splitForPatch(purified);
+  const after = { lines: afterRaw.lines, endsWithNewline: before.endsWithNewline };
+
+  const oldText = before.lines.join("\n");
+  const newText = after.lines.join("\n");
+  if (oldText === newText && before.lines.length === after.lines.length) {
+    return null;
+  }
+
+  const diff = diffLines(oldText, newText);
+  const lastOld = before.lines.length;
+  const lastNew = after.lines.length;
+
+  const noEol = !before.endsWithNewline; // same for both sides
+  const lines: PatchLine[] = diff.flatMap((line): PatchLine[] => {
+    const isLastOld = line.oldLine !== null && line.oldLine === lastOld;
+    const isLastNew = line.newLine !== null && line.newLine === lastNew;
+    if (line.kind === "removed") {
+      return [{ sign: "-", text: line.text, noEol: noEol && isLastOld }];
+    }
+    if (line.kind === "added") {
+      return [{ sign: "+", text: line.text, noEol: noEol && isLastNew }];
+    }
+    // A shared line that is last on only one side differs in its newline,
+    // so git needs it as a remove + add pair.
+    if (noEol && isLastOld !== isLastNew) {
+      return [
+        { sign: "-", text: line.text, noEol: isLastOld },
+        { sign: "+", text: line.text, noEol: isLastNew },
+      ];
+    }
+    return [{ sign: " ", text: line.text, noEol: noEol && isLastOld }];
+  });
+
+  // Group changes into hunks with PATCH_CONTEXT lines of context.
+  const changed = lines
+    .map((line, index) => (line.sign === " " ? -1 : index))
+    .filter((index) => index >= 0);
+  if (changed.length === 0) return null;
+
+  const ranges: Array<[number, number]> = [];
+  for (const index of changed) {
+    const start = Math.max(0, index - PATCH_CONTEXT);
+    const end = Math.min(lines.length - 1, index + PATCH_CONTEXT);
+    const last = ranges[ranges.length - 1];
+    if (last && start <= last[1] + 1) last[1] = Math.max(last[1], end);
+    else ranges.push([start, end]);
+  }
+
+  // Old/new line numbers *before* each diff index.
+  const oldBefore: number[] = [];
+  const newBefore: number[] = [];
+  let oldSeen = 0;
+  let newSeen = 0;
+  for (const line of lines) {
+    oldBefore.push(oldSeen);
+    newBefore.push(newSeen);
+    if (line.sign !== "+") oldSeen += 1;
+    if (line.sign !== "-") newSeen += 1;
+  }
+
+  const out: string[] = [
+    `diff --git a/${path} b/${path}`,
+    `--- a/${path}`,
+    `+++ b/${path}`,
+  ];
+
+  for (const [start, end] of ranges) {
+    const slice = lines.slice(start, end + 1);
+    const oldCount = slice.filter((line) => line.sign !== "+").length;
+    const newCount = slice.filter((line) => line.sign !== "-").length;
+    // Unified-diff convention: a zero-length side starts at the preceding line.
+    const oldStart = oldCount === 0 ? oldBefore[start] : oldBefore[start] + 1;
+    const newStart = newCount === 0 ? newBefore[start] : newBefore[start] + 1;
+    out.push(`@@ -${oldStart},${oldCount} +${newStart},${newCount} @@`);
+    for (const line of slice) {
+      out.push(`${line.sign}${line.text}`);
+      if (line.noEol) out.push(NO_EOL);
+    }
+  }
+
+  return `${out.join("\n")}\n`;
+}
 
 export interface AutopsyReportInput {
   originalCode: string;
@@ -80,6 +239,13 @@ export function buildAutopsyReport({
       "| :---: | :---: | :---: | :---: | :---: | :---: |",
       `| ${summary.detected} | ${summary.fixed} | ${summary.unresolved} | ${summary.critical} | ${summary.warning} | ${summary.info} |`,
     );
+    if (summary.healthBefore !== undefined && summary.healthAfter !== undefined) {
+      lines.push(
+        "",
+        `**Code Health & Security Score:** ${summary.healthBefore}/100 → ${summary.healthAfter}/100 ` +
+          `(−${HEALTH_WEIGHTS.critical} per critical, −${HEALTH_WEIGHTS.warning} per warning, −${HEALTH_WEIGHTS.info} per info)`,
+      );
+    }
   } else {
     lines.push("_No corruption summary was returned by the engine._");
   }

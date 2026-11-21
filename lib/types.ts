@@ -66,6 +66,14 @@ export interface ExorcismSummary {
   critical: number;
   warning: number;
   info: number;
+  /**
+   * Code Health & Security Score (0–100) of the original artifact, from
+   * `healthScore()` in `lib/report.ts`. Absent when the builtin analyzer does
+   * not support the language, and on history entries saved before scoring.
+   */
+  healthBefore?: number;
+  /** Same score for the purified artifact (residual findings only). */
+  healthAfter?: number;
 }
 
 export interface ExorcismReport {

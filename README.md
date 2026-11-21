@@ -639,6 +639,7 @@ The build must finish with **zero TypeScript/ESLint errors**. Open
 | --- | --- |
 | 📜 **Pick a cursed artifact** | Loads a real buggy JS/TS sample into the editor. |
 | 📤 **Upload** | Reads a local artifact into the editor; the runtime is detected from the extension when supported. |
+| 🐙 **GitHub** | Opens a URL field. Paste a public `github.com/<owner>/<repo>/blob/<branch>/<path>` (or `raw.githubusercontent.com`) link and click **Fetch**; the file, its repo path, and its runtime load into the editor. Files over 24,000 chars, binary files, and private repos are rejected. |
 | 🔀 **Runtime selector** | Chooses the sandbox runtime next to the filename: JavaScript stays local; the other 28 runtimes use the remote Paiza.IO proxy. |
 | ✍️ **Edit the artifact** | Paste your own snippet; the scanner reads exactly what is in the editor. |
 | 🪄 **RITUAL DIRECTIVE** | Optional instruction passed with the code to the live model (for example, convert to strict TypeScript). |
@@ -653,7 +654,9 @@ The build must finish with **zero TypeScript/ESLint errors**. Open
 | 🧪 **TEST SANDBOX** | Runs JavaScript in a local Blob Web Worker (2-second timeout) or sends any other runtime to the remote Paiza.IO proxy (25-second client deadline); stdout, stderr, build errors, and exit code are shown. |
 | 🕰️ **HISTORY** | Opens the last-10 run drawer; one click restores code, directive, findings, fixes, engine, summary, and logs. |
 | 📋 **Copy / Download** | Retrieves the full purified artifact from `finalCode`. |
-| 🧾 **EXPORT REPORT** | Downloads `necrocode-exorcism-report.md` with the full autopsy. |
+| 🧾 **EXPORT REPORT** | Downloads `necrocode-exorcism-report.md` with the full autopsy, including the health score. |
+| 🩹 **.PATCH** | Downloads `necrocode-fix.patch`, a unified diff for the artifact's path. Run `git apply necrocode-fix.patch` at the repo root to apply the fix. |
+| 🛡️ **Health badge** | The terminal header shows the Code Health & Security Score before → after, e.g. `46 → 100 /100`. Score = 100 − 15 per critical − 6 per warning − 2 per info (JS/TS/TSX only). |
 | 🎵 **HORROR BGM** | Toggles the looped `/audio/horror-bgm.mp3` soundtrack _(on by default, `0.22` idle / `0.85` surge)_. |
 | 🎧 **3D AUDIO FX** | Toggles stereo-panned synthesized haunted SFX, including the `EXORCISE CODE` DHUM slam _(off by default)_. |
 | 📺 **CRT** | Toggles global and terminal scanlines. |
@@ -670,6 +673,8 @@ The build must finish with **zero TypeScript/ESLint errors**. Open
 │   │   └── 📄 route.ts            # 📡 POST SSE route — language-aware exorcism stream
 │   ├── 📂 api/run/
 │   │   └── 📄 route.ts            # 🧪 Remote sandbox proxy — allowlist, limits, output
+│   ├── 📂 api/github/
+│   │   └── 📄 route.ts            # 🐙 Public GitHub file summon (raw.githubusercontent.com only)
 │   ├── 🎨 globals.css             # Horror FX: fog, scanlines, rune borders, glass
 │   ├── 🖼️ icon.svg                # Crimson skull sigil / favicon
 │   ├── 📄 layout.tsx              # Root layout & metadata
@@ -699,7 +704,8 @@ The build must finish with **zero TypeScript/ESLint errors**. Open
 │   ├── 📄 history.ts              # 🕰️ Last-10 entry shape + slim/fingerprint helpers
 │   ├── 📄 languages.ts            # 🔀 Runtime registry + filename detection
 │   ├── 📄 liveEngine.ts           # 🔮 Gemini → Groq → OpenRouter rewrite + fallback
-│   ├── 📄 report.ts               # 🧾 Markdown exorcism autopsy builder
+│   ├── 📄 github.ts               # 🐙 GitHub blob/raw URL parser + validation
+│   ├── 📄 report.ts               # 🧾 Autopsy report, health score, git-apply patch builder
 │   ├── 📄 runner.ts               # ☁️ Paiza.IO create/poll bridge + output normalization
 │   ├── 📄 presets.ts              # Preset metadata + icons
 │   ├── 📄 useAgentStream.ts       # Client hook: POST SSE → UI state + restore

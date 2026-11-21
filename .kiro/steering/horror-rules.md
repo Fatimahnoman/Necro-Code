@@ -53,7 +53,8 @@ Three-pane HUD, responsive, zero horizontal scroll:
      `Horror BGM`, `3D Audio FX`, CRT and fog toggles, phase `StatusPill`
      (`text-[9.5px] px-2.5 py-1 gap-1.5`, must not clip at the right edge).
 1. **Left · Spellbook** (`ControlPanel`)
-   - Cursed artifact presets, upload button, runtime selector, ritual
+   - Cursed artifact presets, `GitHub` summon toggle (single-line URL form,
+     `POST /api/github`) next to the upload button, runtime selector, ritual
      directive, line-numbered code editor, progress bar, summary chips,
      “Exorcise Code” and “Banish ritual”.
 2. **Center · 3D Ritual Graph** (`AgentCanvas` + `ExecutionGraph3D`)
@@ -67,7 +68,9 @@ Three-pane HUD, responsive, zero horizontal scroll:
 3. **Right · Grimoire Terminal** (`Terminal`)
    - `Terminal` / `Spectral Diff` tabs (unified diff with dual line gutters),
      color-coded logs, copy, download, `GEN TEST`, `Test sandbox`, `Export
-     report`, footer summary.
+     report`, `.patch` (`necrocode-fix.patch`), footer summary.
+   - Header health badge `<before> → <after> /100`: crimson < 50, amber
+     50–79, neon ≥ 80. Weights live only in `HEALTH_WEIGHTS` (`lib/report.ts`).
 4. **Atmosphere** (`HorrorBackdrop`)
    - Fixed full-screen WebGL fog/embers and a giant wireframe relic behind the
      glass dashboard, reacting to the same SSE aura.
@@ -115,7 +118,8 @@ tracking-[0.15em]`.
 6. Input is capped at **24,000 chars** server-side (directive at 500).
 7. The analyzer itself makes no network calls. Network access lives only in
    `lib/liveEngine.ts` (BYOK LLM, only when sigils are present) and
-   `lib/runner.ts` (Paiza.IO, only for non-JavaScript sandbox runs).
+   `lib/runner.ts` (Paiza.IO, only for non-JavaScript sandbox runs), and
+   `app/api/github/route.ts` (only `raw.githubusercontent.com`).
 
 ## Live engine contract
 

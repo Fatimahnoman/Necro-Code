@@ -4,11 +4,13 @@
 
 NecroCode is a 3D horror cyber-gothic code exorcist built with Next.js 15 and
 React Three Fiber for the Kiroween 2026 Costume Contest (UI/UX track). A user
-submits a source artifact. The server runs a deterministic static analyzer for
+submits a source artifact by pasting, uploading, or summoning a file from a
+public GitHub repository. The server runs a deterministic static analyzer for
 JavaScript/TypeScript/TSX, optionally asks a bring-your-own-key (BYOK) LLM
 provider for a rewrite, and streams the ritual over Server-Sent Events (SSE).
 The client mirrors every streamed event in a 3D Ritual Graph, a terminal, a
-Spectral Diff, a sandbox runner, and an adaptive audio layer.
+Spectral Diff, a sandbox runner, and an adaptive audio layer. Each run ends
+with a 0–100 health score and a patch that `git apply` accepts.
 
 Every requirement below maps to code that exists in this repository. File
 references point to the implementing module.
@@ -21,6 +23,8 @@ references point to the implementing module.
 - **Ritual Graph** — the 3D stage graph in `components/three/ExecutionGraph3D.tsx`.
 - **Aura** — the aggregate run state rendered on the 3D relic (`lib/aura.ts`).
 - **AgentEvent** — one SSE payload, defined in `lib/types.ts`.
+- **Health score** — Code Health & Security Score, 0–100, from `healthScore()` in `lib/report.ts`.
+- **Summon** — loading a public GitHub file into the editor via `/api/github`.
 
 ---
 
@@ -136,3 +140,33 @@ so that I can evaluate it quickly.
 5. WHEN a run completes, THE client SHALL save it to the Grimoire History in `localStorage` (`necrocode.grimoire-history.v1`), keeping the last 10 entries.
 6. WHEN the user selects a history entry, THE client SHALL restore its code, directive, findings, fixes, engine, summary, and logs.
 7. WHEN the user clicks `Export report`, THE Terminal SHALL download a Markdown autopsy report built by `lib/report.ts`.
+
+### Requirement 9 — Direct GitHub file summon
+
+**User story:** As a developer, I want to load a file straight from a public
+GitHub repository, so that I can exorcise real code without copy-pasting.
+
+#### Acceptance criteria
+
+1. WHEN the user clicks `GitHub` next to `Upload` in the Spellbook, THE ControlPanel SHALL toggle a single-line form with a `Paste public GitHub file URL...` input and a `Fetch` button.
+2. WHEN the user submits a `github.com/<owner>/<repo>/blob/<ref>/<path>` URL, THE system (`lib/github.ts`) SHALL convert it to `https://raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>`; a `raw.githubusercontent.com` URL SHALL be accepted as-is; query strings and fragments SHALL be ignored.
+3. WHEN the URL host is not `github.com`, `www.github.com`, or `raw.githubusercontent.com`, or the URL contains credentials, a port, `.`/`..` segments, or encoded `/` or `\`, THE system SHALL reject it without making a network request.
+4. WHEN `POST /api/github` fetches the raw file, THE route SHALL only contact `raw.githubusercontent.com`, SHALL follow at most two redirects and only to that host, and SHALL abort after 8 seconds.
+5. IF the file is missing or private, larger than 24,000 characters, binary, not valid UTF-8, or empty, THEN THE route SHALL return an error message and THE ControlPanel SHALL show it without changing the editor.
+6. WHEN the fetch succeeds, THE ControlPanel SHALL load the source into the editor, set the filename to the repo-relative path, and set the runtime from the file extension; IF the extension is unknown, THEN THE runtime SHALL stay unchanged.
+
+### Requirement 10 — Health score and `git apply` patch
+
+**User story:** As a reviewer, I want a score and a patch I can apply, so that
+I can judge the risk of a file and ship the fix in my own repository.
+
+#### Acceptance criteria
+
+1. WHEN the analyzer language is JavaScript, TypeScript, or TSX, THE SSE route SHALL add `healthBefore` (all findings) and `healthAfter` (residual findings) to the final `summary`, each computed by `healthScore()` as `100 − 15·critical − 6·warning − 2·info`, clamped to 0–100.
+2. WHEN the analyzer language is not supported, THE SSE route SHALL omit both scores.
+3. WHEN the final summary carries both scores, THE route SHALL stream a `Code Health & Security Score: <before>/100 → <after>/100` line and THE Terminal header SHALL show a `<before> → <after> /100` badge colored crimson (< 50), amber (50–79), or neon (≥ 80).
+4. WHEN the run completes and the purified artifact differs from the original, THE Terminal SHALL enable a `.patch` button next to `Export report` that downloads `necrocode-fix.patch`.
+5. THE patch SHALL be a unified diff with `diff --git a/<path> b/<path>`, `---`/`+++` headers, `@@` hunks with three lines of context, and `\ No newline at end of file` markers where needed, so that `git apply necrocode-fix.patch` succeeds on the original LF file at `<path>` relative to the repository root.
+6. WHEN the patch is built, THE system SHALL use the editor filename or GitHub path as `<path>`, SHALL fall back to `artifact.<ext>` for absolute or `..` paths, and SHALL keep the original file's trailing-newline style.
+7. WHEN no lines changed, THE `.patch` button SHALL be disabled.
+8. WHEN the autopsy report is exported and both scores exist, THE report SHALL include the before → after score and the weights.

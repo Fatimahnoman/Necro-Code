@@ -518,6 +518,7 @@ export default function Home() {
               appliedFixes={state.appliedFixes}
               engine={state.engine}
               language={language}
+              filename={filename}
               onCopied={() => play("copy")}
               onExported={() => play("click")}
               onSandbox={() => play("click")}

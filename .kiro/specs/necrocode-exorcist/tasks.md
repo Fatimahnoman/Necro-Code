@@ -73,3 +73,20 @@ when the code exists in this repository.
 
 - [x] 13. Build verification for submission
   - Run `npx tsc --noEmit`, `npm run lint`, and `npm run build` on a machine with npm registry access and tick this box once all three pass. The Kiro sandbox used for the spec audit had no npm registry access, so it could not run them.
+
+- [x] 14. Direct GitHub file summon
+  - [x] 14.1 `parseGitHubFileUrl()` in `lib/github.ts`: host allowlist, blob → raw conversion, segment validation. _R9.2, R9.3_
+  - [x] 14.2 `POST /api/github`: raw-host-only fetch, same-host redirects (max 2), 8 s timeout, 24,000-char / binary / UTF-8 / empty checks. _R9.4, R9.5_
+  - [x] 14.3 `GitHub` toggle + URL form in `ControlPanel`; loads code, repo path, and detected runtime. _R9.1, R9.6_
+
+- [x] 15. Health score and `git apply` patch
+  - [x] 15.1 `HEALTH_WEIGHTS`, `healthScore()`, `healthTier()` in `lib/report.ts`; optional `healthBefore` / `healthAfter` on `ExorcismSummary`. _R10.1, R10.2_
+  - [x] 15.2 SSE route adds both scores to the final summary and streams the score line. _R10.1, R10.3_
+  - [x] 15.3 Terminal header health badge. _R10.3_
+  - [x] 15.4 `buildUnifiedPatch()` + `patchPath()` in `lib/report.ts`; `.patch` button downloads `necrocode-fix.patch`. _R10.4–R10.7_
+  - [x] 15.5 Score line in the Markdown autopsy report. _R10.8_
+  - [x] 15.6 Ad-hoc check: 400 patches applied with real `git apply` and matched byte for byte; GitHub parser and route checked with a mocked `fetch`.
+
+- [ ] 16. Build verification for tasks 14–15
+  - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` with npm registry access and tick this box once all three pass. The Kiro sandbox still had no npm registry access; only the server-side and `lib/` files were typechecked there (TypeScript, `strict`, stubbed `next/server`). `ControlPanel.tsx`, `Terminal.tsx`, and `page.tsx` were not typechecked or linted.
+  - Manually verify a live summon against a real public repo (the sandbox could not reach GitHub raw).

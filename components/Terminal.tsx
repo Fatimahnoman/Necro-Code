@@ -5,6 +5,7 @@ import {
   Check,
   Copy,
   Download,
+  FileDiff,
   FileText,
   FlaskConical,
   Loader2,
@@ -20,7 +21,14 @@ import {
   type DiffLine,
 } from "@/lib/diff";
 import { findLanguage } from "@/lib/languages";
-import { buildAutopsyReport } from "@/lib/report";
+import {
+  buildAutopsyReport,
+  buildUnifiedPatch,
+  HEALTH_WEIGHTS,
+  type HealthTier,
+  healthTier,
+  patchPath,
+} from "@/lib/report";
 import {
   type SandboxLineKind,
   useCodeSandbox,
@@ -63,6 +71,30 @@ const DIFF_SIGN: Record<DiffLine["kind"], string> = {
   removed: "-",
   added: "+",
 };
+
+const HEALTH_COLOR: Record<HealthTier, string> = {
+  cursed: "text-crimson",
+  haunted: "text-amber-300",
+  pure: "text-neon",
+};
+
+const HEALTH_BORDER: Record<HealthTier, string> = {
+  cursed: "border-crimson/40 shadow-[0_0_12px_rgba(255,0,60,0.18)]",
+  haunted: "border-amber-300/40 shadow-[0_0_12px_rgba(252,211,77,0.14)]",
+  pure: "border-neon/40 shadow-[0_0_12px_rgba(0,255,102,0.16)]",
+};
+
+function downloadText(content: string, filename: string, type: string) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
 
 const SANDBOX_COLOR: Record<SandboxLineKind, string> = {
   log: "text-slate-300",
@@ -141,6 +173,7 @@ export function Terminal({
   appliedFixes,
   engine,
   language,
+  filename,
   onCopied,
   onExported,
   onSandbox,
@@ -156,6 +189,8 @@ export function Terminal({
   appliedFixes: AppliedFix[];
   engine: EngineInfo;
   language: string;
+  /** Editor filename or GitHub repo path; used as the patch target path. */
+  filename: string;
   onCopied?: () => void;
   onExported?: () => void;
   onSandbox?: () => void;
@@ -284,6 +319,27 @@ export function Terminal({
     summary,
   ]);
 
+  const patch = useMemo(
+    () =>
+      originalCode !== null && finalCode !== null
+        ? buildUnifiedPatch(
+            originalCode,
+            finalCode,
+            patchPath(filename, runnerLanguage.extension),
+          )
+        : null,
+    [filename, finalCode, originalCode, runnerLanguage.extension],
+  );
+
+  const handlePatch = useCallback(() => {
+    if (!patch) return;
+    downloadText(patch, "necrocode-fix.patch", "text/x-diff;charset=utf-8");
+    onExported?.();
+  }, [onExported, patch]);
+
+  const healthBefore = summary?.healthBefore;
+  const healthAfter = summary?.healthAfter;
+
   const handleSandbox = useCallback(() => {
     if (!finalCode) return;
     onSandbox?.();
@@ -333,6 +389,24 @@ export function Terminal({
           )}
 
           <div className="ml-auto flex items-center gap-1.5">
+            {healthBefore !== undefined && healthAfter !== undefined && (
+              <span
+                data-health-before={healthBefore}
+                data-health-after={healthAfter}
+                title={`Code Health & Security Score before → after exorcism. 100 minus ${HEALTH_WEIGHTS.critical} per critical, ${HEALTH_WEIGHTS.warning} per warning, ${HEALTH_WEIGHTS.info} per info finding.`}
+                aria-label={`Health score ${healthBefore} out of 100 before, ${healthAfter} out of 100 after`}
+                className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md border bg-black/50 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] ${HEALTH_BORDER[healthTier(healthAfter)]}`}
+              >
+                <span className={HEALTH_COLOR[healthTier(healthBefore)]}>
+                  {healthBefore}
+                </span>
+                <span className="text-slate-500">→</span>
+                <span className={`font-bold ${HEALTH_COLOR[healthTier(healthAfter)]}`}>
+                  {healthAfter}
+                </span>
+                <span className="text-slate-500">/100</span>
+              </span>
+            )}
             <button
               type="button"
               onClick={handleDownload}
@@ -727,6 +801,22 @@ export function Terminal({
             >
               <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span className="whitespace-nowrap">Export report</span>
+            </button>
+            <button
+              type="button"
+              onClick={handlePatch}
+              disabled={!patch}
+              title={
+                patch
+                  ? `Download necrocode-fix.patch for ${patchPath(filename, runnerLanguage.extension)} — apply with: git apply necrocode-fix.patch`
+                  : originalCode === null
+                    ? "The patch is sealed until the ritual completes"
+                    : "No changes to patch"
+              }
+              className="group relative flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-neon/40 bg-neon/5 px-2.5 py-2 font-mono text-[13px] uppercase tracking-[0.14em] text-neon transition hover:bg-neon/10 hover:shadow-[0_0_24px_rgba(0,255,102,0.18)] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-slate-700"
+            >
+              <FileDiff className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="whitespace-nowrap">.patch</span>
             </button>
           </div>
         </div>

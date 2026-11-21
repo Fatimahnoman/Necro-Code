@@ -13,6 +13,7 @@ import {
   isLanguageId,
 } from "@/lib/languages";
 import { tryLiveExorcism } from "@/lib/liveEngine";
+import { healthScore } from "@/lib/report";
 import {
   type AgentEvent,
   type AgentPhase,
@@ -353,6 +354,17 @@ function buildScript(
     });
   }
 
+  if (summary.healthBefore !== undefined && summary.healthAfter !== undefined) {
+    push({
+      phase: "executing",
+      stage: null,
+      nodeStatus: null,
+      level: summary.healthAfter >= 80 ? "success" : "warn",
+      message: `» Code Health & Security Score: ${summary.healthBefore}/100 → ${summary.healthAfter}/100`,
+      delay: 220,
+    });
+  }
+
   push({
     phase: "complete",
     stage: null,
@@ -442,6 +454,12 @@ async function handle(
       ? Math.max(0, baseReport.summary.detected - remaining.length)
       : 0,
     unresolved: remaining.length,
+    ...(analyzerLanguage
+      ? {
+          healthBefore: healthScore(baseReport.findings),
+          healthAfter: healthScore(remaining),
+        }
+      : {}),
   };
   const report: ExorcismReport = {
     ...baseReport,

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   ChevronDown,
   FileCode2,
+  GitBranch,
   Loader2,
   RotateCcw,
   Skull,
@@ -11,7 +12,18 @@ import {
   Upload,
   Wand2,
 } from "lucide-react";
-import { type ChangeEvent, useMemo, useRef } from "react";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  type GitHubSummonResponse,
+  parseGitHubFileUrl,
+} from "@/lib/github";
 import {
   findLanguage,
   languageIdFromFilename,
@@ -85,6 +97,60 @@ export function ControlPanel({
   summary,
 }: ControlPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const githubInputRef = useRef<HTMLInputElement>(null);
+  const githubAbortRef = useRef<AbortController | null>(null);
+  const [githubOpen, setGithubOpen] = useState(false);
+  const [githubUrl, setGithubUrl] = useState("");
+  const [githubStatus, setGithubStatus] = useState<{
+    kind: "idle" | "loading" | "error" | "success";
+    message: string;
+  }>({ kind: "idle", message: "" });
+
+  useEffect(() => {
+    if (githubOpen) githubInputRef.current?.focus();
+  }, [githubOpen]);
+
+  const handleGithubSummon = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (running || githubStatus.kind === "loading") return;
+
+    const parsed = parseGitHubFileUrl(githubUrl);
+    if (!parsed.ok) {
+      setGithubStatus({ kind: "error", message: parsed.message });
+      return;
+    }
+
+    githubAbortRef.current?.abort();
+    const controller = new AbortController();
+    githubAbortRef.current = controller;
+    setGithubStatus({ kind: "loading", message: "Summoning from GitHub…" });
+
+    try {
+      const response = await fetch("/api/github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: githubUrl }),
+        signal: controller.signal,
+      });
+      const data = (await response.json()) as GitHubSummonResponse;
+      if (!data.ok) {
+        setGithubStatus({ kind: "error", message: data.message });
+        return;
+      }
+      onCodeChange(data.code);
+      onFilenameChange(data.path);
+      if (data.language) onLanguageChange(data.language);
+      setGithubStatus({
+        kind: "success",
+        message: `${data.owner}/${data.repo}@${data.ref} · ${data.lines} lines${
+          data.language ? ` · ${findLanguage(data.language).label}` : " · unknown extension, runtime unchanged"
+        }`,
+      });
+    } catch {
+      if (controller.signal.aborted) return;
+      setGithubStatus({ kind: "error", message: "Could not reach the GitHub summoner." });
+    }
+  };
 
   const lines = useMemo(() => code.split("\n"), [code]);
   const languageMeta = findLanguage(language);
@@ -131,15 +197,33 @@ export function ControlPanel({
           <span className="font-mono text-[13px] uppercase tracking-[0.24em] text-slate-400">
             Cursed template
           </span>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            title="Upload a cursed artifact in any supported language"
-            className="inline-flex items-center gap-1 rounded-md border border-spectral/25 px-1.5 py-0.5 font-mono text-[13px] uppercase tracking-[0.18em] text-spectral transition hover:bg-spectral/10"
-          >
-            <Upload className="h-2.5 w-2.5" aria-hidden />
-            Upload
-          </button>
+          <span className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setGithubOpen((open) => !open)}
+              aria-expanded={githubOpen}
+              aria-controls="github-summon"
+              title="Summon a file from a public GitHub repository"
+              className={[
+                "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[13px] uppercase tracking-[0.18em] transition",
+                githubOpen
+                  ? "border-haunt/50 bg-haunt/10 text-haunt-glow"
+                  : "border-haunt/25 text-haunt hover:bg-haunt/10",
+              ].join(" ")}
+            >
+              <GitBranch className="h-2.5 w-2.5" aria-hidden />
+              GitHub
+            </button>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              title="Upload a cursed artifact in any supported language"
+              className="inline-flex items-center gap-1 rounded-md border border-spectral/25 px-1.5 py-0.5 font-mono text-[13px] uppercase tracking-[0.18em] text-spectral transition hover:bg-spectral/10"
+            >
+              <Upload className="h-2.5 w-2.5" aria-hidden />
+              Upload
+            </button>
+          </span>
           <input
             ref={fileRef}
             type="file"
@@ -150,6 +234,54 @@ export function ControlPanel({
             className="hidden"
           />
         </div>
+
+        {githubOpen && (
+          <form
+            id="github-summon"
+            onSubmit={handleGithubSummon}
+            className="space-y-1"
+          >
+            <div className="flex items-center gap-1.5">
+              <input
+                ref={githubInputRef}
+                type="text"
+                inputMode="url"
+                value={githubUrl}
+                onChange={(event) => setGithubUrl(event.target.value)}
+                placeholder="Paste public GitHub file URL..."
+                aria-label="Public GitHub file URL"
+                spellCheck={false}
+                autoComplete="off"
+                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/60 px-2.5 py-1.5 font-mono text-[13px] text-bone outline-none transition placeholder:text-slate-700 focus:border-haunt/50"
+              />
+              <button
+                type="submit"
+                disabled={running || githubStatus.kind === "loading" || githubUrl.trim().length === 0}
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-haunt/40 bg-haunt/10 px-2.5 py-1.5 font-mono text-[13px] uppercase tracking-[0.16em] text-haunt-glow transition hover:bg-haunt/15 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {githubStatus.kind === "loading" && (
+                  <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                )}
+                Fetch
+              </button>
+            </div>
+            {githubStatus.kind !== "idle" && (
+              <p
+                role={githubStatus.kind === "error" ? "alert" : "status"}
+                className={`truncate font-mono text-[12px] ${
+                  githubStatus.kind === "error"
+                    ? "text-crimson"
+                    : githubStatus.kind === "success"
+                      ? "text-neon"
+                      : "text-slate-400"
+                }`}
+                title={githubStatus.message}
+              >
+                {githubStatus.message}
+              </p>
+            )}
+          </form>
+        )}
 
         <div className="relative flex items-center gap-2">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-black/50">

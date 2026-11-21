@@ -24,11 +24,15 @@ Browser (React 19 client)                          Server (Node.js runtime)
 │  ├─ three/HorrorBackdrop (R3F, fixed)   │       │ app/api/run/route.ts          │
 │  ├─ ApiSigilsModal / HistoryDrawer      │ POST  │  └─ lib/runner.ts → Paiza.IO   │
 │  └─ hooks: useAgentStream, useCodeSandbox│─────▶│                               │
-│     useHorrorAudio, useCyberSound,      │       └───────────────────────────────┘
-│     useApiSigils, useGrimoireHistory,   │
-│     useUiSettings                       │
-└────────────────────────────────────────┘
+│     useHorrorAudio, useCyberSound,      │       │ app/api/github/route.ts       │
+│     useApiSigils, useGrimoireHistory,   │ POST  │  ├─ lib/github.ts (URL parse)  │
+│     useUiSettings                       │──────▶│  └─ raw.githubusercontent.com │
+└────────────────────────────────────────┘        └───────────────────────────────┘
 ```
+
+Shared, side-effect-free helpers used on both sides: `lib/report.ts`
+(`healthScore`, `buildUnifiedPatch`, `buildAutopsyReport`), `lib/diff.ts`,
+`lib/github.ts`.
 
 ### Stack
 
@@ -121,7 +125,7 @@ interface AgentEvent {
   progress: number;             // 0..100
   ts: string;                   // ISO timestamp
   bug?: BugFinding;
-  summary?: ExorcismSummary;    // final event
+  summary?: ExorcismSummary;    // final event; includes optional healthBefore / healthAfter
   finalCode?: string;           // final event
   originalCode?: string;        // final event
   findings?: BugFinding[];      // final event
@@ -166,13 +170,16 @@ interface AgentCanvasProps {
 
 ### `ControlPanel` (`components/ControlPanel.tsx`)
 
-- Cursed presets (`lib/cursedCode.ts`), file upload, runtime selector, ritual directive, line-numbered editor, progress bar, summary chips.
+- Cursed presets (`lib/cursedCode.ts`), `GitHub` summon toggle, file upload, runtime selector, ritual directive, line-numbered editor, progress bar, summary chips.
+- The `GitHub` toggle opens a form (`#github-summon`). Submit validates with `parseGitHubFileUrl()` first, then calls `POST /api/github`, and on success calls `onCodeChange`, `onFilenameChange(path)`, and `onLanguageChange(language)` when the language is known.
 - `Exorcise Code` button (crimson glow, hover scale) and `Banish ritual` reset.
 
 ### `Terminal` (`components/Terminal.tsx`)
 
 - Tabs: `Terminal` (color-coded log, `role="log"`) and `Spectral Diff` (unified diff with dual line gutters).
-- Actions: copy, download (`purified-artifact.ts`), `GEN TEST`, `Test sandbox`, `Export report` (`necrocode-exorcism-report.md`).
+- Actions: copy, download (`purified-artifact.ts`), `GEN TEST`, `Test sandbox`, `Export report` (`necrocode-exorcism-report.md`), `.patch` (`necrocode-fix.patch`).
+- Header shows the health badge (`<before> → <after> /100`) when `summary.healthBefore` and `summary.healthAfter` exist.
+- New prop: `filename: string` (editor filename or GitHub path) — the patch target path.
 - When `autoDemoNonce` changes and the run is complete, switches to the diff and starts the sandbox.
 
 ### Header (`app/page.tsx`)
@@ -190,6 +197,71 @@ interface AgentCanvasProps {
    - Output is accepted only if non-empty, under 160,000 chars, and code-like.
 4. On success, the live code becomes `finalCode`. For JS/TS/TSX it is re-analyzed for residual findings.
 5. On failure of every provider, the Heuristic result stands and the stream says so.
+
+## GitHub summon design
+
+```ts
+// lib/github.ts
+parseGitHubFileUrl(input: string):
+  | { ok: true; file: { owner; repo; ref; path; filename; rawUrl } }
+  | { ok: false; message: string };
+
+// POST /api/github  body: { url: string }
+type GitHubSummonResponse =
+  | { ok: true; code; owner; repo; ref; path; filename; language: LanguageId | null; lines }
+  | { ok: false; message };
+```
+
+| Step | Rule |
+| --- | --- |
+| Parse | Hosts `github.com`, `www.github.com`, `raw.githubusercontent.com` only; no credentials or port; `blob/` required for github.com; ref = first segment after `blob/`; reject `.`, `..`, encoded `/` or `\`, control chars. |
+| Fetch | Server builds the raw URL itself; `redirect: "manual"`, max 2 redirects, each must stay on `https://raw.githubusercontent.com`; 8 s `AbortController` timeout. |
+| Read | Stop at 96,000 bytes; reject NUL bytes (binary), invalid UTF-8, empty files, and > 24,000 chars (same cap as the SSE route, so a summoned file is never truncated). Strip a UTF-8 BOM. |
+| Detect | `languageIdFromFilename(filename)`; `null` keeps the current runtime. |
+
+Status codes: `400` invalid URL or body, `404` not found or private, `413` too
+large, `415` binary or not UTF-8, `422` empty, `502` GitHub error or blocked
+redirect, `504` timeout.
+
+Known limit: a branch name containing `/` fetches correctly, but `path` then
+includes the tail of the branch name, so the patch path needs editing.
+
+## Health score design
+
+```ts
+HEALTH_WEIGHTS = { critical: 15, warning: 6, info: 2 };
+healthScore(findings) = clamp(0, 100, 100 − Σ HEALTH_WEIGHTS[severity]);
+healthTier(score) = score ≥ 80 ? "pure" : score ≥ 50 ? "haunted" : "cursed";
+```
+
+- The SSE route computes `healthBefore` from `baseReport.findings` and
+  `healthAfter` from `remaining` (re-analyzed after a live rewrite), only for
+  JS/TS/TSX. Both ride on the final `summary`, so history entries keep them.
+- Measured on the bundled presets: `haunted-loop` 46 → 100,
+  `async-memory-leak` (AUTO DEMO) 73 → 100, `tainted-secret` 56 → 85,
+  `syntax-corruption` 55 → 55.
+
+## Patch design
+
+`buildUnifiedPatch(original, purified, path): string | null` in `lib/report.ts`.
+
+1. Normalize CRLF to LF and split each side into lines plus a
+   trailing-newline flag. The purified side takes the original's flag.
+2. Diff with `diffLines()`. A shared last line whose newline differs becomes a
+   `-`/`+` pair.
+3. Group changes into hunks with 3 context lines; merge overlapping hunks.
+   Zero-length sides use the preceding line number (`@@ -0,0 +1,3 @@`).
+4. Emit `diff --git a/<path> b/<path>`, `--- a/<path>`, `+++ b/<path>`, hunks,
+   and `\ No newline at end of file` after the affected last line.
+5. Return `null` when nothing changed (button disabled).
+
+`patchPath(name, ext)` converts `\` to `/`, drops empty and `.` segments, and
+falls back to `artifact.<ext>` for `..` or control characters.
+
+Known limits: the patch targets LF files (CRLF files need
+`git apply --ignore-whitespace` or LF checkout); artifacts over 24,000 chars
+are truncated by the SSE route, so their patch may not apply (GitHub summons
+reject such files up front).
 
 ## Sandbox design
 
@@ -219,5 +291,9 @@ interface AgentCanvasProps {
 ## Testing strategy
 
 - No automated test suite is committed.
+- The GitHub parser, `/api/github` (with a mocked `fetch`), `healthScore`, and
+  `buildUnifiedPatch` were checked with a throwaway script: 400 generated and
+  preset patches were applied with real `git apply` and matched the expected
+  file byte for byte. The script is not committed (see task 12).
 - Verification is `npx tsc --noEmit`, `npm run lint`, `npm run build`, plus the manual checklist in `README.md` (“How to Test the Running App”).
 - `GEN TEST` is a runtime smoke check for purified artifacts, not a project test suite.
