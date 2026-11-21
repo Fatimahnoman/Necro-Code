@@ -493,11 +493,11 @@ runner. 🎉
    - **Purified Output** transcribes code and all seals + aura become **neon green**.
 3. The Grimoire terminal streams real logs and the purified code.
 4. Expected default summary: **10 cursed · 10 silenced · 0 residual**.
-5. Open **SPECTRAL DIFF** in the terminal header. The line-by-line view marks
+5. Open the **SPECTRAL DIFF** tab in the Grimoire panel. The line-by-line view marks
    every removed original line in crimson `-` and every purified replacement in
    emerald `+`, with old/new line numbers.
 6. Click **COPY PURIFIED CODE**; the button switches to **Sigil copied**.
-7. Click **EXPORT REPORT** to download `necrocode-exorcism-report.md` with the
+7. Click **REPORT** to download `necrocode-exorcism-report.md` with the
    timestamp, active engine, full findings, applied counter-sigils, and both
    code blocks.
 8. Use the download icon in the terminal header to save `purified-artifact.ts`.
@@ -658,10 +658,9 @@ The build must finish with **zero TypeScript/ESLint errors**. Open
 | 🧾 **EXPORT REPORT** | Downloads `necrocode-exorcism-report.md` with the full autopsy, including the health score. |
 | 🩹 **.PATCH** | Downloads `necrocode-fix.patch`, a unified diff for the artifact's path. Run `git apply necrocode-fix.patch` at the repo root to apply the fix. |
 | 🛡️ **Health badge** | The terminal header shows the Code Health & Security Score before → after, e.g. `46 → 100 /100`. Score = 100 − 15 per critical − 6 per warning − 2 per info (JS/TS/TSX only). |
-| 🎵 **HORROR BGM** | Toggles the looped `/audio/horror-bgm.mp3` soundtrack _(on by default, `0.22` idle / `0.85` surge)_. |
-| 🎧 **3D AUDIO FX** | Toggles stereo-panned synthesized haunted SFX, including the `EXORCISE CODE` DHUM slam _(off by default)_. |
-| 📺 **CRT** | Toggles global and terminal scanlines. |
-| 🌫️ **Fog** | Toggles drifting fog + animated rune grid. |
+| 🎛️ **FX & Audio** | Header popover with four switches: **Horror BGM** (looped `/audio/horror-bgm.mp3`, on by default, `0.22` idle / `0.85` surge), **3D Audio FX** (synthesized SFX incl. the `DHUM!` slam, off by default), **CRT** (scanlines), and **Fog** (drifting fog + rune grid). |
+| 📑 **Grimoire tabs** | The right panel has **Logs**, **Spectral Diff**, and **Sandbox** tabs under a fixed toolbar (**Gen test**, **Test sandbox**, **Copy**, **Report**, **.patch**). Running a test switches to **Sandbox**. |
+| 📱 **Mobile** | Below 1024px, a **Spellbook / 3D Ritual / Grimoire** switcher shows one panel at a time. |
 
 ---
 
@@ -795,7 +794,7 @@ is a working code analyzer, so every visual change comes from a real event.
    relic aura moves from purple to crimson to green as the SSE events arrive.
 3. After completion, use the **timeline** under the graph to inspect each stage,
    and click **GEN TEST** for a `PASS` / `FAIL` smoke check.
-4. Turn on **3D AUDIO FX** to hear the `DHUM!` slam and per-stage SFX; the
+4. Open **FX & Audio** and turn on **3D AUDIO FX** to hear the `DHUM!` slam and per-stage SFX; the
    **HORROR BGM** surges during the run and settles after it.
 
 **How Kiro was used:** the feature is specified in

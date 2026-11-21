@@ -45,6 +45,15 @@ const STATUS_HEX: Record<NodeStatus, string> = {
   error: AURA_HEX.crimson,
 };
 
+const HELPER_STEPS = [
+  "Paste or fetch code",
+  "Click EXORCISE CODE",
+  "Click any 3D seal to inspect",
+] as const;
+
+/** Bottom strip reserved for the first-run helper (up to two wrapped lines). */
+const FOOTER_HELPER_PX = 64;
+
 function formatMs(value: number | null): string {
   return value === null ? "—" : `${Math.round(value)} ms`;
 }
@@ -124,7 +133,7 @@ function GraphFallback() {
           <span className="absolute inset-2 animate-[spin_3s_linear_infinite_reverse] rounded-full border border-blood/30" />
           <span className="h-2 w-2 rounded-full bg-crimson shadow-[0_0_18px_rgba(255,0,60,0.9)]" />
         </div>
-        <p className="font-mono text-[13px] uppercase tracking-[0.3em] text-slate-400">
+        <p className="font-mono text-[13px] uppercase tracking-[0.3em] text-zinc-300">
           Summoning the 3D ritual…
         </p>
       </div>
@@ -206,6 +215,9 @@ export function AgentCanvas({
       : null;
   const ritualMs = totalDurationMs(logs, now, running);
 
+  /** First-run guide: only before any ritual has produced events. */
+  const showHelper = phase === "idle" && !running && logs.length === 0;
+
   const RITUAL_TIMELINE_STEPS: Array<{
     id: string;
     label: string;
@@ -236,7 +248,7 @@ export function AgentCanvas({
           <h2 className="font-display text-xs font-bold uppercase tracking-[0.15em] text-white">
             Ritual Graph
           </h2>
-          <p className="mt-0.5 font-mono text-[12px] uppercase tracking-[0.26em] text-slate-400">
+          <p className="mt-0.5 font-mono text-[12px] uppercase tracking-[0.2em] text-zinc-300">
             Drag to orbit · click a seal
           </p>
         </div>
@@ -258,7 +270,7 @@ export function AgentCanvas({
             />
             {AURA_LABEL[aura]}
           </span>
-          <span className="rounded-full border border-white/10 bg-black/45 px-2.5 py-1 font-mono text-[12px] uppercase tracking-[0.22em] text-slate-400 backdrop-blur-md">
+          <span className="rounded-full border border-white/15 bg-black/50 px-2.5 py-1 font-mono text-[12px] uppercase tracking-[0.2em] text-zinc-200 backdrop-blur-md">
             Bugs <span className="text-crimson">{bugCount}</span>
           </span>
         </div>
@@ -273,8 +285,10 @@ export function AgentCanvas({
           selected={selected}
           onSelect={setSelected}
           onClear={() => setSelected(null)}
-          reserveTopPx={68}
-          reserveBottomPx={phase === "complete" ? 96 : 44}
+          reserveTopPx={72}
+          reserveBottomPx={
+            phase === "complete" ? 104 : showHelper ? FOOTER_HELPER_PX : 44
+          }
         />
       </div>
 
@@ -294,7 +308,9 @@ export function AgentCanvas({
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 14 }}
-            className="absolute inset-x-3 bottom-10 z-40 overflow-hidden rounded-xl border border-white/10 bg-black/85 px-3 pb-3 pt-3 backdrop-blur-xl"
+            className={`absolute inset-x-3 z-40 overflow-hidden rounded-xl border border-white/10 bg-[#0a0b14]/95 px-3 pb-3 pt-3 backdrop-blur-xl ${
+              phase === "complete" ? "bottom-[108px]" : "bottom-14"
+            }`}
             style={{ boxShadow: `0 0 34px ${STATUS_HEX[selectedStatus]}22` }}
           >
             <div className="flex items-start justify-between gap-3">
@@ -305,7 +321,7 @@ export function AgentCanvas({
                 >
                   {selectedStage.glyph} {selectedStage.label}
                 </p>
-                <p className="mt-1 font-mono text-[13px] leading-snug text-slate-400">
+                <p className="mt-1 font-mono text-[13px] leading-snug text-zinc-300">
                   {selectedStage.description}
                 </p>
               </div>
@@ -323,7 +339,7 @@ export function AgentCanvas({
                   type="button"
                   onClick={() => setSelected(null)}
                   aria-label="Close seal details"
-                  className="rounded-md border border-white/10 p-1 text-slate-400 transition hover:border-crimson/40 hover:text-crimson"
+                  className="rounded-md border border-white/10 p-1 text-zinc-300 transition hover:border-crimson/40 hover:text-crimson"
                 >
                   <X className="h-3 w-3" aria-hidden />
                 </button>
@@ -332,31 +348,31 @@ export function AgentCanvas({
 
             <div className="mt-2 grid grid-cols-2 gap-1.5">
               <div className="rounded-md border border-white/10 bg-white/[0.025] px-2 py-1.5">
-                <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-slate-400">
+                <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-zinc-300">
                   Active engine
                 </p>
                 <p className="mt-0.5 truncate font-mono text-[13px] font-semibold uppercase tracking-[0.12em] text-spectral">
                   {engine.name}
                 </p>
-                <p className="truncate font-mono text-[12px] uppercase tracking-[0.14em] text-slate-400">
+                <p className="truncate font-mono text-[12px] uppercase tracking-[0.14em] text-zinc-300">
                   {engine.model}
                 </p>
               </div>
               <div className="rounded-md border border-white/10 bg-white/[0.025] px-2 py-1.5">
-                <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-slate-400">
+                <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-zinc-300">
                   Execution time
                 </p>
                 <p className="mt-0.5 truncate font-mono text-[13px] font-semibold tracking-[0.08em] text-bone">
                   {formatMs(stageMs)}
                 </p>
-                <p className="truncate font-mono text-[12px] uppercase tracking-[0.14em] text-slate-400">
+                <p className="truncate font-mono text-[12px] uppercase tracking-[0.14em] text-zinc-300">
                   ritual {formatMs(ritualMs)}
                 </p>
               </div>
             </div>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-1">
-              <span className="font-mono text-[12px] uppercase tracking-[0.2em] text-slate-400">
+              <span className="font-mono text-[12px] uppercase tracking-[0.2em] text-zinc-300">
                 Severity
               </span>
               <span className="rounded border border-crimson/25 bg-crimson/5 px-1.5 py-0.5 font-mono text-[12px] uppercase tracking-[0.12em] text-crimson">
@@ -368,7 +384,7 @@ export function AgentCanvas({
               <span className="rounded border border-spectral/25 bg-spectral/5 px-1.5 py-0.5 font-mono text-[12px] uppercase tracking-[0.12em] text-spectral">
                 info {severity.info}
               </span>
-              <span className="ml-auto font-mono text-[12px] uppercase tracking-[0.14em] text-slate-400">
+              <span className="ml-auto font-mono text-[12px] uppercase tracking-[0.14em] text-zinc-300">
                 {severity.detected} detected · {severity.fixed} fixed
               </span>
             </div>
@@ -377,7 +393,7 @@ export function AgentCanvas({
       </AnimatePresence>
 
       {phase === "complete" ? (
-        <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-30 border-t border-white/5 bg-black/70 px-3 py-2 backdrop-blur-xl">
+        <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0a0b14]/90 px-3 py-2 backdrop-blur-xl">
           <div className="grid grid-cols-4 gap-1.5">
             {RITUAL_TIMELINE_STEPS.map((step) => (
               <button
@@ -386,22 +402,22 @@ export function AgentCanvas({
                 onClick={() => setSelected(step.stageId)}
                 aria-pressed={selected === step.stageId}
                 className={[
-                  "flex flex-col items-center justify-center gap-0.5 rounded-md border px-2 py-1.5 font-mono text-[9.5px] uppercase tracking-[0.14em] transition",
+                  "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1.5 font-mono text-[12px] font-medium uppercase leading-tight tracking-[0.06em] transition",
                   selected === step.stageId
                     ? "border-crimson/60 bg-crimson/10 text-crimson"
-                    : "border-white/10 bg-black/45 text-slate-300 hover:border-haunt/40 hover:text-haunt",
+                    : "border-white/15 bg-black/50 text-zinc-200 hover:border-haunt/50 hover:text-haunt-glow",
                 ].join(" ")}
               >
-                <span>{step.label}</span>
-                <span className="text-[9px] tracking-[0.18em] text-slate-400">
+                <span className="max-w-full truncate">{step.label}</span>
+                <span className="max-w-full truncate text-[12px] font-normal tracking-[0.06em] text-zinc-400">
                   {STATUS_LABEL[nodes[step.stageId]]}
                 </span>
               </button>
             ))}
           </div>
-          <div className="mt-1.5 flex items-center justify-between gap-2 font-mono text-[12px] uppercase tracking-[0.22em] text-slate-400">
+          <div className="mt-1.5 flex items-center justify-between gap-2 font-mono text-[12px] uppercase tracking-[0.22em] text-zinc-300">
             <span>SSE ↔ 3D sync</span>
-            <span className={running ? "text-crimson" : phase === "complete" ? "text-neon" : "text-slate-400"}>
+            <span className={running ? "text-crimson" : phase === "complete" ? "text-neon" : "text-zinc-300"}>
               {running
                 ? `ritual ${progress}%`
                 : summary
@@ -412,10 +428,30 @@ export function AgentCanvas({
             </span>
           </div>
         </div>
+      ) : showHelper ? (
+        <div
+          data-ritual-helper
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0a0b14]/85 px-3 py-2.5 backdrop-blur-md"
+        >
+          <ol className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-[12px] leading-snug text-zinc-200">
+            {HELPER_STEPS.map((step, index) => (
+              <li key={step} className="flex items-center gap-2">
+                {index > 0 && (
+                  <span className="text-haunt-glow" aria-hidden>
+                    →
+                  </span>
+                )}
+                <span>
+                  <span className="text-crimson">{index + 1}.</span> {step}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
       ) : (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex items-center justify-between gap-2 p-3 font-mono text-[12px] uppercase tracking-[0.22em] text-slate-400">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex items-center justify-between gap-2 p-3 font-mono text-[12px] uppercase tracking-[0.22em] text-zinc-300">
           <span>SSE ↔ 3D sync</span>
-          <span className={running ? "text-crimson" : "text-slate-400"}>
+          <span className={running ? "text-crimson" : "text-zinc-300"}>
             {running
               ? `ritual ${progress}%`
               : summary

@@ -164,7 +164,7 @@ export function ControlPanel({
           <h2 className="font-display text-xs font-bold uppercase tracking-[0.15em] text-white">
             Spellbook
           </h2>
-          <p className="font-mono text-[13px] uppercase tracking-[0.24em] text-slate-400">
+          <p className="font-mono text-[13px] uppercase tracking-[0.24em] text-zinc-300">
             Cursed code editor · feed the pyre
           </p>
         </div>
@@ -173,7 +173,7 @@ export function ControlPanel({
       {/* Template selector */}
       <div className="shrink-0 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="whitespace-nowrap font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-300">
+          <span className="whitespace-nowrap font-mono text-[12px] font-medium uppercase tracking-[0.18em] text-zinc-300">
             Presets
           </span>
           <span className="flex shrink-0 items-center gap-1.5">
@@ -184,7 +184,7 @@ export function ControlPanel({
               aria-controls="github-summon"
               title="Summon a file from a public GitHub repository"
               className={[
-                "inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2 font-mono text-[11px] font-medium uppercase leading-none tracking-[0.12em] transition",
+                "inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.12em] transition",
                 githubOpen
                   ? "border-haunt/60 bg-haunt/15 text-haunt-glow"
                   : "border-haunt/40 bg-haunt/5 text-zinc-200 hover:bg-haunt/10 hover:text-white",
@@ -197,7 +197,7 @@ export function ControlPanel({
               type="button"
               onClick={() => fileRef.current?.click()}
               title="Upload a cursed artifact in any supported language"
-              className="inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-spectral/40 bg-spectral/5 px-2 font-mono text-[11px] font-medium uppercase leading-none tracking-[0.12em] text-zinc-200 transition hover:bg-spectral/10 hover:text-white"
+              className="inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-spectral/40 bg-spectral/5 px-2 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.12em] text-zinc-200 transition hover:bg-spectral/10 hover:text-white"
             >
               <Upload className="h-3.5 w-3.5 shrink-0 text-spectral" aria-hidden />
               Upload
@@ -252,7 +252,7 @@ export function ControlPanel({
                     ? "text-crimson"
                     : githubStatus.kind === "success"
                       ? "text-neon"
-                      : "text-slate-400"
+                      : "text-zinc-300"
                 }`}
                 title={githubStatus.message}
               >
@@ -294,13 +294,13 @@ export function ControlPanel({
               ))}
             </select>
             <ChevronDown
-              className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-300"
               aria-hidden
             />
           </div>
         </div>
 
-        <p className="min-h-[2.2em] font-mono text-[13px] leading-relaxed text-slate-400">
+        <p className="min-h-[2.2em] font-mono text-[13px] leading-relaxed text-zinc-300">
           {selectedPreset?.blurb ??
             "A custom curse, written by your own hand. The crypt reads every line."}
         </p>
@@ -310,11 +310,11 @@ export function ControlPanel({
       <div className="shrink-0 space-y-1">
         <label
           htmlFor="ritual-directive"
-          className="flex items-center gap-1.5 font-mono text-[13px] uppercase tracking-[0.24em] text-slate-400"
+          className="flex items-center gap-1.5 font-mono text-[13px] uppercase tracking-[0.24em] text-zinc-300"
         >
           <Wand2 className="h-2.5 w-2.5 text-spectral" aria-hidden />
           Ritual Directive
-          <span className="tracking-[0.16em] text-slate-400">(optional)</span>
+          <span className="tracking-[0.16em] text-zinc-300">(optional)</span>
         </label>
         <input
           id="ritual-directive"
@@ -330,12 +330,12 @@ export function ControlPanel({
       {/* Editor */}
       <div className="flex min-h-[260px] flex-1 flex-col gap-2">
         <div className="flex shrink-0 items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5 font-mono text-[13px] uppercase tracking-[0.24em] text-slate-400">
+          <span className="flex items-center gap-1.5 font-mono text-[13px] uppercase tracking-[0.24em] text-zinc-300">
             <Sparkles className="h-2.5 w-2.5 text-haunt" aria-hidden />
             Artifact
           </span>
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate font-mono text-[13px] text-slate-200">
+            <span className="truncate font-mono text-[13px] text-zinc-100">
               {filename}
             </span>
             <span className="relative shrink-0">
@@ -377,7 +377,7 @@ export function ControlPanel({
           />
         </div>
 
-        <div className="flex shrink-0 items-center justify-between font-mono text-[13px] uppercase tracking-[0.18em] text-slate-400">
+        <div className="flex shrink-0 items-center justify-between font-mono text-[13px] uppercase tracking-[0.18em] text-zinc-300">
           <span>{lines.length} lines</span>
           <span>{code.length} chars</span>
         </div>
@@ -386,9 +386,9 @@ export function ControlPanel({
       {/* Ritual controls */}
       <div className="flex shrink-0 flex-col gap-2 border-t border-purple-900/30 bg-[#0D111D] pt-2">
         <div className="space-y-1">
-          <div className="flex justify-between font-mono text-[13px] uppercase tracking-[0.2em] text-slate-400">
+          <div className="flex justify-between font-mono text-[13px] uppercase tracking-[0.2em] text-zinc-300">
             <span>{PHASE_LABEL[phase]}</span>
-            <span className={running ? "text-crimson" : "text-slate-400"}>
+            <span className={running ? "text-crimson" : "text-zinc-300"}>
               {progress}%
             </span>
           </div>
@@ -408,7 +408,7 @@ export function ControlPanel({
           disabled={running}
           whileHover={running ? undefined : { scale: 1.012 }}
           whileTap={running ? undefined : { scale: 0.985 }}
-          className="flex h-11 min-h-[44px] w-full shrink-0 items-center justify-center rounded-xl border border-crimson/60 bg-crimson/10 px-4 font-display text-[14px] font-semibold uppercase tracking-[0.26em] text-crimson shadow-[0_0_30px_rgba(255,0,60,0.18)] transition-colors hover:bg-crimson/15 hover:shadow-[0_0_40px_rgba(255,0,60,0.28)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex h-12 min-h-[48px] w-full shrink-0 items-center justify-center rounded-xl border border-crimson bg-gradient-to-r from-crimson/30 via-crimson/20 to-haunt/25 px-4 font-display text-[15px] font-bold uppercase tracking-[0.22em] text-white shadow-[0_0_36px_rgba(255,0,60,0.38),inset_0_0_18px_rgba(255,0,60,0.25)] transition hover:from-crimson/40 hover:shadow-[0_0_52px_rgba(255,0,60,0.5),inset_0_0_22px_rgba(255,0,60,0.3)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <span className="flex items-center justify-center gap-2.5">
             {running ? (
@@ -417,7 +417,7 @@ export function ControlPanel({
               <Skull className="h-4 w-4" aria-hidden />
             )}
             {running ? "Exorcising…" : "Exorcise Code"}
-            <span className="font-mono text-[13px] tracking-[0.18em] text-crimson/60">
+            <span className="font-mono text-[12px] tracking-[0.14em] text-white/70">
               {running ? `${progress}%` : "SSE"}
             </span>
           </span>
@@ -427,7 +427,7 @@ export function ControlPanel({
           type="button"
           onClick={onReset}
           disabled={running}
-          className="flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-white/5 bg-black/25 px-3 font-mono text-[13px] uppercase tracking-[0.22em] text-slate-400 transition hover:border-haunt/35 hover:text-haunt disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-white/5 bg-black/25 px-3 font-mono text-[13px] uppercase tracking-[0.22em] text-zinc-300 transition hover:border-haunt/35 hover:text-haunt disabled:cursor-not-allowed disabled:opacity-40"
         >
           <RotateCcw className="h-3 w-3" aria-hidden />
           Banish ritual

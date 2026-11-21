@@ -49,18 +49,22 @@ images, no remote audio assets (the only audio file is the bundled
 Three-pane HUD, responsive, zero horizontal scroll:
 
 0. **Header** (`app/page.tsx`)
-   - `NECROCODE` + `// AI CODE EXORCIST`, `AUTO DEMO`, `API Sigils`, `History`,
-     `Horror BGM`, `3D Audio FX`, `CRT` and `Fog` toggles, phase `StatusPill`.
-   - Two tiers on the right: status readouts (phase, engine, SSE, aura) above
-     controls. Every pill is `h-7 shrink-0 whitespace-nowrap text-[11px]
-     leading-none tracking-[0.14em]` (`HEADER_PILL` in `page.tsx`); inactive
-     pills use `text-zinc-200 border-white/15`. Rows wrap; pills never shrink
-     or clip.
+   - Left: brand `NECROCODE` + `// AI CODE EXORCIST`, and one engine badge
+     (`Live AI engine` / `Builtin safety net`).
+   - Right: `Auto demo` (crimson outline, secondary), `API Sigils`, `History`,
+     and one `FX & Audio` popover (`components/FxMenu.tsx`) holding the
+     `Horror BGM`, `3D Audio FX`, `CRT`, and `Fog` switches. No phase, SSE, or
+     aura pills in the header (the Spellbook shows the phase, the Ritual Graph
+     shows the aura).
+   - Pills share `HEADER_PILL` (`h-8 shrink-0 whitespace-nowrap text-[12px]
+     tracking-[0.1em]`); rows wrap, pills never shrink or clip.
 1. **Left · Spellbook** (`ControlPanel`)
    - Cursed artifact presets, `GitHub` summon toggle (single-line URL form,
      `POST /api/github`) next to the upload button, runtime selector, ritual
      directive, code editor (`min-h-[260px] flex-1`, takes the free height),
      progress bar, “Exorcise Code” and “Banish ritual”.
+   - `Exorcise Code` is the only filled, glowing CTA on the page (crimson →
+     haunt gradient, white text, `h-12`). Every other button is outline.
    - No cursed/silenced/residual counter here; it lives only in the Grimoire
      Terminal footer.
 2. **Center · 3D Ritual Graph** (`AgentCanvas` + `ExecutionGraph3D`)
@@ -71,31 +75,48 @@ Three-pane HUD, responsive, zero horizontal scroll:
    - Click a seal to inspect its curse. Red pulsing border/aura on `error`.
    - After `complete`, a four-step timeline (`DORMANT · SCANNING · EXORCISING ·
      PURIFIED`) selects each stage for inspection.
+   - Before the first run (`idle`, no logs), the footer shows the helper
+     `1. Paste or fetch code → 2. Click EXORCISE CODE → 3. Click any 3D seal to
+     inspect`; it is replaced by the SSE sync line once a run starts.
 3. **Right · Grimoire Terminal** (`Terminal`)
-   - `Terminal` / `Spectral Diff` tabs (unified diff with dual line gutters),
-     then a pinned action bar that is always rendered and never scrolls:
-     `Gen test`, `Test sandbox`, `Copy purified code`, `Export report`,
-     `.patch` (`necrocode-fix.patch`), and the test badge. Buttons share
-     `ACTION_BUTTON` (`h-8 whitespace-nowrap text-[11px]`) and disable until an
-     artifact exists. Below: scrolling log/diff, sandbox output, footer summary.
+   - Fixed top block that never scrolls: title row (health badge, download),
+     the action toolbar (`Gen test`, `Test sandbox`, `Copy`, `Report`,
+     `.patch`, test badge; `ACTION_BUTTON`, `h-8 whitespace-nowrap
+     text-[12px]`, disabled until an artifact exists), then three tabs:
+     `Logs`, `Spectral Diff`, `Sandbox`.
+   - Tab badges: `Logs` pulses while running, `Spectral Diff` shows `-n +n`,
+     `Sandbox` shows a status dot once output exists.
+   - `Test sandbox` and `Gen test` switch to `Sandbox` (also on a language
+     mismatch). `AUTO DEMO` stays on `Spectral Diff` and runs the sandbox in
+     the background. A new run switches to `Logs`.
+   - Footer: the cursed / silenced / residual summary (the only copy of it).
    - Header health badge `<before> → <after> /100`: crimson < 50, amber
      50–79, neon ≥ 80. Weights live only in `HEALTH_WEIGHTS` (`lib/report.ts`).
 4. **Atmosphere** (`HorrorBackdrop`)
    - Fixed full-screen WebGL fog/embers and a giant wireframe relic behind the
      glass dashboard, reacting to the same SSE aura.
 
-Grid: `grid-cols-1 gap-4` on mobile (stacked); proportional columns on
-desktop so the 3D stage is the widest:
-- `lg` (1024–1279px): `minmax(0,1.05fr) minmax(0,1.35fr) minmax(0,1.1fr)`.
-- `xl+`: `minmax(340px,1.05fr) minmax(440px,1.35fr) minmax(360px,1.1fr)`.
-  The minimums total 1,140px + gaps, so they only apply from `xl`, where they
-  cannot cause horizontal scroll.
-Page padding `px-4`; `lg:items-stretch`. Panel roots use
+Desktop grid (`lg+`), center column widest:
+- `lg` (1024–1279px): `minmax(0,1fr) minmax(0,1.35fr) minmax(0,1.1fr)`.
+- `xl+`: `minmax(330px,1fr) minmax(440px,1.35fr) minmax(360px,1.1fr)`.
+  The minimums total 1,130px + gaps + padding (~1,194px), so they only apply
+  from `xl`; at `lg` they would overflow the viewport.
+`gap-4`, page padding `px-4`, `lg:items-stretch`. Panel roots use
 `h-full min-h-0 flex flex-col rounded-2xl`.
 
-Glass: panels are `rgba(10,11,20,0.88)` (`#0a0b14` at 88%) with a 12px
-backdrop blur, keeping the gradient rune border. CRT scanline and sweep alphas
-are half their earlier values (global `0.0125`, terminal `0.0175`).
+Mobile (`< lg`): a sticky three-tab switcher (`Spellbook` | `3D Ritual` |
+`Grimoire`) shows one panel at a time (`h-[calc(100dvh-210px)]
+min-h-[520px]`). All three panels stay mounted (hidden with CSS) so sandbox
+output and WebGL state survive tab switches. `Exorcise Code` and `AUTO DEMO`
+switch to `3D Ritual`; restoring a history entry switches to `Grimoire`.
+
+Glass: panels are `#0a0b14` at 90% with a 12px backdrop blur, keeping the
+gradient rune border. CRT layers are faded by `--crt-opacity: 0.16` in
+`globals.css` (effective line alpha ≈ 0.012).
+
+Text: UI labels, buttons, and logs are 12–13px; nothing below 12px. Secondary
+text is `text-zinc-300`/`zinc-400`, primary `text-zinc-200`/`zinc-100`
+(`#E5E7EB`); no `slate` greys.
 
 Typography: brand `text-xl font-extrabold tracking-[0.16em]`; panel headings
 (`Spellbook`, `Ritual Graph`, Terminal title) `text-xs font-bold uppercase

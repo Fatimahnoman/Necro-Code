@@ -49,7 +49,7 @@ import type {
 } from "@/lib/types";
 
 const LEVEL_COLOR: Record<LogLevel, string> = {
-  info: "text-slate-300",
+  info: "text-zinc-200",
   success: "text-neon text-glow-neon",
   warn: "text-amber-300",
   error: "text-crimson text-glow-crimson",
@@ -67,7 +67,7 @@ const LEVEL_GLYPH: Record<LogLevel, string> = {
 };
 
 const DIFF_ROW: Record<DiffLine["kind"], string> = {
-  same: "border-transparent text-slate-400",
+  same: "border-transparent text-zinc-300",
   removed: "border-crimson/50 bg-crimson/10 text-crimson/90",
   added: "border-neon/50 bg-neon/10 text-neon/90",
 };
@@ -104,14 +104,35 @@ function downloadText(content: string, filename: string, type: string) {
 
 /** Uniform pinned-toolbar button: single line, never shrinks or truncates. */
 const ACTION_BUTTON =
-  "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 font-mono text-[11px] font-medium uppercase leading-none tracking-[0.12em] transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-zinc-600 disabled:shadow-none";
+  "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.08em] transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-zinc-500 disabled:shadow-none";
+
+type GrimoireTab = "logs" | "diff" | "sandbox";
+
+const GRIMOIRE_TABS: Array<{ id: GrimoireTab; label: string }> = [
+  { id: "logs", label: "Logs" },
+  { id: "diff", label: "Spectral Diff" },
+  { id: "sandbox", label: "Sandbox" },
+];
+
+const TAB_SELECTED: Record<GrimoireTab, string> = {
+  logs: "border-spectral/50 bg-spectral/15 text-spectral shadow-[0_0_12px_rgba(6,182,212,0.14)]",
+  diff: "border-haunt/50 bg-haunt/15 text-haunt-glow shadow-[0_0_12px_rgba(147,51,234,0.14)]",
+  sandbox: "border-neon/45 bg-neon/10 text-neon shadow-[0_0_12px_rgba(0,255,102,0.12)]",
+};
+
+const SANDBOX_DOT: Record<"running" | "complete" | "error" | "timeout", string> = {
+  running: "animate-pulse bg-haunt-glow",
+  complete: "bg-neon shadow-[0_0_8px_rgba(0,255,102,0.9)]",
+  error: "bg-crimson shadow-[0_0_8px_rgba(255,0,60,0.9)]",
+  timeout: "bg-amber-300",
+};
 
 const SANDBOX_COLOR: Record<SandboxLineKind, string> = {
-  log: "text-slate-300",
+  log: "text-zinc-200",
   info: "text-spectral",
   warn: "text-amber-300",
   error: "text-crimson",
-  debug: "text-slate-400",
+  debug: "text-zinc-300",
   result: "text-neon",
   system: "text-haunt/80",
 };
@@ -132,10 +153,10 @@ function DiffRow({ line }: { line: DiffLine }) {
       data-diff-kind={line.kind}
       className={`flex gap-1.5 border-l-2 px-1 py-0.5 ${DIFF_ROW[line.kind]}`}
     >
-      <span className="w-7 shrink-0 select-none text-right text-[13px] text-slate-400">
+      <span className="w-7 shrink-0 select-none text-right text-[13px] text-zinc-300">
         {line.oldLine ?? ""}
       </span>
-      <span className="w-7 shrink-0 select-none text-right text-[13px] text-slate-400">
+      <span className="w-7 shrink-0 select-none text-right text-[13px] text-zinc-300">
         {line.newLine ?? ""}
       </span>
       <span className="w-2.5 shrink-0 select-none text-center font-bold">
@@ -184,7 +205,7 @@ export function Terminal({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
-  const [view, setView] = useState<"terminal" | "diff">("terminal");
+  const [view, setView] = useState<GrimoireTab>("logs");
   const [testStatus, setTestStatus] = useState<
     "idle" | "running" | "passed" | "failed"
   >("idle");
@@ -201,7 +222,7 @@ export function Terminal({
   } = useCodeSandbox();
 
   useEffect(() => {
-    if (view !== "terminal") return;
+    if (view !== "logs") return;
     const element = scrollRef.current;
     if (element) element.scrollTop = element.scrollHeight;
   }, [logs, view]);
@@ -361,17 +382,24 @@ export function Terminal({
     [language, rejectSandbox],
   );
 
-  const handleSandbox = useCallback(() => {
-    if (!finalCode) return;
-    onSandbox?.();
-    // A plain sandbox run must not be graded as a pending GEN TEST.
-    setTestStatus((status) => (status === "running" ? "idle" : status));
-    if (!preflight(finalCode)) return;
-    runSandbox(finalCode, language);
-  }, [finalCode, language, onSandbox, preflight, runSandbox]);
+  const startSandbox = useCallback(
+    (switchView: boolean) => {
+      if (!finalCode) return;
+      onSandbox?.();
+      if (switchView) setView("sandbox");
+      // A plain sandbox run must not be graded as a pending GEN TEST.
+      setTestStatus((status) => (status === "running" ? "idle" : status));
+      if (!preflight(finalCode)) return;
+      runSandbox(finalCode, language);
+    },
+    [finalCode, language, onSandbox, preflight, runSandbox],
+  );
+
+  const handleSandbox = useCallback(() => startSandbox(true), [startSandbox]);
 
   const handleGenerateTest = useCallback(() => {
     if (!finalCode) return;
+    setView("sandbox");
     if (!preflight(finalCode)) {
       setTestStatus("idle");
       setTestHarness(null);
@@ -385,17 +413,24 @@ export function Terminal({
 
   useEffect(() => {
     if (!autoDemoNonce || !finalCode || running || !summary) return;
+    // AUTO DEMO shows the diff; the sandbox runs alongside and its tab badge lights up.
     setView("diff");
-    handleSandbox();
-  }, [autoDemoNonce, finalCode, running, summary, handleSandbox]);
+    startSandbox(false);
+  }, [autoDemoNonce, finalCode, running, summary, startSandbox]);
+
+  // A new ritual always starts on the live log.
+  useEffect(() => {
+    if (running) setView("logs");
+  }, [running]);
 
   return (
     <aside
-      className={`rune-border horror-panel relative flex h-full min-h-0 flex-col justify-between overflow-hidden rounded-2xl ${
+      className={`rune-border horror-panel relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl ${
         scanlines ? "scanlines" : ""
       }`}
     >
-      <div className="relative z-10 border-b border-white/5 bg-black/55">
+      {/* Header + pinned action toolbar + tabs: never scroll. */}
+      <div className="relative z-30 shrink-0 border-b border-white/10 bg-[#0a0b14]/95 backdrop-blur-md">
         <div className="flex items-center gap-2 px-3 pb-1.5 pt-2.5">
           <div className="flex gap-1.5">
             <span className="h-2 w-2 rounded-full bg-crimson shadow-[0_0_8px_rgba(255,0,60,0.8)]" />
@@ -426,16 +461,16 @@ export function Terminal({
                 data-health-after={healthAfter}
                 title={`Code Health & Security Score before → after exorcism. 100 minus ${HEALTH_WEIGHTS.critical} per critical, ${HEALTH_WEIGHTS.warning} per warning, ${HEALTH_WEIGHTS.info} per info finding.`}
                 aria-label={`Health score ${healthBefore} out of 100 before, ${healthAfter} out of 100 after`}
-                className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md border bg-black/50 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] ${HEALTH_BORDER[healthTier(healthAfter)]}`}
+                className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md border bg-black/50 px-1.5 py-0.5 font-mono text-[12px] uppercase tracking-[0.08em] ${HEALTH_BORDER[healthTier(healthAfter)]}`}
               >
                 <span className={HEALTH_COLOR[healthTier(healthBefore)]}>
                   {healthBefore}
                 </span>
-                <span className="text-slate-500">→</span>
+                <span className="text-zinc-400">→</span>
                 <span className={`font-bold ${HEALTH_COLOR[healthTier(healthAfter)]}`}>
                   {healthAfter}
                 </span>
-                <span className="text-slate-500">/100</span>
+                <span className="text-zinc-400">/100</span>
               </span>
             )}
             <button
@@ -447,7 +482,7 @@ export function Terminal({
                 "grid h-6 w-6 place-items-center rounded-md border transition",
                 hasCode
                   ? "border-haunt/40 text-haunt hover:bg-haunt/10"
-                  : "cursor-not-allowed border-white/10 text-slate-400",
+                  : "cursor-not-allowed border-white/10 text-zinc-300",
               ].join(" ")}
             >
               <Download className="h-3 w-3" aria-hidden />
@@ -455,71 +490,8 @@ export function Terminal({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-2.5 pb-2">
-          <div
-            role="tablist"
-            aria-label="Terminal view"
-            className="flex rounded-md border border-white/10 bg-black/45 p-0.5"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={view === "terminal"}
-              onClick={() => setView("terminal")}
-              className={[
-                "rounded px-2 py-1 font-mono text-[12px] uppercase tracking-[0.2em] transition",
-                view === "terminal"
-                  ? "bg-spectral/15 text-spectral shadow-[0_0_12px_rgba(6,182,212,0.12)]"
-                  : "text-slate-400 hover:text-slate-400",
-              ].join(" ")}
-            >
-              Terminal
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={view === "diff"}
-              onClick={() => setView("diff")}
-              className={[
-                "rounded px-2 py-1 font-mono text-[12px] uppercase tracking-[0.2em] transition",
-                view === "diff"
-                  ? "bg-haunt/15 text-haunt shadow-[0_0_12px_rgba(147,51,234,0.12)]"
-                  : "text-slate-400 hover:text-slate-400",
-              ].join(" ")}
-            >
-              Spectral Diff
-            </button>
-          </div>
 
-          <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.18em] text-slate-400">
-            {view === "diff" && canDiff ? (
-              <>
-                <span className="text-crimson">-{stats.removed}</span>
-                <span className="text-neon">+{stats.added}</span>
-              </>
-            ) : (
-              <>
-                <span
-                  className={`h-1 w-1 rounded-full ${
-                    running
-                      ? "animate-pulse bg-crimson"
-                      : canDiff
-                        ? "bg-neon"
-                        : "bg-slate-700"
-                  }`}
-                />
-                {canDiff ? "sealed" : "unread"}
-              </>
-            )}
-          </span>
-        </div>
-      </div>
-
-      {/* Pinned action bar: always visible under the tabs; buttons disable until an artifact exists. */}
-      <div
-        data-terminal-actions
-        className="relative z-30 shrink-0 border-b border-white/10 bg-[#0a0b14]/95 px-2.5 py-2 backdrop-blur-md"
-      >
+        <div data-terminal-actions className="px-2.5 pb-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
@@ -574,7 +546,7 @@ export function Terminal({
             ) : (
               <Copy className="h-3.5 w-3.5 shrink-0" aria-hidden />
             )}
-            {copied ? "Sigil copied" : "Copy purified code"}
+            {copied ? "Copied" : "Copy"}
           </button>
           <button
             type="button"
@@ -588,7 +560,7 @@ export function Terminal({
             className={`${ACTION_BUTTON} border-spectral/45 bg-spectral/10 text-zinc-100 hover:bg-spectral/15 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)]`}
           >
             <FileText className="h-3.5 w-3.5 shrink-0 text-spectral" aria-hidden />
-            Export report
+            Report
           </button>
           <button
             type="button"
@@ -609,7 +581,7 @@ export function Terminal({
           <span
             aria-live="polite"
             className={[
-              "inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-full border px-2.5 font-mono text-[11px] font-medium uppercase leading-none tracking-[0.12em]",
+              "inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-full border px-2.5 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.08em]",
               testStatus === "passed"
                 ? "border-neon/50 bg-neon/10 text-neon"
                 : testStatus === "failed"
@@ -624,13 +596,61 @@ export function Terminal({
                 : "Test"}
           </span>
         </div>
+        </div>
+
+        <div
+          role="tablist"
+          aria-label="Grimoire view"
+          className="flex items-center gap-1 px-2.5 pb-2 pt-1"
+        >
+          {GRIMOIRE_TABS.map((tab) => {
+            const selected = view === tab.id;
+            const badge =
+              tab.id === "diff" && canDiff ? (
+                <span className="flex items-center gap-1 text-[12px] normal-case tracking-normal">
+                  <span className="text-crimson">-{stats.removed}</span>
+                  <span className="text-neon">+{stats.added}</span>
+                </span>
+              ) : tab.id === "sandbox" && sandboxStatus !== "idle" ? (
+                <span
+                  data-sandbox-badge={sandboxStatus}
+                  aria-label={`sandbox ${sandboxStatus}`}
+                  className={`h-2 w-2 shrink-0 rounded-full ${SANDBOX_DOT[sandboxStatus]}`}
+                />
+              ) : tab.id === "logs" && running ? (
+                <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-crimson" />
+              ) : null;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                id={`grimoire-tab-${tab.id}`}
+                aria-selected={selected}
+                aria-controls="grimoire-panel"
+                onClick={() => setView(tab.id)}
+                className={[
+                  "inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.1em] transition",
+                  selected
+                    ? TAB_SELECTED[tab.id]
+                    : "border-white/10 bg-black/40 text-zinc-300 hover:border-white/25 hover:text-white",
+                ].join(" ")}
+              >
+                {tab.label}
+                {badge}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {view === "terminal" ? (
+      {view === "logs" ? (
         <div
           ref={scrollRef}
+          id="grimoire-panel"
           role="log"
           aria-live="polite"
+          aria-labelledby="grimoire-tab-logs"
           className="relative z-10 min-h-0 flex-1 overflow-y-auto p-3 font-mono text-[13px] leading-relaxed"
         >
           {logs.length === 0 && (
@@ -639,10 +659,10 @@ export function Terminal({
                 <span className="absolute inset-0 animate-[spin_20s_linear_infinite] rounded-full border border-dashed border-haunt/20" />
                 <ScrollText className="h-5 w-5 text-haunt/50" aria-hidden />
               </div>
-              <p className="font-mono text-[13px] uppercase tracking-[0.28em] text-slate-400">
+              <p className="font-mono text-[13px] uppercase tracking-[0.28em] text-zinc-300">
                 The grimoire is empty
               </p>
-              <p className="max-w-[230px] font-mono text-[13px] leading-relaxed text-slate-400">
+              <p className="max-w-[230px] font-mono text-[13px] leading-relaxed text-zinc-300">
                 Offer a cursed artifact and press{" "}
                 <span className="text-crimson">Exorcise Code</span> to begin the
                 séance.
@@ -691,11 +711,12 @@ export function Terminal({
             </div>
           )}
         </div>
-      ) : (
+      ) : view === "diff" ? (
         <div
           ref={scrollRef}
-          role="region"
-          aria-label="Spectral diff"
+          id="grimoire-panel"
+          role="tabpanel"
+          aria-labelledby="grimoire-tab-diff"
           className="relative z-10 min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-2 font-mono text-[13px] leading-relaxed"
         >
           {!canDiff ? (
@@ -708,10 +729,10 @@ export function Terminal({
                 />
                 <FileText className="h-5 w-5 text-haunt/50" aria-hidden />
               </div>
-              <p className="font-mono text-[13px] uppercase tracking-[0.28em] text-slate-400">
+              <p className="font-mono text-[13px] uppercase tracking-[0.28em] text-zinc-300">
                 {running ? "Spectral diff forming" : "No artifact to compare"}
               </p>
-              <p className="max-w-[250px] font-mono text-[13px] leading-relaxed text-slate-400">
+              <p className="max-w-[250px] font-mono text-[13px] leading-relaxed text-zinc-300">
                 {running
                   ? "The purified artifact is still being transcribed. The diff will appear when the final seal is drawn."
                   : "Exorcise a cursed artifact to reveal every line the ritual changed."}
@@ -725,14 +746,14 @@ export function Terminal({
               <p className="font-mono text-[13px] uppercase tracking-[0.28em] text-neon/80">
                 No spectral residue
               </p>
-              <p className="max-w-[240px] font-mono text-[13px] leading-relaxed text-slate-400">
+              <p className="max-w-[240px] font-mono text-[13px] leading-relaxed text-zinc-300">
                 Original and purified artifacts match line for line.
               </p>
             </div>
           ) : (
             <>
               <div className="mb-2 flex items-center justify-between gap-2 rounded-md border border-white/10 bg-black/35 px-2 py-1.5 font-mono text-[12px] uppercase tracking-[0.18em]">
-                <span className="text-slate-400">original → purified</span>
+                <span className="text-zinc-300">original → purified</span>
                 <span className="flex items-center gap-2">
                   <span className="text-crimson">-{stats.removed} removed</span>
                   <span className="text-neon">+{stats.added} added</span>
@@ -751,48 +772,35 @@ export function Terminal({
             </>
           )}
         </div>
-      )}
-
-      {summary && (
-        <div className="relative z-10 border-t border-white/5 bg-black/40 px-3 py-2">
-          <div className="flex items-center justify-between font-mono text-[12px] uppercase tracking-[0.24em] text-slate-400">
-            <span>Corruption report</span>
-            <span className={summary.unresolved > 0 ? "text-crimson" : "text-neon"}>
-              {summary.unresolved > 0 ? "residual" : "purified"}
-            </span>
-          </div>
-          <div className="mt-1.5 grid grid-cols-3 gap-1.5 text-center font-mono uppercase tracking-[0.14em]">
-            <div className="rounded-md border border-crimson/20 bg-crimson/5 py-1 text-crimson">
-              <div className="text-[14px] font-semibold leading-none">
-                {summary.detected}
-              </div>
-              <div className="mt-0.5 text-[12px] text-slate-400">cursed</div>
-            </div>
-            <div className="rounded-md border border-neon/20 bg-neon/5 py-1 text-neon">
-              <div className="text-[14px] font-semibold leading-none">
-                {summary.fixed}
-              </div>
-              <div className="mt-0.5 text-[12px] text-slate-400">silenced</div>
-            </div>
-            <div className="rounded-md border border-haunt/20 bg-haunt/5 py-1 text-haunt">
-              <div className="text-[14px] font-semibold leading-none">
-                {summary.unresolved}
-              </div>
-              <div className="mt-0.5 text-[12px] text-slate-400">residual</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {sandboxStatus !== "idle" && (
+      ) : (
         <div
+          id="grimoire-panel"
+          role="tabpanel"
+          aria-labelledby="grimoire-tab-sandbox"
           data-sandbox-output
           data-sandbox-status={sandboxStatus}
-          className="relative z-10 border-t border-white/5 bg-black/65"
+          className="relative z-10 flex min-h-0 flex-1 flex-col"
         >
-          <div className="flex items-center gap-2 px-3 py-1.5">
+          {sandboxStatus === "idle" ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
+              <div className="relative grid h-16 w-16 place-items-center">
+                <span className="absolute inset-0 rounded-full border border-dashed border-haunt/25" />
+                <Play className="h-5 w-5 text-haunt/60" aria-hidden />
+              </div>
+              <p className="font-mono text-[13px] uppercase tracking-[0.2em] text-zinc-200">
+                Sandbox is sealed
+              </p>
+              <p className="max-w-[260px] font-mono text-[13px] leading-relaxed text-zinc-400">
+                {finalCode
+                  ? "Click TEST SANDBOX or GEN TEST to run the purified artifact."
+                  : "Exorcise an artifact first, then run it here."}
+              </p>
+            </div>
+          ) : (
+            <>
+          <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2">
             <SquareTerminal className="h-3 w-3 shrink-0 text-haunt" aria-hidden />
-            <span className="font-mono text-[12px] uppercase tracking-[0.22em] text-slate-400">
+            <span className="font-mono text-[12px] uppercase tracking-[0.22em] text-zinc-300">
               Sandbox output
             </span>
             {sandboxMode && (
@@ -831,15 +839,15 @@ export function Terminal({
               type="button"
               onClick={clearSandbox}
               aria-label="Clear sandbox output"
-              className="grid h-5 w-5 shrink-0 place-items-center rounded border border-white/10 text-slate-400 transition hover:border-crimson/35 hover:text-crimson"
+              className="grid h-5 w-5 shrink-0 place-items-center rounded border border-white/10 text-zinc-300 transition hover:border-crimson/35 hover:text-crimson"
             >
               <X className="h-2.5 w-2.5" aria-hidden />
             </button>
           </div>
-          <div
-            aria-live="polite"
-            className="max-h-28 overflow-y-auto overflow-x-hidden px-3 pb-2 font-mono text-[13px] leading-relaxed sm:max-h-36"
-          >
+              <div
+                aria-live="polite"
+                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 font-mono text-[13px] leading-relaxed"
+              >
             {sandboxLines.map((line, index) => (
               <div
                 key={`${line.kind}-${index}`}
@@ -861,6 +869,39 @@ export function Terminal({
                 <span className="inline-block h-3 w-1.5 animate-pulse bg-haunt" />
               </div>
             )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {summary && (
+        <div className="relative z-10 border-t border-white/5 bg-black/40 px-3 py-2">
+          <div className="flex items-center justify-between font-mono text-[12px] uppercase tracking-[0.24em] text-zinc-300">
+            <span>Corruption report</span>
+            <span className={summary.unresolved > 0 ? "text-crimson" : "text-neon"}>
+              {summary.unresolved > 0 ? "residual" : "purified"}
+            </span>
+          </div>
+          <div className="mt-1.5 grid grid-cols-3 gap-1.5 text-center font-mono uppercase tracking-[0.14em]">
+            <div className="rounded-md border border-crimson/20 bg-crimson/5 py-1 text-crimson">
+              <div className="text-[14px] font-semibold leading-none">
+                {summary.detected}
+              </div>
+              <div className="mt-0.5 text-[12px] text-zinc-300">cursed</div>
+            </div>
+            <div className="rounded-md border border-neon/20 bg-neon/5 py-1 text-neon">
+              <div className="text-[14px] font-semibold leading-none">
+                {summary.fixed}
+              </div>
+              <div className="mt-0.5 text-[12px] text-zinc-300">silenced</div>
+            </div>
+            <div className="rounded-md border border-haunt/20 bg-haunt/5 py-1 text-haunt">
+              <div className="text-[14px] font-semibold leading-none">
+                {summary.unresolved}
+              </div>
+              <div className="mt-0.5 text-[12px] text-zinc-300">residual</div>
+            </div>
           </div>
         </div>
       )}

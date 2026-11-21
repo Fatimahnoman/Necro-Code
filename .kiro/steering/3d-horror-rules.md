@@ -90,20 +90,24 @@ Two dedicated, dynamically imported client-only canvases:
   This avoids React 19's synchronous-root-unmount warning from Drei `Html`.
 - The overlay is `pointer-events: none` so labels never steal orbit or seal
   clicks. Use `will-change: transform` and direct style writes, not state.
-- Labels sit inside the graph viewport. On narrow canvases, inset the outer
-  labels and derive `--label-max` from the canvas width so they never clip.
-- Labels are compact single-line HUD tags: `font-mono text-[9.5px] uppercase
-  leading-none tracking-[0.14em] px-2 py-1 whitespace-nowrap rounded bg-black/75
-  border border-white/15 backdrop-blur-md`, capped by `max-w-[var(--label-max,158px)]`.
-  No solid white cards.
-- Camera is `[0, 0.18, 6.2]` with `fov: 45`. Seals sit at `(±2.55, ±1.5)`
-  (`ORBIT_X`, `ORBIT_Y`).
+- Labels are clamped inside the canvas every frame using their measured
+  width (`EDGE_GAP_PX` = 8), however the graph is orbited.
+- Labels are HUD tags: `font-mono text-[12px] font-medium uppercase
+  leading-tight tracking-[0.08em] px-2 py-1 rounded-md bg-[#0a0b14]/90 border
+  backdrop-blur-md text-zinc-200`, `w-max max-w-[var(--label-max,176px)]`
+  (`labelMaxPx()` = 30% of canvas width, 112–176px). Long names may wrap to
+  two lines. No solid white cards.
+- Camera is `[0, 0.18, 6.0]` with `fov: 45`. Seals sit at `(±2.75, ±1.58)`
+  (`ORBIT_X`, `ORBIT_Y`), farther from the relic than before.
 - Graph scale comes from `fitGraph(width, height, reserveTopPx,
-  reserveBottomPx)`: the largest scale up to `1.12` (floor `0.4`) that keeps
-  seals, their labels, and both HUD strips inside the canvas, plus a vertical
-  offset that centres the graph between the strips. `AgentCanvas` reserves
-  68px on top and 96px at the bottom once the timeline shows (44px before),
-  so the `Purified Output` label never overlaps the timeline.
+  reserveBottomPx)`: the largest scale up to `1.15` (floor `0.4`) that keeps
+  the seals (width) and seals + labels + both HUD strips (height) inside the
+  canvas, plus a vertical offset that centres the graph between the strips.
+  `AgentCanvas` reserves 72px on top and, at the bottom, 104px with the
+  timeline, 64px with the first-run helper, 44px otherwise, so the
+  `Purified Output` label never overlaps the footer.
+- The seal inspection card sits above the footer (`bottom-[108px]` with the
+  timeline, `bottom-14` otherwise).
 - Central relic: additive outer wireframe, back-face rim shell (pulsing
   opacity), inner counter-rotating wireframe lattice, crisp dodecahedron
   edge lines, and two rim point lights behind it (aura color + `AURA_HEX.purple`).
@@ -121,9 +125,9 @@ Two dedicated, dynamically imported client-only canvases:
 | Hover `Exorcise Code` | Crimson glow brightens, slight scale-up |
 | Click `AUTO DEMO` in the header | Load `async-memory-leak`, run, then open Spectral Diff and run the sandbox |
 | Click a timeline step (after `complete`) | Select that stage's seal and show its inspection card |
-| Toggle `Horror BGM` | Looped `/audio/horror-bgm.mp3` only; never mutes 3D FX |
-| Toggle `3D Audio FX` | Stereo-panned oscillator SFX (incl. `dhum`) only; never silences BGM |
-| Toggle CRT / fog icons | CSS atmosphere layers only |
+| `FX & Audio` → `Horror BGM` | Looped `/audio/horror-bgm.mp3` only; never mutes 3D FX |
+| `FX & Audio` → `3D Audio FX` | Stereo-panned oscillator SFX (incl. `dhum`) only; never silences BGM |
+| `FX & Audio` → `CRT` / `Fog` | CSS atmosphere layers only |
 
 ## Stage → visual mapping
 

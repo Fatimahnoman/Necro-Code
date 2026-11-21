@@ -157,9 +157,9 @@ interface AgentCanvasProps {
 
 ### `ExecutionGraph3D` (`components/three/ExecutionGraph3D.tsx`)
 
-- `Canvas` with camera `[0, 0.18, 6.2]`, `fov: 45`, `dpr: [1, 1.8]`, transparent clear color.
+- `Canvas` with camera `[0, 0.18, 6.0]`, `fov: 45`, `dpr: [1, 1.8]`, transparent clear color.
 - Four seals, a central relic, Drei `Line` edges, and flowing orbs on the active edge.
-- Seals at `(±2.55, ±1.5)`. Scale and vertical offset come from `fitGraph()`: up to `1.12`, limited so seals, labels, and the reserved HUD strips (`reserveTopPx`, `reserveBottomPx` props, set by `AgentCanvas` to 68 / 96 when the timeline shows, 44 otherwise) fit the canvas.
+- Seals at `(±2.75, ±1.58)`. Scale and vertical offset come from `fitGraph()`: up to `1.15`, limited so seals (width) and seals + labels + HUD strips (height) fit. `AgentCanvas` passes `reserveTopPx` 72 and `reserveBottomPx` 104 (timeline) / 64 (first-run helper) / 44. Labels are clamped inside the canvas by measured width.
 - Central relic: additive wireframe, back-face rim shell, inner wireframe lattice, edge lines, two rim point lights.
 - `OrbitControls` with `enablePan={false}` and `enableZoom={false}`; `onPointerMissed` clears selection.
 - Stage labels are a DOM overlay projected from 3D anchors every frame (`text-[9.5px]`, `bg-black/75`, `backdrop-blur-md`, `whitespace-nowrap`).
@@ -177,8 +177,8 @@ interface AgentCanvasProps {
 
 ### `Terminal` (`components/Terminal.tsx`)
 
-- Tabs: `Terminal` (color-coded log, `role="log"`) and `Spectral Diff` (unified diff with dual line gutters).
-- Pinned action bar directly under the tabs (always rendered, outside the scroll area): `Gen test`, `Test sandbox`, `Copy purified code`, `Export report` (`necrocode-exorcism-report.md`), `.patch` (`necrocode-fix.patch`), test badge. The header keeps the download icon (`purified-artifact.ts`).
+- Fixed top block: title row (health badge, download icon for `purified-artifact.ts`), action toolbar (`Gen test`, `Test sandbox`, `Copy`, `Report` → `necrocode-exorcism-report.md`, `.patch` → `necrocode-fix.patch`, test badge), then tabs `Logs` (`role="log"`), `Spectral Diff`, `Sandbox`.
+- `view: "logs" | "diff" | "sandbox"`. `startSandbox(switchView)` runs the pre-flight and the sandbox; `Test sandbox` and `Gen test` switch to `Sandbox`, `AUTO DEMO` calls `startSandbox(false)` after switching to `Spectral Diff`. `running` becoming true switches to `Logs`.
 - Header shows the health badge (`<before> → <after> /100`) when `summary.healthBefore` and `summary.healthAfter` exist.
 - New prop: `filename: string` (editor filename or GitHub path) — the patch target path.
 - When `autoDemoNonce` changes and the run is complete, switches to the diff and starts the sandbox.
@@ -186,7 +186,8 @@ interface AgentCanvasProps {
 ### Header (`app/page.tsx`)
 
 - Brand `NECROCODE` (`text-xl font-extrabold tracking-[0.16em]`) with `// AI CODE EXORCIST`.
-- Controls: `AUTO DEMO`, `API Sigils`, `History`, `Horror BGM`, `3D Audio FX`, CRT toggle, fog toggle, `StatusPill`.
+- Left: brand + engine badge. Right: `Auto demo` (outline), `API Sigils`, `History`, `FxMenu` popover (`components/FxMenu.tsx`: four `role="switch"` rows; closes on outside click and Escape).
+- Below `lg`: sticky `Spellbook | 3D Ritual | Grimoire` tabs (`mobileTab` state). Panels stay mounted and are hidden with `hidden lg:block`.
 
 ## Fallback pipeline
 

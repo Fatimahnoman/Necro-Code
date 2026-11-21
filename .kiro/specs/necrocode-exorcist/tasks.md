@@ -111,3 +111,14 @@ when the code exists in this repository.
 - [ ] 20. Visual and build verification for task 19
   - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build`. The sandbox still had no npm registry access; all files were typechecked against hand-written stubs for React, Next, three, and R3F, which cannot catch library-specific type errors. ESLint (including `react-hooks`) was not run.
   - Check in a browser at 1280px, 1440px, and 1920px widths: no clipped header pills or terminal buttons, `Purified Output` label clear of the timeline after a run.
+
+- [x] 21. Hierarchical cockpit refactor
+  - [x] 21.1 Header: brand + engine badge left; `Auto demo`, `API Sigils`, `History`, `FX & Audio` popover right (`components/FxMenu.tsx`). _R8.1_
+  - [x] 21.2 Grid `1fr / 1.35fr / 1.1fr` (330 / 440 / 360px minimums from `xl`); mobile tab switcher. _R8.2, R8.8_
+  - [x] 21.3 Seal orbit `(±2.75, ±1.58)`, camera z 6.0, scale cap 1.15, labels clamped in-canvas, first-run helper footer. _R4.1, R8.9_
+  - [x] 21.4 Terminal: fixed toolbar + `Logs` / `Spectral Diff` / `Sandbox` tabs with badges and auto-switch. _R8.10_
+  - [x] 21.5 12–13px text, zinc contrast, `#0a0b14` 90% glass, `--crt-opacity: 0.16`; filled gradient `Exorcise Code` CTA.
+
+- [ ] 22. Visual and build verification for task 21
+  - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build`. The sandbox had no npm registry access; files were typechecked only against hand-written stubs. ESLint was not run.
+  - Check at 390px (mobile tabs), 1024px, 1280px, 1440px, and 1920px: header pills, FX popover, terminal toolbar, and the `Purified Output` label vs. the timeline.

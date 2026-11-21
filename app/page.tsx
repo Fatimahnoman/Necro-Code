@@ -1,28 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  AlertTriangle,
-  CloudFog,
-  History,
-  KeyRound,
-  Music,
-  ScanLine,
-  Skull,
-  Sparkles,
-  Volume2,
-  VolumeX,
-} from "lucide-react";
+import { AlertTriangle, History, KeyRound, Skull, Sparkles } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { AgentCanvas } from "@/components/AgentCanvas";
 import { ApiSigilsModal } from "@/components/ApiSigilsModal";
 import { ControlPanel } from "@/components/ControlPanel";
 import { HistoryDrawer } from "@/components/HistoryDrawer";
-import { StatusPill } from "@/components/StatusPill";
+import { FxMenu } from "@/components/FxMenu";
 import { Terminal } from "@/components/Terminal";
-import { ToggleButton } from "@/components/ToggleButton";
-import { AURA_HEX, AURA_LABEL, auraFromState } from "@/lib/aura";
+import { auraFromState } from "@/lib/aura";
 import {
   DEFAULT_ARTIFACT_ID,
   DEFAULT_CURSED_CODE,
@@ -47,7 +35,7 @@ import { useAgentStream } from "@/lib/useAgentStream";
 import { useApiSigils } from "@/lib/useApiSigils";
 import { useCyberSound } from "@/lib/useCyberSound";
 import { useGrimoireHistory } from "@/lib/useGrimoireHistory";
-import { useUiSettings } from "@/lib/useUiSettings";
+import { type UiSettings, useUiSettings } from "@/lib/useUiSettings";
 
 const HorrorBackdrop = dynamic(
   () =>
@@ -62,7 +50,15 @@ const DEFAULT_CODE = initialArtifact?.code ?? DEFAULT_CURSED_CODE;
 const DEFAULT_FILENAME = "cursed-ouroboros-loop.js";
 /** Shared header pill: 11px, single line, never shrinks, so pills never clip. */
 const HEADER_PILL =
-  "inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 font-mono text-[11px] font-medium uppercase leading-none tracking-[0.14em] transition";
+  "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.1em] transition";
+
+type MobileTab = "spellbook" | "ritual" | "grimoire";
+
+const MOBILE_TABS: Array<{ id: MobileTab; label: string }> = [
+  { id: "spellbook", label: "Spellbook" },
+  { id: "ritual", label: "3D Ritual" },
+  { id: "grimoire", label: "Grimoire" },
+];
 
 const AUTO_DEMO_ARTIFACT_ID = "async-memory-leak";
 const AUTO_DEMO_DIRECTIVE =
@@ -97,6 +93,7 @@ export default function Home() {
   const [apiOpen, setApiOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [autoDemoNonce, setAutoDemoNonce] = useState(0);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("spellbook");
 
   const lastSonifiedSeq = useRef<number>(-1);
   const lastHistoryFingerprint = useRef<string | null>(null);
@@ -185,6 +182,7 @@ export default function Home() {
     if (state.running) return;
     lastSonifiedSeq.current = -1;
     play("dhum");
+    setMobileTab("ritual");
     void run({ code, directive, language, sigils });
   };
 
@@ -200,6 +198,7 @@ export default function Home() {
     setLanguage(artifact.language);
     setSelectedPresetId(artifact.id);
     setAutoDemoNonce((nonce) => nonce + 1);
+    setMobileTab("ritual");
     void run({
       code: artifact.code,
       directive: AUTO_DEMO_DIRECTIVE,
@@ -238,8 +237,19 @@ export default function Home() {
       engine: entry.engine,
     });
     setHistoryOpen(false);
+    setMobileTab("grimoire");
     play("click");
   };
+
+  const handleFxToggle = (key: keyof UiSettings) => {
+    // The click SFX only sounds when 3D Audio FX is (or is about to be) on.
+    if (key !== "soundOn" || !settings.soundOn) play("click");
+    toggle(key);
+  };
+
+  /** Below `lg` only the selected panel is shown; all three stay mounted. */
+  const mobilePanel = (tab: MobileTab) =>
+    `${mobileTab === tab ? "block" : "hidden"} h-[calc(100dvh-210px)] min-h-[520px] lg:block lg:h-auto lg:min-h-0`;
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-void">
@@ -264,7 +274,8 @@ export default function Home() {
       )}
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-4 py-3 lg:h-screen lg:min-h-0 lg:py-4">
-        <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-crimson/15 py-2">
+        <header className="relative z-40 flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-crimson/15 py-3">
+          {/* Left · brand + active engine */}
           <div className="flex min-w-0 items-center gap-3">
             <div className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full border border-crimson/40 bg-black/70 shadow-[0_0_26px_rgba(255,0,60,0.22)]">
               <span className="pointer-events-none absolute -inset-1.5 animate-[spin_26s_linear_infinite] rounded-full border border-dashed border-haunt/25" />
@@ -272,204 +283,96 @@ export default function Home() {
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <h1 className="animate-flicker font-display text-xl font-extrabold tracking-[0.16em] text-white uppercase">
+                <h1 className="animate-flicker font-display text-xl font-extrabold uppercase tracking-[0.16em] text-white">
                   NECROCODE
                 </h1>
-                <span className="font-mono text-[12px] uppercase tracking-[0.3em] text-crimson/70">
+                <span className="font-mono text-[12px] uppercase tracking-[0.24em] text-crimson">
                   {"// AI CODE EXORCIST"}
                 </span>
-                <span className="hidden rounded border border-haunt/25 px-1.5 py-0.5 font-mono text-[12px] uppercase tracking-[0.2em] text-haunt/70 sm:inline">
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span
+                  title={
+                    liveKeys
+                      ? liveEngineActive
+                        ? "A live API sigil will be used on the next exorcism."
+                        : "A live sigil is configured, but the last run used the builtin safety net."
+                      : "No API sigil configured — the builtin deterministic engine is active."
+                  }
+                  className={[
+                    HEADER_PILL,
+                    "h-6 bg-black/50",
+                    liveEngineActive
+                      ? "border-neon/45 text-neon"
+                      : "border-white/20 text-zinc-200",
+                  ].join(" ")}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                      liveEngineActive
+                        ? "animate-pulse bg-neon shadow-[0_0_8px_rgba(0,255,102,0.9)]"
+                        : "bg-zinc-400"
+                    }`}
+                  />
+                  {liveEngineActive ? "Live AI engine" : "Builtin safety net"}
+                </span>
+                <span className="hidden font-mono text-[12px] uppercase tracking-[0.18em] text-zinc-400 md:inline">
                   Kiroween 2026
                 </span>
               </div>
-              <p className="mt-0.5 truncate font-mono text-[12px] uppercase tracking-[0.34em] text-slate-400">
-                Premium 3D horror studio · WebGL · SSE · Kiro hooks
-              </p>
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-col gap-1.5 sm:items-end">
-            {/* Tier 1 · live status readouts */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-              <StatusPill phase={state.phase} />
-              <span
-                title={
-                  liveKeys
-                    ? liveEngineActive
-                      ? "A live API sigil will be used on the next exorcism."
-                      : "A live sigil is configured, but the last run used the builtin safety net."
-                    : "No API sigil configured — the builtin deterministic engine is active."
-                }
-                className={[
-                  HEADER_PILL,
-                  "bg-black/50",
-                  liveEngineActive
-                    ? "border-neon/40 text-neon"
-                    : "border-white/15 text-zinc-200",
-                ].join(" ")}
-              >
-                <span
-                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                    liveEngineActive
-                      ? "animate-pulse bg-neon shadow-[0_0_8px_rgba(0,255,102,0.9)]"
-                      : "bg-zinc-500"
-                  }`}
-                />
-                <span className="hidden sm:inline">
-                  {liveEngineActive ? "LIVE AI ENGINE" : "BUILTIN SAFETY NET"}
-                </span>
-                <span className="sm:hidden">
-                  {liveEngineActive ? "LIVE" : "SAFETY"}
-                </span>
+          {/* Right · utilities + FX popover */}
+          <nav aria-label="Studio controls" className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleAutoDemo}
+              disabled={state.running}
+              aria-label="Run the one-click judge auto demo"
+              title="Load the cursed async memory leak and run the full exorcism"
+              className={`${HEADER_PILL} border-crimson/60 bg-transparent text-crimson hover:bg-crimson/10 hover:shadow-[0_0_18px_rgba(255,0,60,0.22)] disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+              Auto demo
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                play("click");
+                setHistoryOpen(false);
+                setApiOpen(true);
+              }}
+              aria-haspopup="dialog"
+              aria-label="Open API sigils"
+              className={`${HEADER_PILL} border-white/20 bg-black/45 text-zinc-100 hover:border-haunt/60 hover:text-white`}
+            >
+              <KeyRound className="h-4 w-4 shrink-0 text-haunt-glow" aria-hidden />
+              <span className="hidden sm:inline">API Sigils</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                play("click");
+                setApiOpen(false);
+                setHistoryOpen(true);
+              }}
+              aria-haspopup="dialog"
+              aria-label="Open grimoire history"
+              className={`${HEADER_PILL} border-white/20 bg-black/45 text-zinc-100 hover:border-spectral/60 hover:text-white`}
+            >
+              <History className="h-4 w-4 shrink-0 text-spectral" aria-hidden />
+              <span className="hidden sm:inline">History</span>
+              <span className="rounded border border-spectral/40 bg-black/50 px-1 py-px text-[12px] leading-none text-spectral">
+                {entries.length}
               </span>
-              <span
-                className={`${HEADER_PILL} hidden border-neon/30 bg-neon/5 text-neon md:inline-flex`}
-              >
-                <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-neon shadow-[0_0_8px_rgba(0,255,102,0.9)]" />
-                SSE live
-              </span>
-              <span
-                className={`${HEADER_PILL} hidden bg-black/50 md:inline-flex`}
-                style={{
-                  borderColor: `${AURA_HEX[aura]}66`,
-                  color: AURA_HEX[aura],
-                  boxShadow: `0 0 18px ${AURA_HEX[aura]}18`,
-                }}
-              >
-                <span
-                  className="h-1.5 w-1.5 shrink-0 rounded-full"
-                  style={{
-                    backgroundColor: AURA_HEX[aura],
-                    boxShadow: `0 0 8px ${AURA_HEX[aura]}`,
-                  }}
-                />
-                {AURA_LABEL[aura]}
-              </span>
-            </div>
-
-            {/* Tier 2 · controls */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-              <button
-                type="button"
-                onClick={handleAutoDemo}
-                disabled={state.running}
-                aria-label="Run the one-click judge auto demo"
-                title="Load the cursed async memory leak and run the full exorcism"
-                className={`${HEADER_PILL} border-crimson/60 bg-crimson/10 text-crimson hover:bg-crimson/15 hover:shadow-[0_0_18px_rgba(255,0,60,0.24)] disabled:cursor-not-allowed disabled:opacity-60`}
-              >
-                <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                AUTO DEMO
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  play("click");
-                  setHistoryOpen(false);
-                  setApiOpen(true);
-                }}
-                aria-haspopup="dialog"
-                aria-label="Open API sigils"
-                className={`${HEADER_PILL} border-haunt/45 bg-haunt/10 text-zinc-200 hover:border-haunt/70 hover:text-white hover:shadow-[0_0_18px_rgba(147,51,234,0.2)]`}
-              >
-                <KeyRound className="h-3.5 w-3.5 shrink-0 text-haunt-glow" aria-hidden />
-                <span className="hidden sm:inline">API Sigils</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  play("click");
-                  setApiOpen(false);
-                  setHistoryOpen(true);
-                }}
-                aria-haspopup="dialog"
-                aria-label="Open grimoire history"
-                className={`${HEADER_PILL} border-spectral/40 bg-spectral/10 text-zinc-200 hover:border-spectral/70 hover:text-white hover:shadow-[0_0_18px_rgba(6,182,212,0.18)]`}
-              >
-                <History className="h-3.5 w-3.5 shrink-0 text-spectral" aria-hidden />
-                <span className="hidden sm:inline">History</span>
-                <span className="rounded border border-spectral/40 bg-black/50 px-1 py-px text-[10px] leading-none text-spectral">
-                  {entries.length}
-                </span>
-              </button>
-
-              <span className="mx-0.5 hidden h-5 w-px bg-white/10 sm:block" aria-hidden />
-
-              <button
-                type="button"
-                onClick={() => toggle("bgmOn")}
-                aria-pressed={settings.bgmOn}
-                aria-label="Toggle horror background music"
-                title="Toggle the looped horror soundtrack"
-                className={[
-                  HEADER_PILL,
-                  settings.bgmOn
-                    ? "border-blood/60 bg-blood/10 text-blood shadow-glow-blood"
-                    : "border-white/15 bg-black/45 text-zinc-200 hover:border-white/30 hover:text-white",
-                ].join(" ")}
-              >
-                <Music className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                <span className="hidden sm:inline">Horror BGM</span>
-                <span
-                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                    settings.bgmOn ? "animate-pulse bg-blood" : "bg-zinc-500"
-                  }`}
-                />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (!settings.soundOn) play("click");
-                  toggle("soundOn");
-                }}
-                aria-pressed={settings.soundOn}
-                aria-label="Toggle 3D audio effects"
-                className={[
-                  HEADER_PILL,
-                  settings.soundOn
-                    ? "border-haunt/60 bg-haunt/10 text-haunt-glow shadow-glow-haunt"
-                    : "border-white/15 bg-black/45 text-zinc-200 hover:border-white/30 hover:text-white",
-                ].join(" ")}
-              >
-                {settings.soundOn ? (
-                  <Volume2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                ) : (
-                  <VolumeX className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                )}
-                <span className="hidden sm:inline">3D Audio FX</span>
-                <span
-                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                    settings.soundOn ? "animate-pulse bg-haunt" : "bg-zinc-500"
-                  }`}
-                />
-              </button>
-
-              <ToggleButton
-                label="CRT Haunting"
-                shortLabel="CRT"
-                icon={ScanLine}
-                active={settings.scanlinesOn}
-                onToggle={() => {
-                  play("click");
-                  toggle("scanlinesOn");
-                }}
-                accent="spectral"
-                title="Toggle flickering CRT scanlines"
-              />
-              <ToggleButton
-                label="Eerie Fog"
-                shortLabel="Fog"
-                icon={CloudFog}
-                active={settings.fogOn}
-                onToggle={() => {
-                  play("click");
-                  toggle("fogOn");
-                }}
-                accent="blood"
-                title="Toggle drifting fog and the animated rune grid"
-              />
-            </div>
-          </div>
+            </button>
+            <FxMenu
+              settings={settings}
+              onToggle={handleFxToggle}
+              className={`${HEADER_PILL} border-white/20 bg-black/45 text-zinc-100 hover:border-haunt/60 hover:text-white aria-expanded:border-haunt/60 aria-expanded:bg-haunt/10`}
+            />
+          </nav>
         </header>
 
         <AnimatePresence>
@@ -486,8 +389,36 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 py-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.35fr)_minmax(0,1.1fr)] lg:items-stretch xl:grid-cols-[minmax(340px,1.05fr)_minmax(440px,1.35fr)_minmax(360px,1.1fr)]">
-          <div className="min-h-[580px] lg:min-h-0">
+        <div
+          role="tablist"
+          aria-label="Studio panel"
+          className="sticky top-0 z-30 -mx-4 mt-3 flex gap-1.5 border-b border-white/10 bg-[#0a0b14]/90 px-4 py-2 backdrop-blur-md lg:hidden"
+        >
+          {MOBILE_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={mobileTab === tab.id}
+              aria-controls={`panel-${tab.id}`}
+              onClick={() => setMobileTab(tab.id)}
+              className={[
+                "inline-flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border font-mono text-[13px] font-medium uppercase tracking-[0.08em] transition",
+                mobileTab === tab.id
+                  ? "border-crimson/60 bg-crimson/10 text-white shadow-[0_0_16px_rgba(255,0,60,0.18)]"
+                  : "border-white/15 bg-black/40 text-zinc-300 hover:text-white",
+              ].join(" ")}
+            >
+              {tab.label}
+              {tab.id === "ritual" && state.running && (
+                <span className="h-2 w-2 animate-pulse rounded-full bg-crimson" aria-hidden />
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1.1fr)] lg:items-stretch xl:grid-cols-[minmax(330px,1fr)_minmax(440px,1.35fr)_minmax(360px,1.1fr)]">
+          <div id="panel-spellbook" className={mobilePanel("spellbook")}>
             <ControlPanel
               code={code}
               onCodeChange={handleCodeChange}
@@ -507,7 +438,7 @@ export default function Home() {
             />
           </div>
 
-          <div className="min-h-[560px] sm:min-h-[630px] lg:min-h-0">
+          <div id="panel-ritual" className={mobilePanel("ritual")}>
             <AgentCanvas
               nodes={state.nodes}
               activeStage={state.activeStage}
@@ -523,7 +454,7 @@ export default function Home() {
             />
           </div>
 
-          <div className="min-h-[420px] lg:min-h-0">
+          <div id="panel-grimoire" className={mobilePanel("grimoire")}>
             <Terminal
               logs={state.logs}
               running={state.running}
@@ -544,7 +475,7 @@ export default function Home() {
           </div>
         </div>
 
-        <footer className="hidden shrink-0 items-center justify-between border-t border-white/5 py-1.5 font-mono text-[12px] uppercase tracking-[0.24em] text-slate-400 sm:flex">
+        <footer className="hidden shrink-0 items-center justify-between border-t border-white/5 py-1.5 font-mono text-[12px] uppercase tracking-[0.2em] text-zinc-400 lg:flex">
           <span>the crypt is always listening</span>
           <span>WebGL · SSE · Kiro</span>
         </footer>

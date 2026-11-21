@@ -22,12 +22,12 @@ type NodeStatusMap = Record<StageId, NodeStatus>;
 type NodeRefMap = Record<StageId, MutableRefObject<THREE.Group | null>>;
 type LabelRefMap = Partial<Record<StageId, HTMLDivElement | null>>;
 
-const LABEL_OFFSET = new THREE.Vector3(0, -0.84, 0);
+const LABEL_OFFSET = new THREE.Vector3(0, -0.88, 0);
 const BADGE_OFFSET = new THREE.Vector3(0.52, 0.5, 0);
 
 /** Seal orbit: half-width / half-height of the ritual square (local units). */
-const ORBIT_X = 2.55;
-const ORBIT_Y = 1.5;
+const ORBIT_X = 2.75;
+const ORBIT_Y = 1.58;
 
 const POSITIONS: Record<StageId, [number, number, number]> = {
   input_code: [-ORBIT_X, ORBIT_Y, 0],
@@ -36,19 +36,19 @@ const POSITIONS: Record<StageId, [number, number, number]> = {
   clean_code_output: [-ORBIT_X, -ORBIT_Y, 0],
 };
 
-const CAMERA_Z = 6.2;
+const CAMERA_Z = 6.0;
 const CAMERA_FOV = 45;
-const MAX_GRAPH_SCALE = 1.12;
+const MAX_GRAPH_SCALE = 1.15;
 const MIN_GRAPH_SCALE = 0.4;
 /** Seal ring radius × hover scale + float amplitude. */
 const SEAL_REACH = 0.82;
-/** Half the height of a projected stage label, in px. */
-const LABEL_HALF_HEIGHT_PX = 12;
+/** Half the height of a projected stage label (up to two 12px lines), in px. */
+const LABEL_HALF_HEIGHT_PX = 20;
 /** Gap kept between labels and the canvas edge, in px. */
 const EDGE_GAP_PX = 8;
 
 export function labelMaxPx(width: number): number {
-  return Math.min(158, Math.max(94, width * 0.29));
+  return Math.min(176, Math.max(112, width * 0.3));
 }
 
 /**
@@ -73,12 +73,10 @@ export function fitGraph(
   const localBottom = ORBIT_Y - LABEL_OFFSET.y;
   const byHeight = (top - bottom) / (localTop + localBottom);
 
+  // Labels are clamped inside the canvas by LabelProjector, so only the
+  // seals bound the width.
   const edge = EDGE_GAP_PX * unitsPerPx;
-  const labelHalf = (labelMaxPx(width) / 2) * unitsPerPx;
-  const byWidth = Math.min(
-    (halfW - edge - labelHalf) / ORBIT_X,
-    (halfW - edge) / (ORBIT_X + SEAL_REACH),
-  );
+  const byWidth = (halfW - edge) / (ORBIT_X + SEAL_REACH);
 
   const scale = Math.min(
     MAX_GRAPH_SCALE,
@@ -115,10 +113,10 @@ function StageLabel({
 
   return (
     <div
-      className="flex max-w-[var(--label-max,158px)] items-center justify-center gap-1 rounded border border-white/15 bg-black/75 px-2 py-1 font-mono text-[9.5px] uppercase leading-none tracking-[0.14em] text-white/90 whitespace-nowrap backdrop-blur-md"
+      className="flex w-max max-w-[var(--label-max,176px)] items-center justify-center gap-1.5 rounded-md border border-white/15 bg-[#0a0b14]/90 px-2 py-1 text-center font-mono text-[12px] font-medium uppercase leading-tight tracking-[0.08em] text-zinc-200 backdrop-blur-md"
       style={{
         borderColor: `${color}66`,
-        color: status === "pending" ? "#94A3B8" : color,
+        color: status === "pending" ? "#E5E7EB" : color,
         boxShadow:
           status === "pending"
             ? "none"
@@ -128,7 +126,7 @@ function StageLabel({
       }}
     >
       <span
-        className="h-1 w-1 rounded-full"
+        className="h-1.5 w-1.5 shrink-0 rounded-full"
         style={{ backgroundColor: color }}
       />
       <span>{stage.label}</span>
@@ -269,7 +267,13 @@ function LabelProjector({
         stage.id === "glitch_scanner" || stage.id === "exorcism_reasoning"
           ? -1
           : 1;
-      const x = (projected.x * 0.5 + 0.5) * size.width + inward * inset;
+      const rawX = (projected.x * 0.5 + 0.5) * size.width + inward * inset;
+      // Keep the whole label inside the canvas, however the graph is orbited.
+      const halfLabel = element.offsetWidth / 2;
+      const x = Math.min(
+        size.width - EDGE_GAP_PX - halfLabel,
+        Math.max(EDGE_GAP_PX + halfLabel, rawX),
+      );
       const y = (-projected.y * 0.5 + 0.5) * size.height;
       element.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
       element.style.opacity = projected.z > 1 ? "0" : "1";
