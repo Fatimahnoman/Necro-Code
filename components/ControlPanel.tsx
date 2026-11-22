@@ -201,9 +201,11 @@ export function ControlPanel({
     <aside className="tome-panel relative flex h-full min-h-0 flex-col gap-2.5 overflow-x-hidden overflow-y-auto rounded-b-2xl py-3 pl-9 pr-4">
       {/* 1 · Preset / GitHub / Upload (+ directive) and filename + runtime. */}
       <div className="shrink-0 space-y-2">
-        <div className="flex items-center gap-1.5">
+        {/* Wraps (tools under the preset) when the column is narrow, so no
+            control is ever squeezed or clipped. */}
+        <div className="flex flex-wrap items-center gap-1.5">
           <div
-            className="brass-slot relative flex min-w-0 flex-1 items-center gap-1 pl-1.5"
+            className="brass-slot relative flex min-w-[150px] flex-1 items-center gap-1 pl-1.5"
             title={
               selectedPreset?.blurb ??
               "A custom curse, written by your own hand. The crypt reads every line."

@@ -127,6 +127,33 @@ export default function Home() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [autoDemoNonce, setAutoDemoNonce] = useState(0);
   const [mobileTab, setMobileTab] = useState<MobileTab>("spellbook");
+  const shakeRef = useRef<HTMLDivElement>(null);
+  const bloodFlashRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * The moment EXORCISE CODE fires: a short violent screen shake and a blood
+   * flash. Web Animations API on refs, so no React state or re-render; skipped
+   * under reduced motion.
+   */
+  const ritualShock = () => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    shakeRef.current?.animate(
+      [
+        { transform: "translate3d(0,0,0)" },
+        { transform: "translate3d(-7px,3px,0) rotate(-0.25deg)" },
+        { transform: "translate3d(6px,-4px,0) rotate(0.25deg)" },
+        { transform: "translate3d(-5px,-2px,0)" },
+        { transform: "translate3d(4px,3px,0) rotate(0.15deg)" },
+        { transform: "translate3d(-2px,1px,0)" },
+        { transform: "translate3d(0,0,0)" },
+      ],
+      { duration: 560, easing: "cubic-bezier(.36,.07,.19,.97)" },
+    );
+    bloodFlashRef.current?.animate(
+      [{ opacity: 0 }, { opacity: 0.85, offset: 0.12 }, { opacity: 0 }],
+      { duration: 900, easing: "ease-out" },
+    );
+  };
   const mobileTabMounted = useRef(false);
 
   const lastSonifiedSeq = useRef<number>(-1);
@@ -234,6 +261,7 @@ export default function Home() {
     if (state.running) return;
     lastSonifiedSeq.current = -1;
     play("dhum");
+    ritualShock();
     setMobileTab("ritual");
     void run({ code, directive, language, sigils });
   };
@@ -242,6 +270,7 @@ export default function Home() {
     if (state.running) return;
     lastSonifiedSeq.current = -1;
     play("dhum");
+    ritualShock();
     const artifact = findArtifact(AUTO_DEMO_ARTIFACT_ID);
     if (!artifact) return;
     setCode(artifact.code);
@@ -339,7 +368,10 @@ export default function Home() {
       </WebGLBoundary>
 
       {settings.fogOn && (
-        <div className="fog-layer pointer-events-none fixed inset-0 z-0 animate-fog-drift opacity-60" />
+        <>
+          <div className="fog-layer pointer-events-none fixed inset-0 z-0 animate-fog-drift opacity-60" />
+          <div aria-hidden className="crimson-tendrils pointer-events-none fixed inset-0 z-0" />
+        </>
       )}
       <div className="haunted-grid pointer-events-none fixed inset-0 z-0 opacity-25" />
       <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_center,transparent_18%,rgba(6,6,12,0.92)_100%)]" />
@@ -348,7 +380,16 @@ export default function Home() {
         <div className="crt-overlay animate-flicker" aria-hidden />
       )}
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-4 py-3 lg:h-screen lg:min-h-0 lg:py-4">
+      {/* Oppressive darkness: a breathing vignette behind and a lighter one in front (corners only). */}
+      <div aria-hidden className="breathing-vignette pointer-events-none fixed inset-0 z-[1]" />
+      <div aria-hidden className="corner-vignette pointer-events-none fixed inset-0 z-20" />
+      <div
+        ref={bloodFlashRef}
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-[45] bg-[radial-gradient(ellipse_at_center,rgba(255,0,60,0.35)_0%,rgba(139,0,0,0.75)_70%,rgba(60,0,0,0.9)_100%)] opacity-0 mix-blend-screen"
+      />
+
+      <div ref={shakeRef} className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-4 py-3 lg:h-screen lg:min-h-0 lg:py-4">
         <header className="relative z-40 flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 py-3">
           {/* Summoning-bar rule: gold hairline with a blood core. */}
           <span
@@ -362,7 +403,7 @@ export default function Home() {
               <span className="text-bone [text-shadow:0_0_16px_rgba(255,0,60,0.45),0_1px_0_rgba(0,0,0,0.9)]">
                 NecroCode
               </span>
-              <span className="text-crimson [text-shadow:0_0_14px_rgba(255,0,60,0.65)]">
+              <span className="cursed-glitch text-crimson [text-shadow:0_0_14px_rgba(255,0,60,0.65)]">
                 {"// AI Code Exorcist"}
               </span>
             </h1>

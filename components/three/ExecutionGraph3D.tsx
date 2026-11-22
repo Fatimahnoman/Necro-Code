@@ -461,26 +461,91 @@ function LabelProjector({
   return null;
 }
 
+/** Roar on ritual start; emerald burn when a ritual ends purified. */
+const ROAR_SECONDS = 1.5;
+const BURN_SECONDS = 2.4;
+const BLOOD = "#FF0A2A";
+const NECROTIC = "#00FF66";
+/** How far the pupils can travel inside the sockets (local units). */
+const GAZE_RANGE = 0.034;
+
 /**
- * Procedural skeleton skull: cranium, maxilla, cheekbones, recessed dark eye
- * sockets with fiery pupils, a nasal cavity, an upper tooth row, and a
- * separate hinged jaw with its own teeth (chatters while a ritual runs).
- * Bone is lit by warm front fill plus crimson / amethyst rim lights behind;
- * pupils and rim lights lerp toward the aura.
+ * Pointer position normalized to the canvas (-1..1 at its edges, clamped to
+ * ±1.6 beyond them), tracked on the window so the skull keeps watching even
+ * when the cursor is over the side panels.
+ */
+function useGaze() {
+  const { gl } = useThree();
+  const gaze = useRef({ x: 0, y: 0 });
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      const rect = gl.domElement.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+      gaze.current.x = Math.max(-1.6, Math.min(1.6, x));
+      gaze.current.y = Math.max(-1.6, Math.min(1.6, y));
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
+  }, [gl]);
+  return gaze;
+}
+
+/**
+ * Possessed demon skull: cranium, heavy brow ridge, swept-back horns,
+ * maxilla, sharp cheekbones, deep hollow sockets with pinpoint pupils
+ * (blood red; necrotic green once purified) that track the cursor, a nasal
+ * cavity, teeth with fangs, and a hinged jaw. Harsh crimson under-lighting
+ * from below casts the face in sinister relief.
+ *
+ * - Running: the jaw chatters; on the rising edge the skull ROARS (jaw wide,
+ *   violent shudder) for `ROAR_SECONDS`.
+ * - Purified finish: crimson burns away into a blinding necrotic-emerald
+ *   flare (light spike + expanding glow shell) over `BURN_SECONDS`.
+ * Shudder/flare are skipped under `prefers-reduced-motion`.
  */
 function SkeletonSkull({ aura, running }: { aura: AuraState; running: boolean }) {
   const head = useRef<THREE.Group>(null);
   const jaw = useRef<THREE.Group>(null);
+  const pupils = useRef<Array<THREE.Mesh | null>>([]);
   const pupilMats = useRef<Array<THREE.MeshBasicMaterial | null>>([]);
   const boneMat = useRef<THREE.MeshStandardMaterial>(null);
   const rimA = useRef<THREE.PointLight>(null);
   const eyeLight = useRef<THREE.PointLight>(null);
-  const target = useMemo(() => new THREE.Color(AURA_HEX[aura]), [aura]);
-  const current = useRef(new THREE.Color(AURA_HEX[aura]));
-  const fire = useMemo(() => new THREE.Color("#FF5A1F"), []);
-  const pupil = useRef(new THREE.Color("#FF5A1F"));
+  const underLight = useRef<THREE.PointLight>(null);
+  const flareLight = useRef<THREE.PointLight>(null);
+  const flare = useRef<THREE.Mesh>(null);
+  const gaze = useGaze();
+  const look = useRef({ x: 0, y: 0 });
 
-  // Teeth sit on a shallow arc in front of the jaw line.
+  const auraTarget = useMemo(() => new THREE.Color(AURA_HEX[aura]), [aura]);
+  const auraNow = useRef(new THREE.Color(AURA_HEX[aura]));
+  const blood = useMemo(() => new THREE.Color(BLOOD), []);
+  const necrotic = useMemo(() => new THREE.Color(NECROTIC), []);
+  const pupilNow = useRef(new THREE.Color(BLOOD));
+  const underNow = useRef(new THREE.Color(BLOOD));
+
+  const clockNow = useRef(0);
+  const roarStart = useRef(-Infinity);
+  const burnStart = useRef(-Infinity);
+  const prevRunning = useRef(running);
+  const reduced = useRef(false);
+
+  useEffect(() => {
+    reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  useEffect(() => {
+    if (running && !prevRunning.current) roarStart.current = clockNow.current;
+    if (!running && prevRunning.current && aura === "green") {
+      burnStart.current = clockNow.current;
+    }
+    prevRunning.current = running;
+    // `aura` is read at the edge only; the complete event updates both together.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
+
   const teeth = useMemo(
     () =>
       Array.from({ length: 8 }, (_, index) => {
@@ -490,86 +555,150 @@ function SkeletonSkull({ aura, running }: { aura: AuraState; running: boolean })
     [],
   );
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
-    current.current.lerp(target, 0.05);
-    // Pupils burn fire-orange, leaning 45% toward the aura.
-    pupil.current.copy(fire).lerp(current.current, 0.45);
-    for (const material of pupilMats.current) material?.color.copy(pupil.current);
+    clockNow.current = t;
+    const roar = (t - roarStart.current) / ROAR_SECONDS;
+    const roaring = roar >= 0 && roar < 1 && !reduced.current;
+    const burn = (t - burnStart.current) / BURN_SECONDS;
+    const burning = burn >= 0 && burn < 1;
+    const purified = aura === "green";
+
+    auraNow.current.lerp(auraTarget, 0.05);
+    // Pupils + under-light: blood red, burning to necrotic green when purified.
+    const goal = purified || burning ? necrotic : blood;
+    pupilNow.current.lerp(goal, burning ? 0.2 : 0.06);
+    underNow.current.lerp(goal, burning ? 0.12 : 0.04);
+    for (const material of pupilMats.current) material?.color.copy(pupilNow.current);
+
+    // Eased gaze toward the cursor.
+    const k = 1 - Math.pow(0.0025, delta);
+    look.current.x += (gaze.current.x - look.current.x) * k;
+    look.current.y += (gaze.current.y - look.current.y) * k;
+    const gx = Math.max(-1, Math.min(1, look.current.x));
+    const gy = Math.max(-1, Math.min(1, look.current.y));
+    pupils.current.forEach((pupil) => {
+      if (!pupil) return;
+      pupil.position.x = gx * GAZE_RANGE;
+      pupil.position.y = -0.01 + gy * GAZE_RANGE * 0.8;
+    });
+
     if (eyeLight.current) {
-      eyeLight.current.color.copy(pupil.current);
-      eyeLight.current.intensity = 2.4 + Math.sin(t * 13) * 0.5 + Math.sin(t * 7.1) * 0.3;
+      eyeLight.current.color.copy(pupilNow.current);
+      eyeLight.current.intensity = 2.2 + Math.sin(t * 13) * 0.5 + Math.sin(t * 7.1) * 0.3 + (roaring ? 3 : 0);
     }
-    if (rimA.current) rimA.current.color.copy(current.current);
-    if (boneMat.current) boneMat.current.emissive.copy(current.current);
+    if (underLight.current) {
+      underLight.current.color.copy(underNow.current);
+      underLight.current.intensity = 15 + Math.sin(t * 9.3) * 2.5 + Math.sin(t * 23) * 1.2 + (roaring ? 10 : 0);
+    }
+    if (rimA.current) rimA.current.color.copy(auraNow.current);
+    if (boneMat.current) {
+      boneMat.current.emissive.copy(burning ? necrotic : auraNow.current);
+      boneMat.current.emissiveIntensity = burning ? 0.06 + (1 - burn) * 1.4 : 0.06;
+    }
+
     if (head.current) {
-      head.current.position.y = Math.sin(t * 1.3) * 0.05;
-      head.current.rotation.y = Math.sin(t * 0.45) * 0.32;
-      head.current.rotation.x = Math.sin(t * 0.7) * 0.05;
+      const shake = roaring ? (1 - roar) * (1 - roar) : 0;
+      head.current.position.set(
+        Math.sin(t * 71) * 0.045 * shake,
+        Math.sin(t * 1.3) * 0.05 + Math.sin(t * 63) * 0.03 * shake,
+        0,
+      );
+      head.current.rotation.set(
+        -gy * 0.2 + Math.sin(t * 0.7) * 0.04 - (roaring ? Math.sin(roar * Math.PI) * 0.25 : 0),
+        gx * 0.42 + Math.sin(t * 0.45) * 0.06,
+        Math.sin(t * 57) * 0.1 * shake,
+      );
       const beat = aura === "crimson" ? 1 + Math.max(0, Math.sin(t * 6.2)) * 0.03 : 1;
-      head.current.scale.setScalar(beat);
+      head.current.scale.setScalar(beat * (roaring ? 1 + Math.sin(roar * Math.PI) * 0.12 : 1));
     }
     if (jaw.current) {
-      const chatter = running ? Math.abs(Math.sin(t * 9)) * 0.16 : 0;
-      jaw.current.rotation.x = 0.06 + Math.sin(t * 1.1) * 0.03 + chatter;
+      const chatter = running ? Math.abs(Math.sin(t * 9)) * 0.14 : 0;
+      const gape = roaring ? Math.sin(Math.min(1, roar * 1.6) * Math.PI * 0.5) * 0.62 * (1 - roar * 0.6) : 0;
+      jaw.current.rotation.x = 0.06 + Math.sin(t * 1.1) * 0.03 + Math.max(chatter, gape);
+    }
+
+    if (flare.current && flareLight.current) {
+      const glow = burning && !reduced.current ? (1 - burn) * (1 - burn) : 0;
+      flare.current.visible = glow > 0.001;
+      flare.current.scale.setScalar(0.9 + burn * 2.6);
+      (flare.current.material as THREE.MeshBasicMaterial).opacity = glow * 0.85;
+      flareLight.current.intensity = burning ? 40 * (1 - burn) * (1 - burn) : 0;
     }
   });
 
-  const bone = (
-    <meshStandardMaterial
-      ref={boneMat}
-      color="#d8cdb9"
-      emissive={AURA_HEX[aura]}
-      emissiveIntensity={0.06}
-      roughness={0.78}
-      metalness={0.04}
-    />
-  );
-  const boneProps = {
-    color: "#cfc3ad",
-    roughness: 0.8,
-    metalness: 0.04,
-  } as const;
-  const hollow = <meshBasicMaterial color="#050307" />;
+  const boneProps = { color: "#cfc3ad", roughness: 0.82, metalness: 0.04 } as const;
+  const hornProps = { color: "#3b2c27", roughness: 0.55, metalness: 0.2 } as const;
+  const hollow = <meshBasicMaterial color="#020103" />;
 
   return (
     <group ref={head}>
-      {/* Cranium + maxilla + cheekbones. */}
+      {/* Cranium + brow ridge + maxilla + cheekbones. */}
       <mesh position={[0, 0.2, -0.02]} scale={[1, 1.04, 1.1]}>
         <sphereGeometry args={[0.6, 40, 32]} />
-        {bone}
+        <meshStandardMaterial
+          ref={boneMat}
+          color="#d8cdb9"
+          emissive={AURA_HEX[aura]}
+          emissiveIntensity={0.06}
+          roughness={0.78}
+          metalness={0.04}
+        />
+      </mesh>
+      <mesh position={[0, 0.2, 0.4]} scale={[1.35, 0.32, 0.55]}>
+        <sphereGeometry args={[0.3, 28, 16]} />
+        <meshStandardMaterial {...boneProps} />
       </mesh>
       <mesh position={[0, -0.16, 0.2]} scale={[1.02, 0.78, 0.9]}>
         <sphereGeometry args={[0.42, 32, 24]} />
         <meshStandardMaterial {...boneProps} />
       </mesh>
       {[-1, 1].map((side) => (
-        <mesh key={`cheek-${side}`} position={[side * 0.32, -0.12, 0.36]} scale={[1.25, 0.7, 0.9]}>
+        <mesh key={`cheek-${side}`} position={[side * 0.33, -0.1, 0.35]} scale={[1.35, 0.6, 0.85]} rotation={[0, 0, side * -0.35]}>
           <sphereGeometry args={[0.15, 20, 16]} />
           <meshStandardMaterial {...boneProps} />
         </mesh>
       ))}
 
-      {/* Recessed sockets, fiery pupils. */}
+      {/* Swept-back demon horns. */}
+      {[-1, 1].map((side) => (
+        <group key={`horn-${side}`} position={[side * 0.4, 0.58, 0.02]} rotation={[-0.55, 0, side * -0.55]}>
+          <mesh position={[0, 0.2, 0]}>
+            <coneGeometry args={[0.075, 0.46, 14]} />
+            <meshStandardMaterial {...hornProps} />
+          </mesh>
+          <mesh position={[0, 0.48, -0.06]} rotation={[-0.6, 0, 0]}>
+            <coneGeometry args={[0.035, 0.2, 10]} />
+            <meshStandardMaterial {...hornProps} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Deep hollow sockets with pinpoint pupils that track the cursor. */}
       {[-1, 1].map((side, index) => (
         <group key={`eye-${side}`} position={[side * 0.2, 0.02, 0.5]}>
-          <mesh scale={[1.15, 0.92, 0.62]}>
+          <mesh scale={[1.15, 0.92, 0.7]}>
             <sphereGeometry args={[0.15, 24, 18]} />
             {hollow}
           </mesh>
-          <mesh position={[0, -0.01, 0.07]}>
-            <sphereGeometry args={[0.05, 16, 12]} />
+          <mesh
+            ref={(mesh) => {
+              pupils.current[index] = mesh;
+            }}
+            position={[0, -0.01, 0.075]}
+          >
+            <sphereGeometry args={[0.036, 16, 12]} />
             <meshBasicMaterial
               ref={(material) => {
                 pupilMats.current[index] = material;
               }}
-              color="#FF5A1F"
+              color={BLOOD}
               toneMapped={false}
             />
           </mesh>
         </group>
       ))}
-      <pointLight ref={eyeLight} position={[0, 0.02, 0.95]} color="#FF5A1F" intensity={2.4} distance={2.2} />
+      <pointLight ref={eyeLight} position={[0, 0.02, 0.95]} color={BLOOD} intensity={2.2} distance={2.2} />
 
       {/* Nasal cavity (inverted triangle). */}
       <mesh position={[0, -0.18, 0.58]} rotation={[0, 0, Math.PI]} scale={[1, 1.1, 0.5]}>
@@ -577,11 +706,17 @@ function SkeletonSkull({ aura, running }: { aura: AuraState; running: boolean })
         {hollow}
       </mesh>
 
-      {/* Upper teeth. */}
+      {/* Upper teeth + fangs. */}
       {teeth.map((tooth) => (
         <mesh key={`upper-${tooth.x}`} position={[tooth.x, -0.37, tooth.z]}>
           <boxGeometry args={[0.05, 0.09, 0.05]} />
           <meshStandardMaterial color="#e7ddca" roughness={0.6} />
+        </mesh>
+      ))}
+      {[-1, 1].map((side) => (
+        <mesh key={`fang-${side}`} position={[side * 0.15, -0.45, 0.46]} rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[0.03, 0.15, 8]} />
+          <meshStandardMaterial color="#f0e6d2" roughness={0.45} />
         </mesh>
       ))}
 
@@ -599,16 +734,129 @@ function SkeletonSkull({ aura, running }: { aura: AuraState; running: boolean })
         ))}
       </group>
 
-      {/* Lighting: warm front fill, aura + amethyst rim from behind. */}
-      <pointLight position={[0, 0.4, 2]} color="#ffd9b0" intensity={1.6} distance={5} />
+      {/* Lighting: harsh blood under-light, faint front fill, aura + amethyst rims. */}
+      <pointLight ref={underLight} position={[0, -1.25, 0.75]} color={BLOOD} intensity={15} distance={4.5} decay={2} />
+      <pointLight position={[0, 0.4, 2]} color="#ffd9b0" intensity={0.35} distance={5} />
       <pointLight ref={rimA} position={[1.1, 0.8, -1.1]} color={AURA_HEX[aura]} intensity={9} distance={4} />
       <pointLight position={[-1.1, 0.4, -1]} color="#9D4EDD" intensity={6} distance={4} />
+
+      {/* Necrotic-emerald purification flare. */}
+      <mesh ref={flare} visible={false}>
+        <sphereGeometry args={[0.7, 24, 16]} />
+        <meshBasicMaterial
+          color={NECROTIC}
+          transparent
+          opacity={0}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+      <pointLight ref={flareLight} position={[0, 0, 1.2]} color={NECROTIC} intensity={0} distance={7} />
     </group>
   );
 }
 
 /**
- * Particle stream along a conduit. Positions are rewritten every frame into
+ * Ghostly soul-chain path between two seals: bows away from the skull and
+ * writhes. Shared by the tendril strands and the particles riding them.
+ */
+function tendrilPoint(
+  from: readonly [number, number, number],
+  to: readonly [number, number, number],
+  p: number,
+  t: number,
+  phase: number,
+  out: THREE.Vector3,
+): THREE.Vector3 {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  const len = Math.hypot(dx, dy) || 1;
+  let nx = -dy / len;
+  let ny = dx / len;
+  // Bow outward (away from the graph center, where the skull sits).
+  const mx = (from[0] + to[0]) / 2;
+  const my = (from[1] + to[1]) / 2;
+  if (nx * mx + ny * my < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  const envelope = Math.sin(p * Math.PI);
+  const offset = envelope * 0.32 + Math.sin(p * Math.PI * 5 - t * 2.2 + phase) * 0.09 * envelope;
+  return out.set(
+    from[0] + dx * p + nx * offset,
+    from[1] + dy * p + ny * offset,
+    from[2] + Math.sin(p * Math.PI * 3 + t * 1.3 + phase) * 0.08 * envelope,
+  );
+}
+
+const TENDRIL_SEGMENTS = 48;
+
+/** One writhing tendril strand (a THREE.Line rebuilt each frame in place). */
+function TendrilStrand({
+  from,
+  to,
+  color,
+  opacity,
+  phase,
+  animate,
+}: {
+  from: [number, number, number];
+  to: [number, number, number];
+  color: string;
+  opacity: number;
+  phase: number;
+  animate: boolean;
+}) {
+  const line = useMemo(() => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array((TENDRIL_SEGMENTS + 1) * 3), 3),
+    );
+    const material = new THREE.LineBasicMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    return new THREE.Line(geometry, material);
+  }, []);
+  useEffect(
+    () => () => {
+      line.geometry.dispose();
+      (line.material as THREE.Material).dispose();
+    },
+    [line],
+  );
+  useEffect(() => {
+    const material = line.material as THREE.LineBasicMaterial;
+    material.color.set(color);
+    material.opacity = opacity;
+  }, [color, line, opacity]);
+
+  const point = useMemo(() => new THREE.Vector3(), []);
+  const written = useRef(false);
+  useFrame((state) => {
+    if (!animate && written.current) return;
+    written.current = true;
+    const attribute = line.geometry.getAttribute("position") as THREE.BufferAttribute;
+    const array = attribute.array as Float32Array;
+    const t = animate ? state.clock.elapsedTime : 0;
+    for (let i = 0; i <= TENDRIL_SEGMENTS; i++) {
+      tendrilPoint(from, to, i / TENDRIL_SEGMENTS, t, phase, point);
+      array[i * 3] = point.x;
+      array[i * 3 + 1] = point.y;
+      array[i * 3 + 2] = point.z;
+    }
+    attribute.needsUpdate = true;
+    line.geometry.computeBoundingSphere();
+  });
+
+  return <primitive object={line} />;
+}
+
+/**
+ * Soul particles riding a tendril. Positions are rewritten every frame into
  * one preallocated buffer (no per-frame allocation).
  */
 function ConduitStream({
@@ -618,6 +866,7 @@ function ConduitStream({
   count,
   speed,
   opacity,
+  phase,
 }: {
   from: [number, number, number];
   to: [number, number, number];
@@ -625,6 +874,7 @@ function ConduitStream({
   count: number;
   speed: number;
   opacity: number;
+  phase: number;
 }) {
   const geometry = useMemo(() => {
     const geo = new THREE.BufferGeometry();
@@ -635,13 +885,7 @@ function ConduitStream({
     return geo;
   }, [count]);
   useEffect(() => () => geometry.dispose(), [geometry]);
-
-  const dx = to[0] - from[0];
-  const dy = to[1] - from[1];
-  const len = Math.hypot(dx, dy) || 1;
-  // Unit normal in the graph plane, for a slight sinuous wobble.
-  const nx = -dy / len;
-  const ny = dx / len;
+  const point = useMemo(() => new THREE.Vector3(), []);
 
   useFrame((state) => {
     const attribute = geometry.getAttribute("position") as THREE.BufferAttribute;
@@ -649,10 +893,10 @@ function ConduitStream({
     const t = state.clock.elapsedTime;
     for (let i = 0; i < count; i++) {
       const p = (t * speed + i / count) % 1;
-      const wobble = Math.sin(p * Math.PI * 4 + t * 3 + i) * 0.045;
-      array[i * 3] = from[0] + dx * p + nx * wobble;
-      array[i * 3 + 1] = from[1] + dy * p + ny * wobble;
-      array[i * 3 + 2] = from[2] + Math.sin(p * Math.PI) * 0.12;
+      tendrilPoint(from, to, p, t, phase, point);
+      array[i * 3] = point.x;
+      array[i * 3 + 1] = point.y;
+      array[i * 3 + 2] = point.z;
     }
     attribute.needsUpdate = true;
   });
@@ -672,16 +916,19 @@ function ConduitStream({
   );
 }
 
+/** Soul chain between two seals: two writhing strands + riding soul particles. */
 function Segment({
   from,
   to,
   nodes,
   activeStage,
+  phase,
 }: {
   from: StageId;
   to: StageId;
   nodes: NodeStatusMap;
   activeStage: StageId | null;
+  phase: number;
 }) {
   const fromStatus = nodes[from];
   const toStatus = nodes[to];
@@ -694,7 +941,7 @@ function Segment({
           ? AURA_HEX.purple
           : fromStatus === "done"
             ? AURA_HEX.green
-            : "#374151";
+            : "#5a4a52";
   const lit = fromStatus !== "pending" || toStatus !== "pending";
   const flowing =
     toStatus === "active" ||
@@ -703,22 +950,31 @@ function Segment({
 
   return (
     <>
-      <Line
-        points={[BACK_POSITIONS[from], BACK_POSITIONS[to]]}
+      <TendrilStrand
+        from={BACK_POSITIONS[from]}
+        to={BACK_POSITIONS[to]}
         color={color}
-        lineWidth={lit ? 1.65 : 0.75}
-        transparent
-        opacity={lit ? 0.62 : 0.18}
-        depthWrite={false}
+        opacity={lit ? 0.75 : 0.22}
+        phase={phase}
+        animate={lit}
+      />
+      <TendrilStrand
+        from={BACK_POSITIONS[from]}
+        to={BACK_POSITIONS[to]}
+        color={color}
+        opacity={lit ? 0.35 : 0.1}
+        phase={phase + 2.1}
+        animate={lit}
       />
       {lit && (
         <ConduitStream
           from={BACK_POSITIONS[from]}
           to={BACK_POSITIONS[to]}
           color={color}
-          count={flowing ? 14 : 6}
-          speed={flowing ? 0.5 : 0.16}
+          count={flowing ? 16 : 6}
+          speed={flowing ? 0.45 : 0.14}
           opacity={flowing ? 0.95 : 0.45}
+          phase={phase}
         />
       )}
     </>
@@ -750,7 +1006,8 @@ const ALTAR_TINT: Record<AuraState, string> = {
   purple: "#9D4EDD",
   green: "#00FF66",
 };
-const ALTAR_MAGENTA = "#FF2BD6";
+/** Second circle color: eldritch violet. */
+const ALTAR_VIOLET = "#A13CFF";
 
 /** Pentagram: a {5/2} star polygon inscribed in radius `r`, as line segments. */
 function pentagram(radius: number): THREE.BufferGeometry {
@@ -778,11 +1035,11 @@ function AltarPedestal({ aura }: { aura: AuraState }) {
   const magentaMats = useRef<Array<THREE.MeshBasicMaterial | THREE.LineBasicMaterial | null>>([]);
   const tint = useMemo(() => new THREE.Color(ALTAR_TINT[aura]), [aura]);
   const magentaTarget = useMemo(
-    () => new THREE.Color(ALTAR_MAGENTA).lerp(tint, 0.5),
+    () => new THREE.Color(ALTAR_VIOLET).lerp(tint, 0.5),
     [tint],
   );
   const tintNow = useRef(new THREE.Color(ALTAR_TINT[aura]));
-  const magentaNow = useRef(new THREE.Color(ALTAR_MAGENTA));
+  const magentaNow = useRef(new THREE.Color(ALTAR_VIOLET));
   const glow = useRef<THREE.PointLight>(null);
 
   const geometries = useMemo(() => {
@@ -1128,6 +1385,58 @@ function SkullFire() {
   );
 }
 
+/**
+ * Ash and embers rising off the summoning circle: points spawn across the
+ * altar disc and drift upward with a slow sideways sway, fading by height.
+ */
+function AshRise() {
+  const count = 110;
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+    return geo;
+  }, []);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  const params = useMemo(
+    () =>
+      Array.from({ length: count }, (_, i) => {
+        const h = Math.sin((i + 7) * 45.164) * 24634.6345;
+        const r = h - Math.floor(h);
+        const angle = r * Math.PI * 2 + i * 2.4;
+        const radius = Math.sqrt((i + 0.5) / count) * ALTAR_R;
+        return { x: Math.cos(angle) * radius, z: Math.sin(angle) * radius * 0.45, phase: r, rate: 0.08 + r * 0.12 };
+      }),
+    [],
+  );
+
+  useFrame((state) => {
+    const attribute = geometry.getAttribute("position") as THREE.BufferAttribute;
+    const array = attribute.array as Float32Array;
+    const t = state.clock.elapsedTime;
+    params.forEach((ash, i) => {
+      const life = (t * ash.rate + ash.phase) % 1;
+      array[i * 3] = ash.x + Math.sin(t * 0.9 + i) * 0.12 * life;
+      array[i * 3 + 1] = ALTAR_Y + 0.05 + life * 2.8;
+      array[i * 3 + 2] = ash.z + Math.cos(t * 0.7 + i) * 0.08 * life;
+    });
+    attribute.needsUpdate = true;
+  });
+
+  return (
+    <points geometry={geometry} frustumCulled={false}>
+      <PointMaterial
+        transparent
+        color="#FF4A3A"
+        size={0.05}
+        sizeAttenuation
+        opacity={0.6}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
+  );
+}
+
 function Graph({
   nodes,
   activeStage,
@@ -1186,15 +1495,17 @@ function Graph({
       />
 
       <AltarPedestal aura={aura} />
+      <AshRise />
       <group position={[0, SKULL_Y, 0]} scale={RELIC_SCALE}>
         <SkeletonSkull aura={aura} running={running} />
         <SkullFire />
       </group>
       <RitualFx running={running} aura={aura} />
 
-      {EDGES.map(([from, to]) => (
+      {EDGES.map(([from, to], index) => (
         <Segment
           key={`${from}-${to}`}
+          phase={index * 1.7}
           from={from}
           to={to}
           nodes={nodes}

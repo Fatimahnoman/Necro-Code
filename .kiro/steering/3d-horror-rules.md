@@ -85,14 +85,24 @@ Two dedicated, dynamically imported client-only canvases:
 
 ## Cathedral ritual altar
 
-- **Skull** (`SkeletonSkull`): a procedural skeleton skull, not a
-  polyhedron. Cranium and maxilla spheres, cheekbones, recessed black eye
-  sockets with fiery pupils (`#FF5A1F` leaning 45% toward the aura) and a
-  flickering eye light, an inverted-triangle nasal cavity, an upper tooth row,
-  and a separate hinged jaw with lower teeth that chatters while a ritual
-  runs. Bone is lit by a warm front fill plus an aura rim light and an
-  amethyst rim light behind. It bobs, sways ±0.32 rad, and beats on crimson.
+- **Skull** (`SkeletonSkull`): a procedural possessed demon skull. Cranium,
+  heavy brow ridge, swept-back horns, maxilla, sharp cheekbones, deep black
+  sockets with pinpoint pupils (blood `#FF0A2A`; necrotic `#00FF66` once
+  purified), an inverted-triangle nasal cavity, teeth with two fangs, and a
+  hinged jaw. Harsh blood under-light from below (`[0,-1.25,0.75]`, ~15,
+  flickering) with only a faint front fill, so the face reads in sinister
+  relief; it turns necrotic green when purified. No shadow maps (cost).
   `RELIC_SCALE = 1.35`, `SKULL_Y = 0.2`.
+  - **Gaze:** `useGaze()` tracks the pointer on `window`, normalized to the
+    canvas rect (clamped ±1.6). The pupils shift up to `GAZE_RANGE` inside
+    the sockets and the head turns toward the cursor (eased).
+  - **Roar** on a run's rising edge (`ROAR_SECONDS = 1.5`): jaw gapes, violent
+    shudder, eye/under-light surge. Chatter while running.
+  - **Burn** on a purified finish (`BURN_SECONDS = 2.4`): crimson burns away
+    into a blinding necrotic-emerald flare (expanding additive shell, 40→0
+    light spike, bone emissive). Roar shudder and flare skip under reduced
+    motion. `AgentCanvas` adds a matching DOM flash over the panel (emerald
+    when purified, crimson pulse when residual).
 - **Fire** (`SkullFire`): a flame crown from the top of the cranium
   (`FireCloud` × 3: white-hot `#FFD27A`, orange `#FF7A1A`, crimson
   `#FF003C`; particles rise and taper), slow dried-blood embers rising past
@@ -100,8 +110,9 @@ Two dedicated, dynamically imported client-only canvases:
 - **Altar** (`AltarPedestal`): a stone slab (3.8 × 2.6 × 0.16, brass edges)
   tilted `rotation={[-Math.PI / 2.4, 0, 0]}` at `ALTAR_Y = -1.05`, with a
   ritual circle on its top face: rune rings and ticks (`ALTAR_TINT[aura]`),
-  a {5/2} pentagram and inner rings in magenta `#FF2BD6` mixed 50% with the
-  tint, counter-rotating, breathing. Tint: idle/crimson `#FF003C` → purple
+  a {5/2} pentagram and inner rings in violet `#A13CFF` mixed 50% with the
+  tint, counter-rotating, breathing. `AshRise`: 110 ash/ember points spawn
+  across the altar disc and drift upward. Tint: idle/crimson `#FF003C` → purple
   `#9D4EDD` → green `#00FF66`.
 - **Seals** (`StageNode3D`): tall Gothic lancet windows: a carved stone
   frame (`archShape()`, half-width 0.6, height 2.06; the click target) with a
@@ -115,7 +126,11 @@ Two dedicated, dynamically imported client-only canvases:
   -0.64`), so they never collide: checked down to a 380×560 canvas with
   worst-case two-line titles (≥ 39px vertical and ≥ 43px horizontal gaps).
   Line 1: stage title; line 2: `stageMeta` (`<STATUS> · <stage time>`).
-- **Conduits** run at `CONDUIT_Z = -0.9`, behind the windows and the skull.
+- **Soul chains** (`Segment`): between consecutive seals, two writhing
+  `TendrilStrand`s (a `THREE.Line` rewritten in place each frame along
+  `tendrilPoint()`: bowed away from the skull + travelling wave) and soul
+  particles (`ConduitStream`) riding the same path, at `CONDUIT_Z = -0.9`
+  behind the windows. Unlit chains are drawn once, static and dim.
   **Ritual FX** (run-start zoom pulse + aura shockwaves) are unchanged.
 - **Nave** (`CathedralNave` in `AgentCanvas.tsx`): a decorative SVG behind
   the transparent canvas: central pointed arch with a lancet, side arcades,

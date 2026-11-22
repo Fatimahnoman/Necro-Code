@@ -104,6 +104,7 @@ function ArchHeader({ title, glass }: { title: string; glass: FrameGlass }) {
           <path d={outer.replace(" V60 Z", "")} fill="none" stroke="#B08D57" strokeOpacity="0.6" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
         </g>
         <path
+          className="candle-rim"
           d={moulding}
           fill="none"
           stroke={`url(#${id}-rim)`}
@@ -121,7 +122,7 @@ function ArchHeader({ title, glass }: { title: string; glass: FrameGlass }) {
         <RoseWindow />
       </div>
       <h2 className="absolute inset-x-8 bottom-2 truncate text-center font-brand text-[15px] font-bold uppercase leading-none tracking-[0.12em] text-bone [text-shadow:0_0_14px_rgba(255,0,60,0.55),0_1px_0_rgba(0,0,0,0.9)]">
-        {title}
+        <span className="cursed-glitch max-w-full truncate align-bottom">{title}</span>
       </h2>
     </div>
   );

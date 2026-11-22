@@ -177,3 +177,14 @@ when the code exists in this repository.
 - [ ] 32. Visual and build verification for task 31
   - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` (sandbox: stub typecheck only; nothing rendered).
   - Check: skull reads as a skull from the default camera and while orbiting; editor highlight stays aligned while typing, scrolling, and with tabs; arch titles not clipped at 330px columns; mobile tabs.
+
+- [x] 33. Horror atmosphere & possessed skull
+  - [x] 33.1 Breathing vignette, corner vignette, crimson fog tendrils, header/arch micro-glitch, candle-flicker borders; bone `#EDE6D6`.
+  - [x] 33.2 Screen shake + blood flash when EXORCISE CODE / AUTO DEMO fires.
+  - [x] 33.3 Demon skull: brow ridge, horns, fangs, cursor-tracking pupils (blood → necrotic), harsh crimson under-light; roar on start; emerald burn flare on a purified finish (+ DOM flash).
+  - [x] 33.4 Crimson-and-violet summoning circle, rising ash, writhing soul-chain tendrils between the seals.
+  - [x] 33.5 No top clipping: Spellbook tool row wraps; Grimoire `Diff` tab label shortens below `xl`.
+
+- [ ] 34. Visual and build verification for task 33
+  - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` (sandbox: stub typecheck only; nothing rendered).
+  - Check: shake + flash on EXORCISE CODE; skull gaze follows the cursor and the roar/burn read clearly; text contrast at the vignette corners; 1024px Spellbook row wraps cleanly; reduced motion disables shake, flash, glitch, and flicker.

@@ -40,7 +40,7 @@ const config: Config = {
           DEFAULT: "#4ADE80",
           dark: "#14532D",
         },
-        bone: "#E2D9C8",
+        bone: "#EDE6D6",
         gold: {
           DEFAULT: "#E2D9C8",
           dim: "#A89C82",

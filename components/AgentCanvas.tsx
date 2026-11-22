@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supportsWebGL, WebGLBoundary } from "@/components/WebGLBoundary";
 import {
   AURA_HEX,
@@ -383,6 +383,29 @@ export function AgentCanvas({
   }, []);
 
   const mode: GraphMode | null = !webglOk ? "2d" : (userMode ?? autoMode);
+
+  // Exorcism climax over the whole panel: an emerald purification flare when a
+  // run ends clean, a crimson pulse when corruption remains. Skipped under
+  // reduced motion.
+  const climaxRef = useRef<HTMLDivElement>(null);
+  const wasRunning = useRef(running);
+  useEffect(() => {
+    const ended = wasRunning.current && !running;
+    wasRunning.current = running;
+    const element = climaxRef.current;
+    if (!ended || !element || !summary) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const purified = summary.unresolved === 0;
+    element.style.background = purified
+      ? "radial-gradient(circle at 50% 42%, rgba(220,255,235,0.95), rgba(0,255,102,0.55) 25%, rgba(0,255,102,0) 70%)"
+      : "radial-gradient(circle at 50% 42%, rgba(255,0,60,0.55), rgba(255,0,60,0) 65%)";
+    element.animate(
+      purified
+        ? [{ opacity: 0 }, { opacity: 1, offset: 0.12 }, { opacity: 0.55, offset: 0.4 }, { opacity: 0 }]
+        : [{ opacity: 0 }, { opacity: 0.8, offset: 0.2 }, { opacity: 0 }],
+      { duration: purified ? 2200 : 900, easing: "ease-out" },
+    );
+  }, [running, summary]);
   const disableWebGL = () => {
     setWebglOk(false);
     setSelected(null);
@@ -466,6 +489,7 @@ export function AgentCanvas({
       }`}
     >
       <CathedralNave />
+      <div ref={climaxRef} aria-hidden className="pointer-events-none absolute inset-0 z-[25] opacity-0 mix-blend-screen" />
       <div
         className="pointer-events-none absolute inset-0"
         style={{

@@ -87,6 +87,17 @@ or `text-gold-dim`.
   without scores. Toolbar buttons are `.medieval-btn`. The Corruption
   Report plaque has three stained-glass panes and a `PURIFIED` / `RESIDUAL`
   verdict plate.
+- **Dread layer:** `.breathing-vignette` (pitch-black edges, 9s breathe)
+  behind the dashboard and a corners-only `.corner-vignette` in front;
+  `.crimson-tendrils` (blurred dried-blood / umbra fog creeping along floor
+  and walls, with the Fog toggle). `.cursed-glitch` adds a brief crimson /
+  violet chromatic-aberration micro-glitch (filter + translate, quiet ~92% of
+  a 7.3s cycle) to the header subtitle and arch titles. `.candle-flicker`
+  gutters the stained-glass strips and arch rims.
+- **Ritual shock:** clicking `EXORCISE CODE` (or AUTO DEMO) runs a 560ms
+  screen shake on the dashboard wrapper and a 900ms blood flash overlay
+  (Web Animations API on refs; no re-render).
+- Text: primary `bone` is `#EDE6D6`; nothing under 12px.
 - CRT layers are faded by `--crt-opacity: 0.08`. Decorative loops stop under
   `prefers-reduced-motion`.
 
@@ -118,7 +129,8 @@ Three-pane HUD, responsive, zero horizontal scroll:
    - Pills share `HEADER_PILL` (`h-8 shrink-0 whitespace-nowrap`); rows
      wrap, pills never shrink or clip.
 1. **Left · Cursed Spellbook** (`ControlPanel`), top to bottom:
-   - Row: preset select · `GitHub` · `Upload` · directive toggle (wand; a
+   - Row (wraps the tools under the preset when the column is narrow, so
+     nothing is squeezed or clipped): preset select · `GitHub` · `Upload` · directive toggle (wand; a
      dot shows when a directive is set; the slot opens automatically when a
      directive is set, e.g. by AUTO DEMO). The GitHub URL form and the
      directive input open below the row.
@@ -142,7 +154,8 @@ Three-pane HUD, responsive, zero horizontal scroll:
      Cursed) and status-colored border.
 3. **Right · Grimoire Terminal** (`Terminal`), top to bottom (fixed block
    that never scrolls, then the viewport):
-   - Tabs `TERMINAL` · `SPECTRAL DIFF` · `SANDBOX` (badges: Terminal pulses
+   - Tabs `TERMINAL` · `SPECTRAL DIFF` (shown as `DIFF` below `xl`, full
+     name kept as the accessible name) · `SANDBOX` (badges: Terminal pulses
      while running, Diff shows `-n +n`, Sandbox shows a status dot).
    - The soul-purity bar.
    - One toolbar row: `GEN TEST` (+ PASS/FAIL pill), `TEST SANDBOX`, `COPY`,

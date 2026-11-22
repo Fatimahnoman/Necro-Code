@@ -530,7 +530,7 @@ export function Terminal({
             const selected = view === tab.id;
             const badge =
               tab.id === "diff" && canDiff ? (
-                <span className="flex items-center gap-1 text-[12px] normal-case tracking-normal">
+                <span className="flex shrink-0 items-center gap-1 text-[12px] normal-case tracking-normal">
                   <span className="text-crimson">-{stats.removed}</span>
                   <span className="text-neon">+{stats.added}</span>
                 </span>
@@ -549,6 +549,8 @@ export function Terminal({
                 type="button"
                 role="tab"
                 id={`grimoire-tab-${tab.id}`}
+                // "Spectral" is visually hidden below xl; keep the full name.
+                aria-label={tab.id === "diff" ? tab.label : undefined}
                 aria-selected={selected}
                 aria-controls="grimoire-panel"
                 onClick={() => setView(tab.id)}
@@ -558,7 +560,13 @@ export function Terminal({
                   selected ? "text-bone" : "text-bone/70 hover:text-bone",
                 ].join(" ")}
               >
-                {tab.label}
+                {tab.id === "diff" ? (
+                  <span className="truncate">
+                    <span className="hidden xl:inline">Spectral </span>Diff
+                  </span>
+                ) : (
+                  <span className="truncate">{tab.label}</span>
+                )}
                 {badge}
               </button>
             );
