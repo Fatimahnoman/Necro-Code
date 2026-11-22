@@ -37,6 +37,9 @@ const POSITIONS: Record<StageId, [number, number, number]> = {
   clean_code_output: [-ORBIT_X, -ORBIT_Y, 0],
 };
 
+/** Conduits run behind the windows and the skull. */
+const CONDUIT_Z = -0.9;
+
 /** Seal centers pushed back to `CONDUIT_Z`, so conduits pass behind. */
 const BACK_POSITIONS = Object.fromEntries(
   Object.entries(POSITIONS).map(([id, [x, y]]) => [id, [x, y, CONDUIT_Z]]),
@@ -68,13 +71,11 @@ const ALTAR_W = 3.8;
 const ALTAR_D = 2.6;
 const ALTAR_H = 0.16;
 const ALTAR_R = 1.22;
-/** Conduits run behind the windows and the skull. */
-const CONDUIT_Z = -0.9;
 /** Gap kept between labels and the canvas edge, in px. */
 const EDGE_GAP_PX = 8;
 
 export function labelMaxPx(width: number): number {
-  return Math.min(176, Math.max(112, width * 0.3));
+  return Math.min(148, Math.max(96, width * 0.26));
 }
 
 /**
@@ -152,7 +153,7 @@ function StageLabel({
     // The filter lives on an unclipped wrapper so the glow survives clip-path.
     <div style={{ filter: glow }}>
       <div
-        className="flex w-max max-w-[var(--label-max,176px)] flex-col items-center px-4 py-1 text-center [clip-path:polygon(0_0,100%_0,calc(100%-9px)_50%,100%_100%,0_100%,9px_50%)]"
+        className="flex w-max max-w-[var(--label-max,148px)] flex-col items-center px-3 py-0.5 text-center [clip-path:polygon(0_0,100%_0,calc(100%-9px)_50%,100%_100%,0_100%,9px_50%)]"
         style={{
           background:
             "linear-gradient(180deg, rgba(26,18,24,0.96), rgba(10,7,11,0.96))",
@@ -160,7 +161,7 @@ function StageLabel({
         }}
       >
         <span
-          className="flex items-center gap-1.5 font-brand text-[12px] font-bold uppercase leading-tight tracking-[0.06em]"
+          className="flex items-center gap-1.5 font-brand text-[10px] font-bold uppercase leading-tight tracking-[0.06em]"
           style={{ color: status === "pending" ? "#E2D9C8" : color }}
         >
           <span
@@ -170,7 +171,7 @@ function StageLabel({
           {stage.label}
         </span>
         {meta && (
-          <span className="mt-0.5 whitespace-nowrap font-mono text-[12px] leading-tight text-bone/80 tabular-nums">
+          <span className="mt-0.5 whitespace-nowrap font-mono text-[10px] leading-tight text-bone/80 tabular-nums">
             {meta}
           </span>
         )}
@@ -1230,8 +1231,8 @@ function RitualFx({ running, aura }: { running: boolean; aura: AuraState }) {
 }
 
 /** Skull scale on the altar and its height above the graph center. */
-const RELIC_SCALE = 1.35;
-const SKULL_Y = 0.2;
+const RELIC_SCALE = 1.65;
+const SKULL_Y = 0.28;
 const SPARK_COUNT = 60;
 
 /**

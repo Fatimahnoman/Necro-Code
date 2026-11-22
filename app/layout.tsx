@@ -42,6 +42,10 @@ export const metadata: Metadata = {
     "SSE",
   ],
   authors: [{ name: "NecroCode" }],
+  // Content advisory for stores/embeds: atmospheric psychological horror,
+  // no gore or explicit material. Use platform rating/age-gating controls for
+  // any real access restriction.
+  other: { "content-rating": "Mature 17+ — atmospheric horror" },
   openGraph: {
     title: "NecroCode — 3D Horror AI Code Exorcist",
     description:
@@ -66,7 +70,7 @@ export default function RootLayout({
       lang="en"
       className={`${brandFont.variable} ${monoFont.variable} ${uiFont.variable}`}
     >
-      <body className="min-h-screen bg-void font-sans text-bone antialiased">
+      <body className="min-h-[100dvh] bg-void font-sans text-bone antialiased">
         {children}
       </body>
     </html>

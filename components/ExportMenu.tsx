@@ -112,7 +112,7 @@ export function ExportMenu({
           role="menu"
           aria-label="Export"
           onKeyDown={onMenuKey}
-          className="absolute right-0 top-full z-50 mt-1.5 w-64 rounded-xl border border-white/15 bg-[#0a0b14]/95 p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.7),0_0_26px_rgba(147,51,234,0.14)] backdrop-blur-xl"
+          className="glass-obsidian dock-sigil absolute right-0 top-full z-50 mt-1.5 w-64 rounded-xl p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.75),0_0_26px_rgba(255,0,60,0.16)]"
         >
           {items.map((item, index) => {
             const Icon = item.icon;
@@ -131,7 +131,7 @@ export function ExportMenu({
                   item.onSelect();
                   close();
                 }}
-                className="flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-white/[0.06] focus:bg-white/[0.08] focus:outline-none disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent"
+                className="flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-crimson/[0.08] focus:bg-crimson/[0.12] focus:outline-none focus-visible:ring-1 focus-visible:ring-crimson/50 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent"
               >
                 <Icon className="mt-0.5 h-4 w-4 shrink-0 text-haunt-glow" aria-hidden />
                 <span className="min-w-0">

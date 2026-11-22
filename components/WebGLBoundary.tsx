@@ -28,6 +28,7 @@ export class WebGLBoundary extends Component<
 
 /** `true` when this browser can create a WebGL (1 or 2) context. */
 export function supportsWebGL(): boolean {
+  if (typeof document === "undefined") return false;
   try {
     const canvas = document.createElement("canvas");
     const context =

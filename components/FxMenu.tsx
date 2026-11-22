@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  Box,
   ChevronDown,
   CloudFog,
   type LucideIcon,
+  Layers3,
   Music,
   ScanLine,
   SlidersHorizontal,
@@ -12,10 +14,11 @@ import {
 import { useEffect, useId, useRef, useState } from "react";
 import type { UiSettings } from "@/lib/useUiSettings";
 
-type FxKey = keyof Pick<UiSettings, "bgmOn" | "soundOn" | "scanlinesOn" | "fogOn">;
+type FxKey = keyof UiSettings;
+type AtmosphereKey = Exclude<FxKey, "graphMode">;
 
 const FX_ITEMS: Array<{
-  key: FxKey;
+  key: AtmosphereKey;
   label: string;
   hint: string;
   icon: LucideIcon;
@@ -158,6 +161,47 @@ export function FxMenu({
               </button>
             );
           })}
+
+          <div className="my-1 h-px bg-white/10" aria-hidden />
+
+          <div className="flex items-center gap-3 rounded-lg px-2.5 py-2">
+            {settings.graphMode === "3d" ? (
+              <Box className="h-4 w-4 shrink-0 text-haunt-glow" aria-hidden />
+            ) : (
+              <Layers3 className="h-4 w-4 shrink-0 text-spectral" aria-hidden />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="block font-mono text-[13px] font-medium uppercase tracking-[0.08em] text-zinc-100">
+                Ritual Stage
+              </p>
+              <p className="block truncate font-mono text-[12px] text-zinc-400">
+                2D fallback is automatic on low-end devices
+              </p>
+            </div>
+            <div
+              role="group"
+              aria-label="Ritual stage renderer"
+              className="flex shrink-0 rounded-md border border-white/15 bg-black/50 p-0.5"
+            >
+              {(["2d", "3d"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={settings.graphMode === mode}
+                  onClick={() => {
+                    if (settings.graphMode !== mode) onToggle("graphMode");
+                  }}
+                  className={`h-6 min-w-[34px] rounded px-1.5 font-sans text-[12px] font-bold uppercase leading-none tracking-[0.06em] transition ${
+                    settings.graphMode === mode
+                      ? "bg-white/15 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]"
+                      : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
