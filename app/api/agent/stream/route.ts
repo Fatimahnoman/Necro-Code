@@ -2,7 +2,6 @@ import type { NextRequest } from "next/server";
 import { analyzeCode, exorciseCode } from "@/lib/analyzer";
 import {
   type ApiSigils,
-  EMPTY_API_SIGILS,
   hasLiveSigils,
   sigilsFromHeaders,
 } from "@/lib/apiSigils";
