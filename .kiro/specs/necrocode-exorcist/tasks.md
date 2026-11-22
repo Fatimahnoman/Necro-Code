@@ -62,7 +62,7 @@ when the code exists in this repository.
   - [x] 10.3 Independent `Horror BGM` / `3D Audio FX` toggles in `useUiSettings`. _R7.6_
 
 - [x] 11. Dashboard and judge tools (`app/page.tsx`)
-  - [x] 11.1 `NECROCODE // OCCULT CODE EXORCIST` header with engine badge and utility controls. _R8.1_
+  - [x] 11.1 `NECROCODE // AI CODE EXORCIST` header with crest and utility controls. _R8.1_
   - [x] 11.2 Responsive grid: stacked on mobile; proportional `1.05fr / 1.35fr / 1.1fr` from `lg`, with 340 / 440 / 360px minimums from `xl`; `gap-4`. _R8.2_
   - [x] 11.3 `AUTO DEMO` with the `async-memory-leak` artifact, auto diff and sandbox. _R8.3, R8.4_
   - [x] 11.4 Grimoire History drawer (last 10, `localStorage`). _R8.5, R8.6_
@@ -165,3 +165,15 @@ when the code exists in this repository.
 - [ ] 30. Visual and build verification for task 29
   - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` (sandbox: stub typecheck only).
   - Check: banners clear the footer (two-line labels), arch windows render on Safari (SVG filters), ember density holds 60fps on a laptop.
+
+- [x] 31. Reference-image cathedral layout
+  - [x] 31.1 Procedural skeleton skull with hinged jaw, fiery pupils, rim lights, and particle fire; tilted altar pedestal with a pentagram ritual circle tinted by the aura.
+  - [x] 31.2 Seals as Gothic lancet stained-glass windows (stage hue + live status crystal); banners on the window plaques; conduits behind.
+  - [x] 31.3 `SigilFrame` arch headers carrying the panel titles; crimson / violet / stone side filigree strips; cathedral nave backdrop.
+  - [x] 31.4 Header: crest + `NECROCODE // AI CODE EXORCIST`; `AUTO DEMO`, `HISTORY [n]`, `API SIGILS` (engine dot), `FX & Audio`. _R8.1_
+  - [x] 31.5 Spellbook order + syntax-highlighted editor (`lib/highlight.ts`). _R8.12_
+  - [x] 31.6 Grimoire order: tabs → soul-purity bar → toolbar → viewport → Corruption Report + verdict; always-visible stage cards in the Ritual Graph. _R8.11_
+
+- [ ] 32. Visual and build verification for task 31
+  - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` (sandbox: stub typecheck only; nothing rendered).
+  - Check: skull reads as a skull from the default camera and while orbiting; editor highlight stays aligned while typing, scrolling, and with tabs; arch titles not clipped at 330px columns; mobile tabs.

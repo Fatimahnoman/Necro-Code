@@ -33,7 +33,7 @@ Spec: `#[[file:../specs/necrocode-exorcist/design.md]]`
 
 No electric-blue `#00F0FF`. No stock images or remote audio (only
 `public/audio/horror-bgm.mp3`). No inline SVG *icons* (use `lucide-react`);
-decorative SVG ornaments (`SigilFrame`, `SigilEmblem`, `SoulGauge`) are allowed.
+decorative SVG ornaments (`SigilFrame`, `GothicCrest`, `WaxSigil`, `CathedralNave`) are allowed.
 
 ## Typography
 
@@ -52,49 +52,44 @@ or `text-gold-dim`.
 ## Blood-Cathedral architecture & stained glass
 
 - **Nave:** a fixed `.cathedral-stone` layer behind everything: charcoal stone
-  `#030305 → #0A070B` with fine grain (`--stone-grain`, an inline SVG
-  `feTurbulence` noise) and the glow of a ruby (`#E0115F`) and a violet
-  (`#7B2CBF`) stained-glass window at the top corners.
-- **Panels as cathedral windows** (`components/SigilFrame.tsx`): each panel
-  has a pointed-arch stone crown above it (two curves meeting at an apex,
-  ruby → violet → gold stained-glass rim, finials, and an eight-petal rose
-  window at the apex) and filigree corners at the base. The crown is in
-  normal flow above the panel, so it never covers content; the panel's top
-  corners are squared to meet it.
-- `.horror-panel` is carved stone (grain + dark gradient) with ruby light
-  leaking in at the top and violet at the base. `.rune-border` is a leaded
-  stained-glass rim (ruby → gold → violet → gold → emerald).
-- **Spellbook tome:** the editor (`.grimoire-editor`) is an aged dark-vellum
-  page with a spine shadow and weathered double inner edge; the line-number
-  gutter uses JetBrains Mono numerals behind a brass double rule, every 10th
-  line marked `ᛟ` in crimson. GitHub / Upload / Preset sit in brass slots
-  (see "Spellbook" below).
-- **`EXORCISE CODE SSE`** (`.ritual-trigger`): glossy crimson sealing wax with
-  a rotating conic energy border and a stamped skull wax seal (`WaxSigil`).
-- **Grimoire:** tabs are etched dark-stone plates (`.arcane-plate`, engraved
-  lettering; the selected plate glows with its `--plate` color). The health
-  badge is a wax seal on a violet ribbon (`WaxSeal`, tinted crimson / amber /
-  emerald by tier) labeled `Soul-purity <before> → <after> /100`. The
-  Corruption Report is a carved stone plaque (`.cathedral-plaque`) with
-  arched stained-glass panes (`.glass-pane`, `--pane` color) for cursed /
-  silenced / residual; it is the only copy of those counts.
-- **Weathered arches:** each arch crown's stone gable is roughened by an SVG
-  `feTurbulence` + `feDisplacementMap` filter and frames a pointed
-  stained-glass window (7 translucent dried-blood / umbra / crimson /
-  emerald panes with lead mullions) under a glowing multi-color rim.
-- **Spellbook** is an open tome (`.tome-panel`): aged vellum, a red
-  manuscript margin rule, weathered layered margins. Upload/GitHub, the URL
-  input + Fetch, the preset select, and the directive sit in
-  `.brass-slot`s. The gutter has a brass double rule and faint aged ruling.
-  `EXORCISE CODE SSE` burns: dried-blood → crimson fill, a rotating flame
-  border, and a pulsing `ember-burn` glow.
-- **Grimoire:** the selected tab gets a leaded multi-color stained-glass
-  border (crimson → dried blood → amethyst → umbra → emerald) with inset
-  neon light. Toolbar buttons use `.medieval-btn` (chamfered plate, brass
-  rim). The badge reads `SOUL-PURITY <before> ➔ <after> / 100` beside a
-  glowing wax seal on an umbra / dried-blood ribbon.
+  with grain (`--stone-grain`) and dried-blood / umbra window glow.
+- **Panels as cathedral windows** (`components/SigilFrame.tsx`):
+  - A tall pointed-arch header (`ArchHeader`, 60px) carrying the panel
+    title as its `<h2>` (Cinzel Decorative 15px): weathered stone gable
+    (`feTurbulence` + `feDisplacementMap`), double moulding with a glowing
+    stained-glass rim, two small lancets at the sides (clear of the title),
+    finials, and a rose window at the apex.
+  - Stained-glass filigree strips down both sides (`.glass-strip-crimson`
+    for the Spellbook, `.glass-strip-violet` for the Grimoire,
+    `.glass-strip-stone` pilasters for the Ritual Graph): a leaded diamond
+    mosaic with glow, overlaying the panel's outer padding only.
+  - Filigree corners at the base. Titles live only in the arch header.
+- `.horror-panel` is carved stone with dried-blood light at the top and
+  umbra at the base. `.rune-border` is a leaded stained-glass rim.
+- **Spellbook** is an open tome (`.tome-panel`): aged vellum, red margin
+  rule, weathered margins. Inputs sit in `.brass-slot`s.
+- **Editor:** a highlighted `<pre>` (`lib/highlight.ts`: comments, strings,
+  numbers, keywords per language family) behind a transparent `<textarea>`;
+  both use `EDITOR_TEXT` (JetBrains Mono 13px / 20px, no ligatures, tab 4)
+  and the `<pre>` follows the textarea scroll via a transform. Lines do not
+  wrap. The gutter (brass double rule, every 10th line `ᛟ`) follows the
+  vertical scroll. Colors: keyword `#FF5C86`, string `#3EF29A`, comment
+  gold-dim, number amber.
+- **`EXORCISE CODE`** (`.ritual-trigger`, 60px tall): dried-blood → crimson
+  fill, rotating flame border, pulsing `ember-burn` glow, `WaxSigil`, and an
+  `SSE` pill (shows the progress % while running). `BANISH RITUAL` is a
+  narrower `.medieval-btn` below it.
+- **Grimoire:** etched dark-stone tabs (`.arcane-plate`; selected tab gets a
+  leaded multi-color stained-glass border). Soul-purity is a labeled bar:
+  `SOUL-PURITY <before> → <after> /100`, fill to `after` (dried blood →
+  tier color: crimson < 50, amber 50–79, neon ≥ 80) with a bone tick at
+  `before`; it reads "Awaiting ritual" / "Not scored for this runtime"
+  without scores. Toolbar buttons are `.medieval-btn`. The Corruption
+  Report plaque has three stained-glass panes and a `PURIFIED` / `RESIDUAL`
+  verdict plate.
 - CRT layers are faded by `--crt-opacity: 0.08`. Decorative loops stop under
   `prefers-reduced-motion`.
+
 
 ## Theme primitives
 
@@ -112,61 +107,53 @@ or `text-gold-dim`.
 Three-pane HUD, responsive, zero horizontal scroll:
 
 0. **Header** (`app/page.tsx`)
-   - Left: `SigilEmblem`, brand `NECROCODE` + `// OCCULT CODE EXORCIST`, and one engine badge
-     (`Live AI engine` / `Builtin safety net`).
-   - Right: `Auto demo` (crimson → violet gradient fill + glow, the header's
-     one accent CTA), then quiet ghost buttons (`GHOST_PILL`: no fill,
-     `border-white/10 text-zinc-300`) for `API Sigils`, `History`,
-     and one `FX & Audio` popover (`components/FxMenu.tsx`) holding the
-     `Horror BGM`, `3D Audio FX`, `CRT`, and `Fog` switches. No phase, SSE, or
-     aura pills in the header (the Spellbook shows the phase, the Ritual Graph
-     shows the aura).
-   - Pills share `HEADER_PILL` (`h-8 shrink-0 whitespace-nowrap text-[12px]
-     tracking-[0.1em]`); rows wrap, pills never shrink or clip.
-1. **Left · Spellbook** (`ControlPanel`)
-   - Cursed artifact presets, `GitHub` summon toggle (single-line URL form,
-     `POST /api/github`) next to the upload button, runtime selector, ritual
-     directive, code editor (`min-h-[260px] flex-1`, takes the free height),
-     progress bar, “Exorcise Code” and “Banish ritual”.
-   - `Exorcise Code` is the only filled, glowing CTA on the page (crimson →
-     haunt gradient, white text, `h-12`). Every other button is outline.
-   - No cursed/silenced/residual counter here; it lives only in the Grimoire
-     Terminal footer.
-2. **Center · 3D Ritual Graph** (`AgentCanvas` + `ExecutionGraph3D`)
-   - Four interactive 3D seals: `Corrupted Code → Spectral Scanner →
-     Kiro Exorcism Reasoning → Purified Output`.
-   - Central polyhedron/skull relic with a crimson heartbeat while bugs exist,
-     purple channeling while reasoning, and neon green when purified.
-   - Click a seal to inspect its curse. Red pulsing border/aura on `error`.
-   - After `complete`, a four-step timeline (`DORMANT · SCANNING · EXORCISING ·
-     PURIFIED`) selects each stage for inspection.
-   - Header `2D | 3D` toggle. 2D (`RitualGraph2D` in `AgentCanvas.tsx`) is a
-     vertical DOM pipeline with the same `STATUS_HEX` colors, bug badge, and
-     click-to-inspect card. It is the default when `prefers-reduced-motion`
-     is set or WebGL is unavailable; a thrown canvas (`WebGLBoundary`) or a
-     `webglcontextlost` event switches to 2D and disables the 3D option.
-   - Before the first run (`idle`, no logs), the footer shows the helper
-     `1. Feed the Crypt → 2. Ignite EXORCISE CODE → 3. Inspect the Altar
-     Seals`; it is replaced by the SSE sync line once a run starts.
-3. **Right · Grimoire Terminal** (`Terminal`)
-   - Fixed top block that never scrolls: title row (health badge), one
-     toolbar row, then three tabs: `Logs`, `Spectral Diff`, `Sandbox`.
-   - Toolbar row: `Test sandbox`, `Gen test` with an attached PASS/FAIL pill
-     (full `smokeLabel()` text in the tooltip and for screen readers),
-     `Copy`, and an `Export ▾` menu (`components/ExportMenu.tsx`) holding
-     `Export Report (.md)`, `Download Git Patch (.patch)`, and
-     `Download Artifact`. The row never wraps: a layout effect steps
-     `density` full → compact → tight (shorter labels, then icons) until it
-     fits; only the primary group may scroll as a last resort. Buttons share
-     `ACTION_BUTTON` (`h-8 whitespace-nowrap text-[12px]`).
-   - Tab badges: `Logs` pulses while running, `Spectral Diff` shows `-n +n`,
-     `Sandbox` shows a status dot once output exists.
-   - `Test sandbox` and `Gen test` switch to `Sandbox` (also on a language
-     mismatch). `AUTO DEMO` stays on `Spectral Diff` and runs the sandbox in
-     the background. A new run switches to `Logs`.
-   - Footer: the cursed / silenced / residual summary (the only copy of it).
-   - Header health badge `<before> → <after> /100`: crimson < 50, amber
-     50–79, neon ≥ 80. Weights live only in `HEALTH_WEIGHTS` (`lib/report.ts`).
+   - Left: `GothicCrest` (shield, crimson field, gold "N") + `<h1>`
+     `NECROCODE // AI CODE EXORCIST` (Cinzel Decorative 24px; "// AI Code
+     Exorcist" in crimson).
+   - Right, in order: `AUTO DEMO` (blood-forged gradient, the header's accent
+     CTA), `HISTORY [n]`, `API SIGILS` (with the engine status dot: green =
+     live AI engine, dim = builtin safety net; full status in its tooltip
+     and accessible name), and the `FX & Audio` popover (Horror BGM,
+     3D Audio FX, CRT, Fog). Ghost pills (`GHOST_PILL`) for all but AUTO DEMO.
+   - Pills share `HEADER_PILL` (`h-8 shrink-0 whitespace-nowrap`); rows
+     wrap, pills never shrink or clip.
+1. **Left · Cursed Spellbook** (`ControlPanel`), top to bottom:
+   - Row: preset select · `GitHub` · `Upload` · directive toggle (wand; a
+     dot shows when a directive is set; the slot opens automatically when a
+     directive is set, e.g. by AUTO DEMO). The GitHub URL form and the
+     directive input open below the row.
+   - Filename + runtime selector.
+   - `LINES` and `CHARS` counters, then the phase label + `%` progress bar.
+   - The tall syntax-highlighted editor (`min-h-[240px] flex-1`).
+   - `EXORCISE CODE` (only filled CTA in the panel) and `BANISH RITUAL`.
+   - No cursed/silenced/residual counter here.
+2. **Center · Ritual Graph** (`AgentCanvas` + `ExecutionGraph3D`)
+   - Cathedral nave backdrop, skull on the tilted altar, four lancet-window
+     seals (see `3d-horror-rules.md`). Click a seal or a stage card to
+     inspect it.
+   - Header row: `2D | 3D` toggle + hint (left), aura pill + bug count
+     (right). 2D (`RitualGraph2D`) is the default for reduced motion or no
+     WebGL; `WebGLBoundary` / `webglcontextlost` switch to 2D.
+   - Base: one line (the first-run helper `1. Feed the Crypt → 2. Ignite
+     EXORCISE CODE → 3. Inspect the Altar Seals` while idle with no logs,
+     otherwise the SSE ↔ 3D sync line), then four stage cards that are
+     always visible: `DORMANT` · `SCANNING` · `EXORCISING` · `PURIFIED`,
+     each with its live status word (Awaiting / Channelling / Sealed /
+     Cursed) and status-colored border.
+3. **Right · Grimoire Terminal** (`Terminal`), top to bottom (fixed block
+   that never scrolls, then the viewport):
+   - Tabs `TERMINAL` · `SPECTRAL DIFF` · `SANDBOX` (badges: Terminal pulses
+     while running, Diff shows `-n +n`, Sandbox shows a status dot).
+   - The soul-purity bar.
+   - One toolbar row: `GEN TEST` (+ PASS/FAIL pill), `TEST SANDBOX`, `COPY`,
+     `Export ▾` (`Export Report (.md)`, `Download Git Patch (.patch)`,
+     `Download Artifact`). The row never wraps: `density` steps full →
+     compact → tight until it fits.
+   - Active tab viewport (logs / diff / sandbox).
+   - `CORRUPTION REPORT` footer card (the only copy of the counts).
+   - `TEST SANDBOX` and `GEN TEST` switch to `SANDBOX`; AUTO DEMO stays on
+     `SPECTRAL DIFF` and runs the sandbox in the background; a new run
+     switches to `TERMINAL`.
 4. **Atmosphere** (`HorrorBackdrop`)
    - Fixed full-screen WebGL fog/embers and a giant wireframe relic behind the
      glass dashboard, reacting to the same SSE aura.

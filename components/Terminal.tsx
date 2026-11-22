@@ -95,53 +95,12 @@ const HEALTH_COLOR: Record<HealthTier, string> = {
   pure: "text-neon",
 };
 
-/** Wax tint per purity tier: [wax, dark rim, highlight]. */
-const WAX: Record<HealthTier, [string, string, string]> = {
-  cursed: ["#8B0000", "#3a0004", "#ff6a80"],
-  haunted: ["#a8741a", "#5a3a06", "#ffe1a0"],
-  pure: ["#0f8a4c", "#04401f", "#9dffcb"],
+/** Soul-purity bar color per tier. */
+const PURITY_HEX: Record<HealthTier, string> = {
+  cursed: "#FF003C",
+  haunted: "#FCD34D",
+  pure: "#00FF66",
 };
-
-/**
- * Wax seal on a violet ribbon, tinted by the purified score's tier and
- * stamped with the score. Decorative; the parent carries the aria-label.
- */
-function WaxSeal({ score }: { score: number }) {
-  const [wax, rim, shine] = WAX[healthTier(score)];
-  return (
-    <svg
-      viewBox="0 0 34 36"
-      aria-hidden
-      focusable="false"
-      className="h-9 w-[34px] shrink-0"
-      style={{ filter: `drop-shadow(0 2px 3px rgba(0,0,0,0.7)) drop-shadow(0 0 6px ${wax})` }}
-    >
-      {/* Ribbon tails. */}
-      <path d="M10 22 6 35 11 32 14 35 16 24Z" fill="#4A154B" stroke="#1f0820" strokeWidth="0.6" />
-      <path d="M24 22 28 35 23 32 20 35 18 24Z" fill="#8B0000" stroke="#3a0004" strokeWidth="0.6" />
-      {/* Irregular wax blob. */}
-      <path
-        d="M17 1.5c2.3 0 3 1.8 5 2.4 2 .6 3.9-.7 5.3.7s.1 3.3.7 5.3c.6 2 2.4 2.7 2.4 5s-1.8 3-2.4 5c-.6 2 .7 3.9-.7 5.3s-3.3.1-5.3.7c-2 .6-2.7 2.4-5 2.4s-3-1.8-5-2.4c-2-.6-3.9.7-5.3-.7s-.1-3.3-.7-5.3c-.6-2-2.4-2.7-2.4-5s1.8-3 2.4-5c.6-2-.7-3.9.7-5.3s3.3-.1 5.3-.7c2-.6 2.7-2.4 5-2.4Z"
-        fill={wax}
-        stroke={rim}
-        strokeWidth="0.9"
-      />
-      <circle cx="17" cy="14.9" r="9.2" fill="none" stroke={shine} strokeOpacity="0.4" strokeWidth="0.8" />
-      <text
-        x="17"
-        y="18.6"
-        textAnchor="middle"
-        fontSize="10"
-        fontWeight="700"
-        fill={rim}
-        style={{ fontFamily: "var(--font-brand), serif" }}
-      >
-        {score}
-      </text>
-      <ellipse cx="12" cy="7.5" rx="3.4" ry="1.5" fill={shine} fillOpacity="0.4" transform="rotate(-30 12 7.5)" />
-    </svg>
-  );
-}
 
 function downloadText(content: string, filename: string, type: string) {
   const blob = new Blob([content], { type });
@@ -166,7 +125,7 @@ type ToolbarDensity = "full" | "compact" | "tight";
 const DENSITY_STEPS: ToolbarDensity[] = ["full", "compact", "tight"];
 
 const GRIMOIRE_TABS: Array<{ id: GrimoireTab; label: string }> = [
-  { id: "logs", label: "Logs" },
+  { id: "logs", label: "Terminal" },
   { id: "diff", label: "Spectral Diff" },
   { id: "sandbox", label: "Sandbox" },
 ];
@@ -464,6 +423,7 @@ export function Terminal({
 
   const healthBefore = summary?.healthBefore;
   const healthAfter = summary?.healthAfter;
+  const scored = healthBefore !== undefined && healthAfter !== undefined;
 
   /** Pre-flight: block a run whose code clearly belongs to another runtime. */
   const preflight = useCallback(
@@ -561,52 +521,99 @@ export function Terminal({
     >
       {/* Header + pinned action toolbar + tabs: never scroll. */}
       <div className="relative z-30 shrink-0 border-b border-gold/15 bg-[#0a0b14]/95 backdrop-blur-md">
-        <div className="flex items-center gap-2 px-3 pb-1.5 pt-2.5">
-          <div className="flex min-w-0 items-center gap-2">
-            <SquareTerminal
-              className="h-4 w-4 shrink-0 text-crimson [filter:drop-shadow(0_0_6px_rgba(255,0,60,0.6))]"
-              aria-hidden
-            />
-            <span className="truncate font-brand text-[15px] font-bold uppercase tracking-[0.14em] text-gold">
-              Grimoire
-            </span>
-          </div>
-
-          {running && (
-            <span className="ml-1 inline-flex items-center gap-1 font-sans text-[12px] font-semibold uppercase tracking-[0.16em] text-crimson">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-crimson" />
-              live
-            </span>
-          )}
-
-          <div className="ml-auto flex items-center gap-1.5">
-            {healthBefore !== undefined && healthAfter !== undefined && (
-              <span
-                data-health-before={healthBefore}
-                data-health-after={healthAfter}
-                title={`Code Health & Security Score before → after exorcism. 100 minus ${HEALTH_WEIGHTS.critical} per critical, ${HEALTH_WEIGHTS.warning} per warning, ${HEALTH_WEIGHTS.info} per info finding.`}
-                aria-label={`Health score ${healthBefore} out of 100 before, ${healthAfter} out of 100 after`}
-                className="relative inline-flex h-9 items-center gap-1.5 whitespace-nowrap pl-0.5 pr-1"
-              >
-                <WaxSeal score={healthAfter} />
-                <span className="flex flex-col leading-none">
-                  <span className="font-brand text-[12px] font-bold uppercase tracking-[0.12em] text-gold-dim">
-                    Soul-purity
-                  </span>
-                  <span className="mt-0.5 font-mono text-[12px] tabular-nums">
-                    <span className={HEALTH_COLOR[healthTier(healthBefore)]}>{healthBefore}</span>
-                    <span className="text-bone/60"> ➔ </span>
-                    <span className={`font-bold ${HEALTH_COLOR[healthTier(healthAfter)]}`}>
-                      {healthAfter}
-                    </span>
-                    <span className="text-bone/60"> / 100</span>
-                  </span>
+        <div
+          role="tablist"
+          aria-label="Grimoire view"
+          className="flex items-center gap-1 px-2.5 pb-2 pt-2"
+        >
+          {GRIMOIRE_TABS.map((tab) => {
+            const selected = view === tab.id;
+            const badge =
+              tab.id === "diff" && canDiff ? (
+                <span className="flex items-center gap-1 text-[12px] normal-case tracking-normal">
+                  <span className="text-crimson">-{stats.removed}</span>
+                  <span className="text-neon">+{stats.added}</span>
                 </span>
+              ) : tab.id === "sandbox" && sandboxStatus !== "idle" ? (
+                <span
+                  data-sandbox-badge={sandboxStatus}
+                  aria-label={`sandbox ${sandboxStatus}`}
+                  className={`h-2 w-2 shrink-0 rounded-full ${SANDBOX_DOT[sandboxStatus]}`}
+                />
+              ) : tab.id === "logs" && running ? (
+                <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-crimson" />
+              ) : null;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                id={`grimoire-tab-${tab.id}`}
+                aria-selected={selected}
+                aria-controls="grimoire-panel"
+                onClick={() => setView(tab.id)}
+                style={{ "--plate": TAB_PLATE[tab.id] } as CSSProperties}
+                className={[
+                  "arcane-plate inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap px-2 font-sans text-[12px] font-bold uppercase leading-none tracking-[0.12em] transition",
+                  selected ? "text-bone" : "text-bone/70 hover:text-bone",
+                ].join(" ")}
+              >
+                {tab.label}
+                {badge}
+              </button>
+            );
+          })}
+        </div>
+        {/* Soul-purity: the Code Health & Security Score, before → after. */}
+        <div
+          data-soul-purity
+          data-health-before={healthBefore}
+          data-health-after={healthAfter}
+          title={`Code Health & Security Score before → after exorcism. 100 minus ${HEALTH_WEIGHTS.critical} per critical, ${HEALTH_WEIGHTS.warning} per warning, ${HEALTH_WEIGHTS.info} per info finding.`}
+          className="px-3 pb-2"
+        >
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="font-brand text-[13px] font-bold uppercase tracking-[0.1em] text-bone">
+              Soul-purity
+            </span>
+            {scored ? (
+              <span
+                aria-label={`Health score ${healthBefore} out of 100 before, ${healthAfter} out of 100 after`}
+                className="font-mono text-[13px] tabular-nums"
+              >
+                <span className={HEALTH_COLOR[healthTier(healthBefore)]}>{healthBefore}</span>
+                <span className="text-bone/60"> → </span>
+                <span className={`font-bold ${HEALTH_COLOR[healthTier(healthAfter)]}`}>{healthAfter}</span>
+                <span className="text-bone/60"> /100</span>
+              </span>
+            ) : (
+              <span className="font-sans text-[12px] font-medium text-bone/60">
+                {summary ? "Not scored for this runtime" : "Awaiting ritual"}
               </span>
             )}
           </div>
+          <div
+            aria-hidden
+            className="relative mt-1.5 h-2 overflow-hidden rounded-full bg-black/60 shadow-[inset_0_0_0_1px_rgba(176,141,87,0.3)]"
+          >
+            {scored && (
+              <>
+                <div
+                  className="h-full rounded-full transition-[width] duration-700"
+                  style={{
+                    width: `${healthAfter}%`,
+                    background: `linear-gradient(90deg, #8B0000, ${PURITY_HEX[healthTier(healthAfter)]})`,
+                    boxShadow: `0 0 10px ${PURITY_HEX[healthTier(healthAfter)]}`,
+                  }}
+                />
+                <span
+                  className="absolute top-0 h-full w-0.5 bg-bone/90"
+                  style={{ left: `calc(${healthBefore}% - 1px)` }}
+                />
+              </>
+            )}
+          </div>
         </div>
-
 
         {/*
           Single-row toolbar. Primary actions stay visible; exports live in
@@ -616,7 +623,7 @@ export function Terminal({
         <div
           data-terminal-actions
           data-density={density}
-          className={`flex items-center px-2.5 pb-2 ${density === "tight" ? "gap-1" : "gap-1.5"}`}
+          className={`flex items-center px-2.5 pb-2.5 ${density === "tight" ? "gap-1" : "gap-1.5"}`}
         >
           {/* Primary actions. Only this row scrolls (last resort); the Export
               menu sits outside it so its dropdown is never clipped. */}
@@ -626,28 +633,6 @@ export function Terminal({
               density === "tight" ? "gap-1" : "gap-1.5"
             }`}
           >
-            <button
-              type="button"
-              onClick={handleSandbox}
-              disabled={!finalCode || sandboxStatus === "running"}
-              aria-label="Test sandbox"
-              title={
-                finalCode
-                  ? runnerLanguage.local
-                    ? "Run the purified JavaScript in a 2-second sandboxed Web Worker"
-                    : `Run the purified ${runnerLanguage.label} on the remote 25-second sandbox`
-                  : "The sandbox is sealed until the purified artifact arrives"
-              }
-              className={`${ACTION_BUTTON} ${density === "tight" ? "px-2" : "px-2.5"} border-amethyst/55 bg-amethyst/15 hover:bg-amethyst/20 hover:shadow-[0_0_20px_rgba(147,51,234,0.24)]`}
-            >
-              {sandboxStatus === "running" ? (
-                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
-              ) : (
-                <Play className="h-3.5 w-3.5 shrink-0 text-amethyst-glow" aria-hidden />
-              )}
-              {density === "full" ? "Test sandbox" : "Sandbox"}
-            </button>
-
             <span className="inline-flex shrink-0 items-center">
               <button
                 type="button"
@@ -694,6 +679,28 @@ export function Terminal({
                 </span>
               )}
             </span>
+            <button
+              type="button"
+              onClick={handleSandbox}
+              disabled={!finalCode || sandboxStatus === "running"}
+              aria-label="Test sandbox"
+              title={
+                finalCode
+                  ? runnerLanguage.local
+                    ? "Run the purified JavaScript in a 2-second sandboxed Web Worker"
+                    : `Run the purified ${runnerLanguage.label} on the remote 25-second sandbox`
+                  : "The sandbox is sealed until the purified artifact arrives"
+              }
+              className={`${ACTION_BUTTON} ${density === "tight" ? "px-2" : "px-2.5"} border-amethyst/55 bg-amethyst/15 hover:bg-amethyst/20 hover:shadow-[0_0_20px_rgba(147,51,234,0.24)]`}
+            >
+              {sandboxStatus === "running" ? (
+                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+              ) : (
+                <Play className="h-3.5 w-3.5 shrink-0 text-amethyst-glow" aria-hidden />
+              )}
+              {density === "full" ? "Test sandbox" : "Sandbox"}
+            </button>
+
             <span className="sr-only" aria-live="polite">
               {testStatus === "running" ? "Smoke test running" : testResult ?? ""}
             </span>
@@ -720,50 +727,6 @@ export function Terminal({
             items={exportItems}
             className={`${ACTION_BUTTON} ${density === "full" ? "px-2.5" : "px-2"} border-gold/20 bg-black/40 hover:border-gold/40 hover:bg-white/[0.06] aria-expanded:border-haunt/60 aria-expanded:bg-haunt/10`}
           />
-        </div>
-
-        <div
-          role="tablist"
-          aria-label="Grimoire view"
-          className="flex items-center gap-1 px-2.5 pb-2 pt-1"
-        >
-          {GRIMOIRE_TABS.map((tab) => {
-            const selected = view === tab.id;
-            const badge =
-              tab.id === "diff" && canDiff ? (
-                <span className="flex items-center gap-1 text-[12px] normal-case tracking-normal">
-                  <span className="text-crimson">-{stats.removed}</span>
-                  <span className="text-neon">+{stats.added}</span>
-                </span>
-              ) : tab.id === "sandbox" && sandboxStatus !== "idle" ? (
-                <span
-                  data-sandbox-badge={sandboxStatus}
-                  aria-label={`sandbox ${sandboxStatus}`}
-                  className={`h-2 w-2 shrink-0 rounded-full ${SANDBOX_DOT[sandboxStatus]}`}
-                />
-              ) : tab.id === "logs" && running ? (
-                <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-crimson" />
-              ) : null;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                id={`grimoire-tab-${tab.id}`}
-                aria-selected={selected}
-                aria-controls="grimoire-panel"
-                onClick={() => setView(tab.id)}
-                style={{ "--plate": TAB_PLATE[tab.id] } as CSSProperties}
-                className={[
-                  "arcane-plate inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap px-2 font-sans text-[12px] font-bold uppercase leading-none tracking-[0.12em] transition",
-                  selected ? "text-bone" : "text-bone/70 hover:text-bone",
-                ].join(" ")}
-              >
-                {tab.label}
-                {badge}
-              </button>
-            );
-          })}
         </div>
       </div>
 
@@ -1000,18 +963,9 @@ export function Terminal({
 
       {summary && (
         <div className="cathedral-plaque relative z-10 border-t border-gold/20 px-3 pb-2.5 pt-2">
-          <div className="flex items-center justify-between">
-            <span className="font-brand text-[13px] font-bold uppercase tracking-[0.12em] text-gold">
-              Corruption Report
-            </span>
-            <span
-              className={`font-sans text-[12px] font-bold uppercase tracking-[0.14em] ${
-                summary.unresolved > 0 ? "text-crimson" : "text-neon"
-              }`}
-            >
-              {summary.unresolved > 0 ? "Residual" : "Purified"}
-            </span>
-          </div>
+          <h3 className="text-center font-brand text-[13px] font-bold uppercase tracking-[0.12em] text-bone">
+            Corruption Report
+          </h3>
           <div className="mt-2 grid grid-cols-3 gap-2 text-center">
             {(
               [
@@ -1033,6 +987,18 @@ export function Terminal({
                 </div>
               </div>
             ))}
+          </div>
+          <div className="mt-2 flex justify-center">
+            <span
+              data-ritual-verdict={summary.unresolved > 0 ? "residual" : "purified"}
+              className={`medieval-btn inline-flex h-8 items-center px-6 font-brand text-[13px] font-bold uppercase tracking-[0.12em] ${
+                summary.unresolved > 0
+                  ? "bg-crimson/15 text-crimson [box-shadow:inset_0_0_0_1px_rgba(255,0,60,0.6),inset_0_0_14px_rgba(255,0,60,0.3)]"
+                  : "bg-neon/10 text-neon [box-shadow:inset_0_0_0_1px_rgba(0,255,102,0.55),inset_0_0_14px_rgba(0,255,102,0.25)]"
+              }`}
+            >
+              {summary.unresolved > 0 ? "Residual" : "Purified"}
+            </span>
           </div>
         </div>
       )}

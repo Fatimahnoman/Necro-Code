@@ -158,11 +158,11 @@ interface AgentCanvasProps {
 ### `ExecutionGraph3D` (`components/three/ExecutionGraph3D.tsx`)
 
 - `Canvas` with camera `[0, 0.18, 6.0]`, `fov: 45`, `dpr: [1, 1.8]`, transparent clear color.
-- Four seals, a central relic, Drei `Line` edges, and flowing orbs on the active edge.
-- Seals at `(±2.75, ±1.58)`. Scale and vertical offset come from `fitGraph()`: up to `1.15`, limited so seals (width) and seals + labels + HUD strips (height) fit. `AgentCanvas` passes `reserveTopPx` 72 and `reserveBottomPx` 104 (timeline) / 64 (first-run helper) / 44. Labels are clamped inside the canvas by measured width.
-- Central relic: additive wireframe, back-face rim shell, inner wireframe lattice, edge lines, two rim point lights.
+- Four lancet-window seals, a procedural skeleton skull with particle fire, a tilted altar pedestal with a pentagram ritual circle, conduit lines + particle streams behind them.
+- Seals at `(±2.75, ±1.58)`. Scale and vertical offset come from `fitGraph()`: up to `1.15`, limited so the windows and the HUD strips fit. `AgentCanvas` passes `reserveTopPx` 64 and `reserveBottomPx` 104. Labels sit on each window's plaque and are clamped inside the canvas by measured width.
+- New props: `running` (summoning pulse) and `stageMeta` (banner line 2).
 - `OrbitControls` with `enablePan={false}` and `enableZoom={false}`; `onPointerMissed` clears selection.
-- Stage labels are a DOM overlay projected from 3D anchors every frame (`text-[9.5px]`, `bg-black/75`, `backdrop-blur-md`, `whitespace-nowrap`).
+- Stage labels are a DOM overlay projected from 3D anchors every frame (swallowtail banners; see `3d-horror-rules.md`).
 
 ### `HorrorBackdrop` (`components/three/HorrorBackdrop.tsx`)
 
@@ -171,22 +171,23 @@ interface AgentCanvasProps {
 
 ### `ControlPanel` (`components/ControlPanel.tsx`)
 
-- Presets (`lib/cursedCode.ts`), `GitHub` summon toggle, file upload, runtime selector, ritual directive, code editor that takes the free height (`min-h-[260px] flex-1`), progress bar. The detected/fixed/residual counter is shown only in the Terminal footer; `ControlPanel` no longer takes a `summary` prop.
+- Order: preset · GitHub · Upload · directive toggle → filename + runtime → LINES / CHARS + phase % bar → syntax-highlighted editor (`lib/highlight.ts`, `<pre>` behind a transparent `<textarea>`) → `Exorcise Code` + `Banish ritual`. The directive input opens on demand and auto-opens when a directive is set. No summary counter; `ControlPanel` takes no `summary` prop.
 - The `GitHub` toggle opens a form (`#github-summon`). Submit validates with `parseGitHubFileUrl()` first, then calls `POST /api/github`, and on success calls `onCodeChange`, `onFilenameChange(path)`, and `onLanguageChange(language)` when the language is known.
 - `Exorcise Code` button (crimson glow, hover scale) and `Banish ritual` reset.
 
 ### `Terminal` (`components/Terminal.tsx`)
 
-- Fixed top block: title row (health badge, download icon for `purified-artifact.ts`), action toolbar (`Gen test`, `Test sandbox`, `Copy`, `Report` → `necrocode-exorcism-report.md`, `.patch` → `necrocode-fix.patch`, test badge), then tabs `Logs` (`role="log"`), `Spectral Diff`, `Sandbox`.
+- Fixed top block: tabs `Terminal` (`role="log"`, view id `logs`), `Spectral Diff`, `Sandbox` → soul-purity bar → toolbar (`Gen test` + result pill, `Test sandbox`, `Copy`, `Export ▾`: report `.md`, `.patch`, `purified-artifact.ts`). Then the viewport and the Corruption Report card with its verdict plate.
 - `view: "logs" | "diff" | "sandbox"`. `startSandbox(switchView)` runs the pre-flight and the sandbox; `Test sandbox` and `Gen test` switch to `Sandbox`, `AUTO DEMO` calls `startSandbox(false)` after switching to `Spectral Diff`. `running` becoming true switches to `Logs`.
-- Header shows the health badge (`<before> → <after> /100`) when `summary.healthBefore` and `summary.healthAfter` exist.
+- The soul-purity bar shows `<before> → <after> /100` when `summary.healthBefore` and `summary.healthAfter` exist, otherwise "Awaiting ritual" / "Not scored for this runtime".
 - New prop: `filename: string` (editor filename or GitHub path) — the patch target path.
 - When `autoDemoNonce` changes and the run is complete, switches to the diff and starts the sandbox.
 
 ### Header (`app/page.tsx`)
 
-- Header emblem `SigilEmblem` (gold circle, blood inverted triangle) + brand `NecroCode` in Cinzel Decorative (`font-brand`, uppercase) with `// Occult Code Exorcist` in Cinzel.
-- Left: brand + engine badge. Right: `Auto demo` (outline), `API Sigils`, `History`, `FxMenu` popover (`components/FxMenu.tsx`: four `role="switch"` rows; closes on outside click and Escape).
+- Left: `GothicCrest` + `<h1>` `NECROCODE // AI CODE EXORCIST` (Cinzel Decorative).
+- Right: `AUTO DEMO`, `HISTORY [n]`, `API SIGILS` (engine status dot; status text in tooltip + accessible name), `FxMenu` popover (four `role="switch"` rows; closes on outside click and Escape).
+- Panels are wrapped in `SigilFrame` (`title`, `glass`), which renders each panel's `<h2>` inside its arch header.
 - Below `lg`: sticky `Spellbook | 3D Ritual | Grimoire` tabs (`mobileTab` state). Panels stay mounted and are hidden with `hidden lg:block`.
 
 ## Fallback pipeline

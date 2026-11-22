@@ -22,8 +22,9 @@ type NodeStatusMap = Record<StageId, NodeStatus>;
 type NodeRefMap = Record<StageId, MutableRefObject<THREE.Group | null>>;
 type LabelRefMap = Partial<Record<StageId, HTMLDivElement | null>>;
 
-const LABEL_OFFSET = new THREE.Vector3(0, -1.12, 0);
-const BADGE_OFFSET = new THREE.Vector3(0.52, 0.5, 0);
+/** Banner anchor: the stone plaque under each window's glass. */
+const LABEL_OFFSET = new THREE.Vector3(0, -0.64, 0.05);
+const BADGE_OFFSET = new THREE.Vector3(0.52, 0.92, 0.05);
 
 /** Seal orbit: half-width / half-height of the ritual square (local units). */
 const ORBIT_X = 2.75;
@@ -36,19 +37,39 @@ const POSITIONS: Record<StageId, [number, number, number]> = {
   clean_code_output: [-ORBIT_X, -ORBIT_Y, 0],
 };
 
+/** Seal centers pushed back to `CONDUIT_Z`, so conduits pass behind. */
+const BACK_POSITIONS = Object.fromEntries(
+  Object.entries(POSITIONS).map(([id, [x, y]]) => [id, [x, y, CONDUIT_Z]]),
+) as Record<StageId, [number, number, number]>;
+
 const CAMERA_Z = 6.0;
 const CAMERA_FOV = 45;
 const MAX_GRAPH_SCALE = 1.15;
 const MIN_GRAPH_SCALE = 0.4;
-/** Stained-glass disc radius (0.86) × hover scale (1.16) + float amplitude. */
-const SEAL_REACH = 1.07;
+/** Gothic lancet window seal (local units, centered on the seal). */
+const WINDOW_HALF_W = 0.6;
+const WINDOW_BOTTOM = -1.03;
+const WINDOW_SPRING = 0.42;
+const WINDOW_TOP = 1.03;
+const GLASS_HALF_W = 0.46;
+const GLASS_BOTTOM = -0.24;
+const GLASS_SPRING = 0.36;
+const GLASS_TOP = 0.9;
+const WINDOW_HOVER_SCALE = 1.06;
+/** Window extent incl. hover scale and float (0.04). */
+const SEAL_HALF_W = WINDOW_HALF_W * WINDOW_HOVER_SCALE;
+const SEAL_HALF_H = WINDOW_TOP * WINDOW_HOVER_SCALE + 0.04;
+/** Banners sit inside the window plaque; allow a little overhang below it, in px. */
+const LABEL_HALF_HEIGHT_PX = 10;
 
-/** Stained-glass rose disc behind each seal. */
-const GLASS_PANES = 12;
-const GLASS_INNER = 0.56;
-const GLASS_OUTER = 0.86;
-/** Half the height of a projected stage banner (title, up to 2 lines, + meta), in px. */
-const LABEL_HALF_HEIGHT_PX = 28;
+/** Tilted altar slab under the skull (local units). */
+const ALTAR_Y = -1.05;
+const ALTAR_W = 3.8;
+const ALTAR_D = 2.6;
+const ALTAR_H = 0.16;
+const ALTAR_R = 1.22;
+/** Conduits run behind the windows and the skull. */
+const CONDUIT_Z = -0.9;
 /** Gap kept between labels and the canvas edge, in px. */
 const EDGE_GAP_PX = 8;
 
@@ -74,14 +95,14 @@ export function fitGraph(
 
   const top = halfH - reserveTopPx * unitsPerPx;
   const bottom = -halfH + (reserveBottomPx + LABEL_HALF_HEIGHT_PX) * unitsPerPx;
-  const localTop = ORBIT_Y + SEAL_REACH;
-  const localBottom = ORBIT_Y - LABEL_OFFSET.y;
+  const localTop = ORBIT_Y + SEAL_HALF_H;
+  const localBottom = ORBIT_Y + SEAL_HALF_H;
   const byHeight = (top - bottom) / (localTop + localBottom);
 
   // Labels are clamped inside the canvas by LabelProjector, so only the
   // seals bound the width.
   const edge = EDGE_GAP_PX * unitsPerPx;
-  const byWidth = (halfW - edge) / (ORBIT_X + SEAL_REACH);
+  const byWidth = (halfW - edge) / (ORBIT_X + SEAL_HALF_W);
 
   const scale = Math.min(
     MAX_GRAPH_SCALE,
@@ -158,51 +179,96 @@ function StageLabel({
   );
 }
 
+/**
+ * Pointed (lancet) arch outline: straight jambs from `bottom` up to `spring`,
+ * then two curves meeting at the apex `top`. Centered on x = 0.
+ */
+function archShape(halfWidth: number, bottom: number, spring: number, top: number): THREE.Shape {
+  const shape = new THREE.Shape();
+  const rise = spring + (top - spring) * 0.72;
+  shape.moveTo(-halfWidth, bottom);
+  shape.lineTo(halfWidth, bottom);
+  shape.lineTo(halfWidth, spring);
+  shape.quadraticCurveTo(halfWidth, rise, 0, top);
+  shape.quadraticCurveTo(-halfWidth, rise, -halfWidth, spring);
+  shape.lineTo(-halfWidth, bottom);
+  return shape;
+}
+
+function outline(shape: THREE.Shape, z: number): Array<[number, number, number]> {
+  return shape.getPoints(28).map((point) => [point.x, point.y, z]);
+}
+
+/** Stained-glass hue per stage (its identity); the live status rides on top. */
+const SEAL_GLASS: Record<StageId, string> = {
+  input_code: "#00C46A",
+  glitch_scanner: "#9D4EDD",
+  exorcism_reasoning: "#E0114B",
+  clean_code_output: "#19E6A8",
+};
+
+/**
+ * A stage seal as a tall Gothic lancet window: a carved stone frame with a
+ * brass moulding, a pointed stained-glass light (stage hue, lead mullion and
+ * transoms, a small rose roundel), a faceted crystal emblem in the live
+ * status color, and a stone plaque below the glass where the DOM banner sits.
+ * The stone frame is the click target.
+ */
 function StageNode3D({
+  stageId,
   position,
   status,
   selected,
   onSelect,
   nodeRef,
 }: {
+  stageId: StageId;
   position: [number, number, number];
   status: NodeStatus;
   selected: boolean;
   onSelect: () => void;
   nodeRef: MutableRefObject<THREE.Group | null>;
 }) {
-  const spinGroup = useRef<THREE.Group>(null);
-  const core = useRef<THREE.Mesh>(null);
-  const haloA = useRef<THREE.Mesh>(null);
-  const glass = useRef<THREE.Group>(null);
-  const deepColor = useMemo(
-    () => `#${new THREE.Color(STATUS_HEX[status]).multiplyScalar(0.45).getHexString()}`,
-    [status],
-  );
-  const leading = useMemo(() => {
-    // Gold "lead came" between panes: 12 radial bars + inner/outer rims.
-    const positions: number[] = [];
-    for (let i = 0; i < GLASS_PANES; i++) {
-      const angle = (i / GLASS_PANES) * Math.PI * 2;
-      positions.push(
-        Math.cos(angle) * GLASS_INNER, Math.sin(angle) * GLASS_INNER, 0,
-        Math.cos(angle) * GLASS_OUTER, Math.sin(angle) * GLASS_OUTER, 0,
-      );
-    }
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    return geometry;
-  }, []);
-  useEffect(() => () => leading.dispose(), [leading]);
+  const crystal = useRef<THREE.Group>(null);
+  const glassMat = useRef<THREE.MeshBasicMaterial>(null);
   const [hovered, setHovered] = useState(false);
   const targetScale = useMemo(() => new THREE.Vector3(1, 1, 1), []);
-  const color = STATUS_HEX[status];
+  const statusColor = STATUS_HEX[status];
+  const glassColor = status === "error" ? STATUS_HEX.error : SEAL_GLASS[stageId];
   const pending = status === "pending";
   const lit = status === "active" || status === "error";
 
-  // Faceted crystal edges, shared by the outline of this seal.
+  const shapes = useMemo(() => {
+    const frame = archShape(WINDOW_HALF_W, WINDOW_BOTTOM, WINDOW_SPRING, WINDOW_TOP);
+    const glass = archShape(GLASS_HALF_W, GLASS_BOTTOM, GLASS_SPRING, GLASS_TOP);
+    return {
+      frameGeometry: new THREE.ShapeGeometry(frame, 24),
+      glassGeometry: new THREE.ShapeGeometry(glass, 24),
+      frameLine: outline(frame, 0.012),
+      glassLine: outline(glass, 0.02),
+    };
+  }, []);
+  useEffect(
+    () => () => {
+      shapes.frameGeometry.dispose();
+      shapes.glassGeometry.dispose();
+    },
+    [shapes],
+  );
+
+  // Lead came: a mullion, two transoms (clipped to the jambs), and the
+  // horizontal sill between glass and plaque.
+  const leadPoints = useMemo<Array<[number, number, number]>>(() => {
+    const z = 0.022;
+    return [
+      [0, GLASS_BOTTOM, z], [0, GLASS_TOP - 0.22, z],
+      [-GLASS_HALF_W, 0.02, z], [GLASS_HALF_W, 0.02, z],
+      [-GLASS_HALF_W, GLASS_SPRING, z], [GLASS_HALF_W, GLASS_SPRING, z],
+    ];
+  }, []);
+
   const crystalEdges = useMemo(() => {
-    const source = new THREE.OctahedronGeometry(0.5, 0);
+    const source = new THREE.OctahedronGeometry(0.2, 0);
     const edges = new THREE.EdgesGeometry(source);
     source.dispose();
     return edges;
@@ -219,150 +285,112 @@ function StageNode3D({
     const t = state.clock.elapsedTime;
     if (nodeRef.current) {
       const group = nodeRef.current;
-      group.position.y = position[1] + Math.sin(t * 1.45 + position[0]) * 0.065;
-      const desired = hovered || selected ? 1.16 : 1;
-      targetScale.setScalar(desired);
+      group.position.y = position[1] + Math.sin(t * 1.2 + position[0]) * 0.04;
+      targetScale.setScalar(hovered || selected ? WINDOW_HOVER_SCALE : 1);
       group.scale.lerp(targetScale, 0.12);
     }
-    if (spinGroup.current) {
-      spinGroup.current.rotation.y += delta * (lit ? 0.85 : 0.22);
+    if (crystal.current) {
+      crystal.current.rotation.y += delta * (lit ? 1.2 : 0.35);
+      crystal.current.scale.setScalar(lit ? 1 + Math.sin(t * (status === "error" ? 9 : 5)) * 0.15 : 1);
     }
-    if (core.current) {
-      const beat = lit ? 1 + Math.sin(t * (status === "error" ? 9 : 5)) * 0.22 : 1;
-      core.current.scale.setScalar(beat);
-    }
-    if (haloA.current) {
-      haloA.current.rotation.x += delta * (lit ? 1.1 : 0.35);
-      haloA.current.rotation.y += delta * 0.4;
-    }
-    if (glass.current) {
-      const pulse = pending ? 0.14 : 0.42 + Math.sin(t * (lit ? 4.2 : 1.6)) * 0.16;
-      glass.current.children.forEach((child) => {
-        const material = (child as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined;
-        if (material && material.userData.pane) material.opacity = pulse;
-      });
+    if (glassMat.current) {
+      glassMat.current.opacity = pending
+        ? 0.2
+        : lit
+          ? 0.55 + Math.sin(t * (status === "error" ? 8 : 4)) * 0.2
+          : 0.62;
     }
   });
 
   return (
     <group ref={nodeRef} position={position}>
-      <group ref={spinGroup}>
-        {/* Faceted obsidian crystal (the click target). */}
-        <mesh
-          scale={[1, 1.25, 1]}
-          onClick={(event) => {
-            event.stopPropagation();
-            onSelect();
-          }}
-          onPointerOver={(event) => {
-            event.stopPropagation();
-            setHovered(true);
-            document.body.style.cursor = "pointer";
-          }}
-          onPointerOut={() => {
-            setHovered(false);
-            document.body.style.cursor = "auto";
-          }}
-        >
-          <octahedronGeometry args={[0.5, 0]} />
-          <meshStandardMaterial
-            color="#0b0a10"
-            emissive={color}
-            emissiveIntensity={pending ? 0.05 : 0.32}
-            metalness={0.92}
-            roughness={0.16}
-            flatShading
-            transparent
-            opacity={0.9}
-          />
-        </mesh>
-        <lineSegments geometry={crystalEdges} scale={[1.005, 1.256, 1.005]}>
-          <lineBasicMaterial
-            color={color}
-            transparent
-            opacity={pending ? 0.35 : 0.95}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-          />
-        </lineSegments>
-        {/* Glowing core shard. */}
-        <mesh ref={core}>
-          <icosahedronGeometry args={[0.19, 0]} />
-          <meshBasicMaterial
-            color={color}
-            transparent
-            opacity={pending ? 0.3 : 1}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-          />
-        </mesh>
-        <pointLight
-          color={color}
-          intensity={lit ? 4.2 : pending ? 0.6 : 1.6}
-          distance={3.6}
+      {/* Carved stone frame (click target). */}
+      <mesh
+        geometry={shapes.frameGeometry}
+        position={[0, 0, -0.02]}
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect();
+        }}
+        onPointerOver={(event) => {
+          event.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          document.body.style.cursor = "auto";
+        }}
+      >
+        <meshStandardMaterial
+          color="#1b141a"
+          emissive={SEAL_GLASS[stageId]}
+          emissiveIntensity={pending ? 0.03 : 0.09}
+          roughness={0.92}
+          metalness={0.1}
         />
-      </group>
+      </mesh>
+      <Line
+        points={shapes.frameLine}
+        color="#B08D57"
+        lineWidth={selected ? 2.6 : 1.8}
+        transparent
+        opacity={pending ? 0.55 : 0.9}
+      />
 
-      {/* Rotating energy halos. */}
-      <mesh ref={haloA}>
-        <torusGeometry args={[0.7, 0.008, 6, 72]} />
+      {/* Stained-glass light. */}
+      <mesh geometry={shapes.glassGeometry}>
         <meshBasicMaterial
-          color={color}
+          ref={glassMat}
+          color={glassColor}
           transparent
-          opacity={pending ? 0.14 : selected ? 1 : 0.7}
-          blending={THREE.AdditiveBlending}
+          opacity={0.2}
           depthWrite={false}
         />
       </mesh>
-      {/* Stained-glass rose disc behind the crystal (faces the camera). */}
-      <group ref={glass} position={[0, 0, -0.16]}>
-        {Array.from({ length: GLASS_PANES }, (_, index) => (
-          <mesh key={index}>
-            <ringGeometry
-              args={[
-                GLASS_INNER,
-                GLASS_OUTER,
-                4,
-                1,
-                (index / GLASS_PANES) * Math.PI * 2,
-                (Math.PI * 2) / GLASS_PANES,
-              ]}
-            />
-            <meshBasicMaterial
-              color={index % 2 === 0 ? color : deepColor}
-              transparent
-              opacity={pending ? 0.14 : 0.42}
-              depthWrite={false}
-              side={THREE.DoubleSide}
-              userData={{ pane: true }}
-            />
-          </mesh>
-        ))}
-        <lineSegments geometry={leading}>
-          <lineBasicMaterial color="#B08D57" transparent opacity={0.75} depthWrite={false} />
+      <Line points={leadPoints} segments color="#120c0a" lineWidth={2.2} />
+      <Line
+        points={shapes.glassLine}
+        color={pending ? "#6B5E45" : statusColor}
+        lineWidth={selected ? 2.8 : 2}
+        transparent
+        opacity={pending ? 0.6 : 1}
+      />
+      {/* Rose roundel near the apex. */}
+      <mesh position={[0, GLASS_TOP - 0.3, 0.024]}>
+        <ringGeometry args={[0.07, 0.1, 24]} />
+        <meshBasicMaterial color="#B08D57" transparent opacity={0.85} />
+      </mesh>
+
+      {/* Crystal emblem in the live status color. */}
+      <group ref={crystal} position={[0, 0.32, 0.12]}>
+        <mesh scale={[1, 1.35, 1]}>
+          <octahedronGeometry args={[0.2, 0]} />
+          <meshStandardMaterial
+            color="#0b0a10"
+            emissive={statusColor}
+            emissiveIntensity={pending ? 0.08 : 0.7}
+            metalness={0.85}
+            roughness={0.2}
+            flatShading
+          />
+        </mesh>
+        <lineSegments geometry={crystalEdges} scale={[1.01, 1.36, 1.01]}>
+          <lineBasicMaterial
+            color={statusColor}
+            transparent
+            opacity={pending ? 0.4 : 1}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
         </lineSegments>
-        <mesh>
-          <torusGeometry args={[GLASS_OUTER, 0.018, 6, 64]} />
-          <meshBasicMaterial color="#B08D57" transparent opacity={0.85} depthWrite={false} />
-        </mesh>
-        <mesh>
-          <torusGeometry args={[GLASS_INNER, 0.012, 6, 48]} />
-          <meshBasicMaterial color="#B08D57" transparent opacity={0.7} depthWrite={false} />
-        </mesh>
-        {/* Brass rivets where the lead came meets the outer rim. */}
-        {Array.from({ length: GLASS_PANES }, (_, index) => {
-          const angle = (index / GLASS_PANES) * Math.PI * 2;
-          return (
-            <mesh
-              key={`rivet-${index}`}
-              position={[Math.cos(angle) * GLASS_OUTER, Math.sin(angle) * GLASS_OUTER, 0.01]}
-            >
-              <circleGeometry args={[0.032, 10]} />
-              <meshBasicMaterial color="#D9B77E" />
-            </mesh>
-          );
-        })}
       </group>
+      <pointLight
+        position={[0, 0.3, 0.5]}
+        color={glassColor}
+        intensity={lit ? 3.2 : pending ? 0.4 : 1.4}
+        distance={2.6}
+      />
     </group>
   );
 }
@@ -433,208 +461,148 @@ function LabelProjector({
   return null;
 }
 
-function CentralRelic({ aura }: { aura: AuraState }) {
-  const group = useRef<THREE.Group>(null);
-  const core = useRef<THREE.Group>(null);
-  const wireMat = useRef<THREE.MeshBasicMaterial>(null);
-  const coreMat = useRef<THREE.MeshStandardMaterial>(null);
-  const ringMat = useRef<THREE.MeshBasicMaterial>(null);
-  const rimMat = useRef<THREE.MeshBasicMaterial>(null);
-  const innerWireMat = useRef<THREE.MeshBasicMaterial>(null);
-  const edgeMat = useRef<THREE.LineBasicMaterial>(null);
-  const light = useRef<THREE.PointLight>(null);
-  const rimLight = useRef<THREE.PointLight>(null);
+/**
+ * Procedural skeleton skull: cranium, maxilla, cheekbones, recessed dark eye
+ * sockets with fiery pupils, a nasal cavity, an upper tooth row, and a
+ * separate hinged jaw with its own teeth (chatters while a ritual runs).
+ * Bone is lit by warm front fill plus crimson / amethyst rim lights behind;
+ * pupils and rim lights lerp toward the aura.
+ */
+function SkeletonSkull({ aura, running }: { aura: AuraState; running: boolean }) {
+  const head = useRef<THREE.Group>(null);
+  const jaw = useRef<THREE.Group>(null);
+  const pupilMats = useRef<Array<THREE.MeshBasicMaterial | null>>([]);
+  const boneMat = useRef<THREE.MeshStandardMaterial>(null);
+  const rimA = useRef<THREE.PointLight>(null);
+  const eyeLight = useRef<THREE.PointLight>(null);
+  const target = useMemo(() => new THREE.Color(AURA_HEX[aura]), [aura]);
+  const current = useRef(new THREE.Color(AURA_HEX[aura]));
+  const fire = useMemo(() => new THREE.Color("#FF5A1F"), []);
+  const pupil = useRef(new THREE.Color("#FF5A1F"));
 
-  const coreEdges = useMemo(() => {
-    const source = new THREE.DodecahedronGeometry(0.96, 0);
-    const edges = new THREE.EdgesGeometry(source);
-    source.dispose();
-    return edges;
-  }, []);
-  useEffect(() => () => coreEdges.dispose(), [coreEdges]);
+  // Teeth sit on a shallow arc in front of the jaw line.
+  const teeth = useMemo(
+    () =>
+      Array.from({ length: 8 }, (_, index) => {
+        const x = -0.21 + index * 0.06;
+        return { x, z: 0.47 - x * x * 1.4 };
+      }),
+    [],
+  );
 
-  const targetColor = useMemo(() => new THREE.Color(AURA_HEX[aura]), [aura]);
-  const currentColor = useRef(new THREE.Color(AURA_HEX[aura]));
-
-  useFrame((state, delta) => {
+  useFrame((state) => {
     const t = state.clock.elapsedTime;
-    currentColor.current.lerp(targetColor, 0.055);
-
-    if (group.current) {
-      group.current.rotation.y += delta * 0.26;
-      const pulse =
-        1 +
-        Math.sin(t * (aura === "crimson" ? 6.2 : aura === "green" ? 2.3 : 3.4)) *
-          (aura === "crimson" ? 0.065 : 0.035);
-      group.current.scale.setScalar(pulse);
+    current.current.lerp(target, 0.05);
+    // Pupils burn fire-orange, leaning 45% toward the aura.
+    pupil.current.copy(fire).lerp(current.current, 0.45);
+    for (const material of pupilMats.current) material?.color.copy(pupil.current);
+    if (eyeLight.current) {
+      eyeLight.current.color.copy(pupil.current);
+      eyeLight.current.intensity = 2.4 + Math.sin(t * 13) * 0.5 + Math.sin(t * 7.1) * 0.3;
     }
-    if (core.current) core.current.rotation.y -= delta * 0.48;
-
-    wireMat.current?.color.copy(currentColor.current);
-    ringMat.current?.color.copy(currentColor.current);
-    rimMat.current?.color.copy(currentColor.current);
-    innerWireMat.current?.color.copy(currentColor.current);
-    edgeMat.current?.color.copy(currentColor.current);
-    if (rimMat.current) {
-      rimMat.current.opacity = 0.14 + (Math.sin(t * 1.7) * 0.5 + 0.5) * 0.12;
+    if (rimA.current) rimA.current.color.copy(current.current);
+    if (boneMat.current) boneMat.current.emissive.copy(current.current);
+    if (head.current) {
+      head.current.position.y = Math.sin(t * 1.3) * 0.05;
+      head.current.rotation.y = Math.sin(t * 0.45) * 0.32;
+      head.current.rotation.x = Math.sin(t * 0.7) * 0.05;
+      const beat = aura === "crimson" ? 1 + Math.max(0, Math.sin(t * 6.2)) * 0.03 : 1;
+      head.current.scale.setScalar(beat);
     }
-    if (coreMat.current) {
-      coreMat.current.color.copy(currentColor.current);
-      coreMat.current.emissive.copy(currentColor.current);
-      coreMat.current.emissiveIntensity =
-        0.95 +
-        Math.sin(t * (aura === "crimson" ? 5.4 : 2.2)) * (aura === "crimson" ? 0.55 : 0.3);
-    }
-    if (light.current) {
-      light.current.color.copy(currentColor.current);
-      light.current.intensity = aura === "crimson" ? 18 : 11;
-    }
-    if (rimLight.current) {
-      rimLight.current.color.copy(currentColor.current);
+    if (jaw.current) {
+      const chatter = running ? Math.abs(Math.sin(t * 9)) * 0.16 : 0;
+      jaw.current.rotation.x = 0.06 + Math.sin(t * 1.1) * 0.03 + chatter;
     }
   });
 
+  const bone = (
+    <meshStandardMaterial
+      ref={boneMat}
+      color="#d8cdb9"
+      emissive={AURA_HEX[aura]}
+      emissiveIntensity={0.06}
+      roughness={0.78}
+      metalness={0.04}
+    />
+  );
+  const boneProps = {
+    color: "#cfc3ad",
+    roughness: 0.8,
+    metalness: 0.04,
+  } as const;
+  const hollow = <meshBasicMaterial color="#050307" />;
+
   return (
-    <group ref={group}>
-      <mesh>
-        <icosahedronGeometry args={[0.96, 1]} />
-        <meshBasicMaterial
-          ref={wireMat}
-          color={AURA_HEX[aura]}
-          wireframe
-          transparent
-          opacity={0.62}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
+    <group ref={head}>
+      {/* Cranium + maxilla + cheekbones. */}
+      <mesh position={[0, 0.2, -0.02]} scale={[1, 1.04, 1.1]}>
+        <sphereGeometry args={[0.6, 40, 32]} />
+        {bone}
+      </mesh>
+      <mesh position={[0, -0.16, 0.2]} scale={[1.02, 0.78, 0.9]}>
+        <sphereGeometry args={[0.42, 32, 24]} />
+        <meshStandardMaterial {...boneProps} />
+      </mesh>
+      {[-1, 1].map((side) => (
+        <mesh key={`cheek-${side}`} position={[side * 0.32, -0.12, 0.36]} scale={[1.25, 0.7, 0.9]}>
+          <sphereGeometry args={[0.15, 20, 16]} />
+          <meshStandardMaterial {...boneProps} />
+        </mesh>
+      ))}
+
+      {/* Recessed sockets, fiery pupils. */}
+      {[-1, 1].map((side, index) => (
+        <group key={`eye-${side}`} position={[side * 0.2, 0.02, 0.5]}>
+          <mesh scale={[1.15, 0.92, 0.62]}>
+            <sphereGeometry args={[0.15, 24, 18]} />
+            {hollow}
+          </mesh>
+          <mesh position={[0, -0.01, 0.07]}>
+            <sphereGeometry args={[0.05, 16, 12]} />
+            <meshBasicMaterial
+              ref={(material) => {
+                pupilMats.current[index] = material;
+              }}
+              color="#FF5A1F"
+              toneMapped={false}
+            />
+          </mesh>
+        </group>
+      ))}
+      <pointLight ref={eyeLight} position={[0, 0.02, 0.95]} color="#FF5A1F" intensity={2.4} distance={2.2} />
+
+      {/* Nasal cavity (inverted triangle). */}
+      <mesh position={[0, -0.18, 0.58]} rotation={[0, 0, Math.PI]} scale={[1, 1.1, 0.5]}>
+        <coneGeometry args={[0.07, 0.17, 3]} />
+        {hollow}
       </mesh>
 
-      {/* Hologram rim: back faces glow at the silhouette edge. */}
-      <mesh scale={1.08}>
-        <icosahedronGeometry args={[0.96, 1]} />
-        <meshBasicMaterial
-          ref={rimMat}
-          color={AURA_HEX[aura]}
-          side={THREE.BackSide}
-          transparent
-          opacity={0.16}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </mesh>
+      {/* Upper teeth. */}
+      {teeth.map((tooth) => (
+        <mesh key={`upper-${tooth.x}`} position={[tooth.x, -0.37, tooth.z]}>
+          <boxGeometry args={[0.05, 0.09, 0.05]} />
+          <meshStandardMaterial color="#e7ddca" roughness={0.6} />
+        </mesh>
+      ))}
 
-      <group ref={core} scale={0.64}>
-        {/* Inner counter-rotating wireframe lattice. */}
-        <mesh scale={0.78}>
-          <icosahedronGeometry args={[0.96, 1]} />
-          <meshBasicMaterial
-            ref={innerWireMat}
-            color={AURA_HEX[aura]}
-            wireframe
-            transparent
-            opacity={0.85}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-          />
+      {/* Hinged jaw with lower teeth. */}
+      <group ref={jaw} position={[0, -0.36, 0.05]}>
+        <mesh position={[0, -0.12, 0.17]} scale={[1, 0.42, 0.86]}>
+          <sphereGeometry args={[0.34, 28, 18]} />
+          <meshStandardMaterial {...boneProps} />
         </mesh>
-        <lineSegments geometry={coreEdges}>
-          <lineBasicMaterial
-            ref={edgeMat}
-            color={AURA_HEX[aura]}
-            transparent
-            opacity={0.95}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-          />
-        </lineSegments>
-        <mesh>
-          <dodecahedronGeometry args={[0.96, 0]} />
-          <meshStandardMaterial
-            ref={coreMat}
-            color={AURA_HEX[aura]}
-            emissive={AURA_HEX[aura]}
-            emissiveIntensity={1.15}
-            metalness={0.68}
-            roughness={0.2}
-            transparent
-            opacity={0.42}
-            depthWrite={false}
-          />
-        </mesh>
+        {teeth.map((tooth) => (
+          <mesh key={`lower-${tooth.x}`} position={[tooth.x, -0.04, tooth.z - 0.06]}>
+            <boxGeometry args={[0.048, 0.08, 0.05]} />
+            <meshStandardMaterial color="#e2d7c3" roughness={0.6} />
+          </mesh>
+        ))}
       </group>
 
-      {/* Skull sockets + glowing pupils */}
-      <mesh position={[-0.25, 0.17, 0.72]} scale={[0.17, 0.11, 0.06]}>
-        <sphereGeometry args={[1, 16, 16]} />
-        <meshBasicMaterial color="#040408" />
-      </mesh>
-      <mesh position={[0.25, 0.17, 0.72]} scale={[0.17, 0.11, 0.06]}>
-        <sphereGeometry args={[1, 16, 16]} />
-        <meshBasicMaterial color="#040408" />
-      </mesh>
-      <mesh position={[-0.25, 0.17, 0.77]} scale={[0.048, 0.048, 0.02]}>
-        <sphereGeometry args={[1, 12, 12]} />
-        <meshBasicMaterial color={AURA_HEX[aura]} />
-      </mesh>
-      <mesh position={[0.25, 0.17, 0.77]} scale={[0.048, 0.048, 0.02]}>
-        <sphereGeometry args={[1, 12, 12]} />
-        <meshBasicMaterial color={AURA_HEX[aura]} />
-      </mesh>
-      <mesh position={[0, -0.1, 0.75]} rotation={[Math.PI / 2, 0, 0]}>
-        <coneGeometry args={[0.06, 0.16, 3]} />
-        <meshBasicMaterial color="#040408" />
-      </mesh>
-
-      <pointLight
-        ref={light}
-        color={AURA_HEX[aura]}
-        intensity={12}
-        distance={7.5}
-      />
-      {/* Sharp rim lights behind the relic so its edges catch light. */}
-      <pointLight
-        ref={rimLight}
-        position={[1.4, 1.1, -1.3]}
-        color={AURA_HEX[aura]}
-        intensity={9}
-        distance={4.5}
-      />
-      <pointLight
-        position={[-1.4, -0.9, -1.2]}
-        color={AURA_HEX.purple}
-        intensity={6}
-        distance={4.5}
-      />
-
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[1.34, 0.008, 8, 128]} />
-        <meshBasicMaterial
-          ref={ringMat}
-          color={AURA_HEX[aura]}
-          transparent
-          opacity={0.46}
-          depthWrite={false}
-        />
-      </mesh>
-      <mesh rotation={[Math.PI / 2.2, 0.35, 0]}>
-        <torusGeometry args={[1.62, 0.004, 8, 128]} />
-        <meshBasicMaterial
-          color={AURA_HEX[aura]}
-          transparent
-          opacity={0.2}
-          depthWrite={false}
-        />
-      </mesh>
-
-      <Sparkles
-        count={34}
-        scale={3.2}
-        size={1.8}
-        speed={0.35}
-        opacity={0.5}
-        color={AURA_HEX[aura]}
-        noise={0.8}
-      />
+      {/* Lighting: warm front fill, aura + amethyst rim from behind. */}
+      <pointLight position={[0, 0.4, 2]} color="#ffd9b0" intensity={1.6} distance={5} />
+      <pointLight ref={rimA} position={[1.1, 0.8, -1.1]} color={AURA_HEX[aura]} intensity={9} distance={4} />
+      <pointLight position={[-1.1, 0.4, -1]} color="#9D4EDD" intensity={6} distance={4} />
     </group>
   );
 }
@@ -736,7 +704,7 @@ function Segment({
   return (
     <>
       <Line
-        points={[POSITIONS[from], POSITIONS[to]]}
+        points={[BACK_POSITIONS[from], BACK_POSITIONS[to]]}
         color={color}
         lineWidth={lit ? 1.65 : 0.75}
         transparent
@@ -745,8 +713,8 @@ function Segment({
       />
       {lit && (
         <ConduitStream
-          from={POSITIONS[from]}
-          to={POSITIONS[to]}
+          from={BACK_POSITIONS[from]}
+          to={BACK_POSITIONS[to]}
           color={color}
           count={flowing ? 14 : 6}
           speed={flowing ? 0.5 : 0.16}
@@ -775,84 +743,133 @@ function runeTicks(count: number, inner: number, outer: number): THREE.BufferGeo
   return geometry;
 }
 
+/** Altar circle tint per aura: Crimson → Purple → Neon Green. */
+const ALTAR_TINT: Record<AuraState, string> = {
+  idle: "#FF003C",
+  crimson: "#FF003C",
+  purple: "#9D4EDD",
+  green: "#00FF66",
+};
+const ALTAR_MAGENTA = "#FF2BD6";
+
+/** Pentagram: a {5/2} star polygon inscribed in radius `r`, as line segments. */
+function pentagram(radius: number): THREE.BufferGeometry {
+  const points: number[] = [];
+  const vertex = (i: number) => {
+    const angle = Math.PI / 2 + (i * Math.PI * 2) / 5;
+    return [Math.cos(angle) * radius, Math.sin(angle) * radius, 0];
+  };
+  for (let i = 0; i < 5; i++) points.push(...vertex(i), ...vertex((i + 2) % 5));
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
+  return geometry;
+}
+
 /**
- * Summoning-altar floor beneath the relic: concentric glowing rune rings,
- * tilted toward the floor and counter-rotating. Colors lerp to the aura.
+ * Tilted stone altar pedestal under the skull (`rotation.x = -π/2.4`) with a
+ * glowing crimson-and-magenta ritual circle on its top face: rune rings,
+ * radial rune ticks, a pentagram, and a counter-rotating inner ring. The
+ * circle lerps to `ALTAR_TINT[aura]` and breathes.
  */
-function AltarRings({ aura }: { aura: AuraState }) {
+function AltarPedestal({ aura }: { aura: AuraState }) {
   const outer = useRef<THREE.Group>(null);
   const inner = useRef<THREE.Group>(null);
-  const materials = useRef<Array<THREE.MeshBasicMaterial | THREE.LineBasicMaterial | null>>([]);
-  // Outer sigils burn ruby, inner sigils violet; both lean 25% toward the aura.
-  const crimson = useMemo(() => new THREE.Color("#E0115F"), []);
-  const violet = useMemo(() => new THREE.Color("#7B2CBF"), []);
-  const auraColor = useMemo(() => new THREE.Color(AURA_HEX[aura]), [aura]);
-  const outerTarget = useMemo(() => crimson.clone().lerp(auraColor, 0.25), [auraColor, crimson]);
-  const innerTarget = useMemo(() => violet.clone().lerp(auraColor, 0.25), [auraColor, violet]);
-  const outerColor = useRef(new THREE.Color("#E0115F"));
-  const innerColor = useRef(new THREE.Color("#7B2CBF"));
+  const tintMats = useRef<Array<THREE.MeshBasicMaterial | THREE.LineBasicMaterial | null>>([]);
+  const magentaMats = useRef<Array<THREE.MeshBasicMaterial | THREE.LineBasicMaterial | null>>([]);
+  const tint = useMemo(() => new THREE.Color(ALTAR_TINT[aura]), [aura]);
+  const magentaTarget = useMemo(
+    () => new THREE.Color(ALTAR_MAGENTA).lerp(tint, 0.5),
+    [tint],
+  );
+  const tintNow = useRef(new THREE.Color(ALTAR_TINT[aura]));
+  const magentaNow = useRef(new THREE.Color(ALTAR_MAGENTA));
+  const glow = useRef<THREE.PointLight>(null);
 
-  const outerTicks = useMemo(() => runeTicks(72, 1.62, 1.86), []);
-  const innerTicks = useMemo(() => runeTicks(36, 1.06, 1.24), []);
+  const geometries = useMemo(() => {
+    const slab = new THREE.BoxGeometry(ALTAR_W, ALTAR_D, ALTAR_H);
+    const slabEdges = new THREE.EdgesGeometry(slab);
+    return {
+      slab,
+      slabEdges,
+      outerTicks: runeTicks(60, ALTAR_R * 0.88, ALTAR_R),
+      innerTicks: runeTicks(30, ALTAR_R * 0.36, ALTAR_R * 0.46),
+      star: pentagram(ALTAR_R * 0.76),
+    };
+  }, []);
   useEffect(
     () => () => {
-      outerTicks.dispose();
-      innerTicks.dispose();
+      for (const geometry of Object.values(geometries)) geometry.dispose();
     },
-    [innerTicks, outerTicks],
+    [geometries],
   );
 
   useFrame((state, delta) => {
-    outerColor.current.lerp(outerTarget, 0.05);
-    innerColor.current.lerp(innerTarget, 0.05);
-    const breathe = 0.85 + Math.sin(state.clock.elapsedTime * 1.6) * 0.15;
-    materials.current.forEach((material, index) => {
-      if (!material) return;
-      material.color.copy(index < 3 ? outerColor.current : innerColor.current).multiplyScalar(breathe);
-    });
-    if (outer.current) outer.current.rotation.z += delta * 0.12;
-    if (inner.current) inner.current.rotation.z -= delta * 0.2;
+    const breathe = 0.82 + Math.sin(state.clock.elapsedTime * 1.6) * 0.18;
+    tintNow.current.lerp(tint, 0.05);
+    magentaNow.current.lerp(magentaTarget, 0.05);
+    for (const material of tintMats.current) {
+      material?.color.copy(tintNow.current).multiplyScalar(breathe);
+    }
+    for (const material of magentaMats.current) {
+      material?.color.copy(magentaNow.current).multiplyScalar(breathe);
+    }
+    if (glow.current) glow.current.color.copy(tintNow.current);
+    if (outer.current) outer.current.rotation.z += delta * 0.14;
+    if (inner.current) inner.current.rotation.z -= delta * 0.24;
   });
 
-  const bind = (index: number) => (material: THREE.MeshBasicMaterial | THREE.LineBasicMaterial | null) => {
-    materials.current[index] = material;
+  const bindTint = (index: number) => (material: THREE.MeshBasicMaterial | THREE.LineBasicMaterial | null) => {
+    tintMats.current[index] = material;
   };
-
-  const glow = {
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  } as const;
+  const bindMagenta = (index: number) => (material: THREE.MeshBasicMaterial | THREE.LineBasicMaterial | null) => {
+    magentaMats.current[index] = material;
+  };
+  const additive = { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false } as const;
+  const surface = ALTAR_H / 2 + 0.006;
 
   return (
-    <group position={[0, -0.92, -0.6]} rotation={[-1.12, 0, 0]}>
-      <group ref={outer}>
-        <mesh>
-          <ringGeometry args={[1.9, 1.94, 128]} />
-          <meshBasicMaterial ref={bind(0)} {...glow} opacity={0.55} side={THREE.DoubleSide} />
-        </mesh>
-        <mesh>
-          <ringGeometry args={[1.56, 1.59, 128]} />
-          <meshBasicMaterial ref={bind(1)} {...glow} opacity={0.4} side={THREE.DoubleSide} />
-        </mesh>
-        <lineSegments geometry={outerTicks}>
-          <lineBasicMaterial ref={bind(2)} {...glow} opacity={0.6} />
-        </lineSegments>
+    <group position={[0, ALTAR_Y, 0]} rotation={[-Math.PI / 2.4, 0, 0]}>
+      {/* Stone slab. */}
+      <mesh geometry={geometries.slab}>
+        <meshStandardMaterial color="#1c161b" roughness={0.95} metalness={0.05} />
+      </mesh>
+      <lineSegments geometry={geometries.slabEdges}>
+        <lineBasicMaterial color="#5E4524" transparent opacity={0.9} />
+      </lineSegments>
+
+      {/* Ritual circle on the top face. */}
+      <group position={[0, 0, surface]}>
+        <group ref={outer}>
+          <mesh>
+            <ringGeometry args={[ALTAR_R, ALTAR_R * 1.035, 128]} />
+            <meshBasicMaterial ref={bindTint(0)} {...additive} opacity={0.95} />
+          </mesh>
+          <mesh>
+            <ringGeometry args={[ALTAR_R * 0.86, ALTAR_R * 0.88, 128]} />
+            <meshBasicMaterial ref={bindTint(1)} {...additive} opacity={0.75} />
+          </mesh>
+          <lineSegments geometry={geometries.outerTicks}>
+            <lineBasicMaterial ref={bindTint(2)} {...additive} opacity={0.85} />
+          </lineSegments>
+          <lineSegments geometry={geometries.star}>
+            <lineBasicMaterial ref={bindMagenta(0)} {...additive} opacity={1} />
+          </lineSegments>
+          <mesh>
+            <ringGeometry args={[ALTAR_R * 0.75, ALTAR_R * 0.77, 96]} />
+            <meshBasicMaterial ref={bindMagenta(1)} {...additive} opacity={0.8} />
+          </mesh>
+        </group>
+        <group ref={inner}>
+          <mesh>
+            <ringGeometry args={[ALTAR_R * 0.46, ALTAR_R * 0.48, 72]} />
+            <meshBasicMaterial ref={bindMagenta(2)} {...additive} opacity={0.75} />
+          </mesh>
+          <lineSegments geometry={geometries.innerTicks}>
+            <lineBasicMaterial ref={bindMagenta(3)} {...additive} opacity={0.75} />
+          </lineSegments>
+        </group>
       </group>
-      <group ref={inner}>
-        <mesh>
-          <ringGeometry args={[1.28, 1.3, 96]} />
-          <meshBasicMaterial ref={bind(3)} {...glow} opacity={0.5} side={THREE.DoubleSide} />
-        </mesh>
-        <lineSegments geometry={innerTicks}>
-          <lineBasicMaterial ref={bind(4)} {...glow} opacity={0.55} />
-        </lineSegments>
-        {/* Inner sigil: a triangle inscribed in the ring. */}
-        <mesh rotation={[0, 0, Math.PI / 2]}>
-          <ringGeometry args={[0.98, 1.0, 3]} />
-          <meshBasicMaterial ref={bind(5)} {...glow} opacity={0.35} side={THREE.DoubleSide} />
-        </mesh>
-      </group>
+      <pointLight ref={glow} position={[0, 0, surface + 0.5]} color={ALTAR_TINT[aura]} intensity={4} distance={3.5} />
     </group>
   );
 }
@@ -955,32 +972,53 @@ function RitualFx({ running, aura }: { running: boolean; aura: AuraState }) {
   );
 }
 
-/** Central skull scale on the altar (the relic's own pulse runs inside). */
-const RELIC_SCALE = 1.3;
-const EMBER_COUNT = 140;
-const SPARK_COUNT = 120;
+/** Skull scale on the altar and its height above the graph center. */
+const RELIC_SCALE = 1.35;
+const SKULL_Y = 0.2;
+const SPARK_COUNT = 60;
 
 /**
- * Dark flames around the skull: ember particles spiral upward, tapering in
- * like a flame, with a flickering hellfire light beneath. Two clouds (ruby
- * and ember orange); positions reuse one buffer per cloud.
+ * Particle fire. Each particle rises from `baseY` by `height` over its life,
+ * its orbit radius tapering from `radius` (×`taper` at the top) so the cloud
+ * reads as a flame. One preallocated buffer, rewritten each frame.
  */
-function EmberCloud({ color, seed, size }: { color: string; seed: number; size: number }) {
+function FireCloud({
+  color,
+  seed,
+  size,
+  count,
+  baseY,
+  height,
+  radius,
+  taper,
+  speed,
+  opacity = 0.9,
+}: {
+  color: string;
+  seed: number;
+  size: number;
+  count: number;
+  baseY: number;
+  height: number;
+  radius: number;
+  taper: number;
+  speed: number;
+  opacity?: number;
+}) {
   const geometry = useMemo(() => {
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(EMBER_COUNT * 3), 3));
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(count * 3), 3));
     return geo;
-  }, []);
+  }, [count]);
   useEffect(() => () => geometry.dispose(), [geometry]);
-  // Deterministic per-particle phase, angle, and speed.
   const params = useMemo(
     () =>
-      Array.from({ length: EMBER_COUNT }, (_, i) => {
+      Array.from({ length: count }, (_, i) => {
         const h = Math.sin((i + 1) * 12.9898 + seed * 78.233) * 43758.5453;
         const r = h - Math.floor(h);
-        return { phase: r, angle: r * Math.PI * 2 + i, speed: 0.22 + r * 0.25 };
+        return { phase: r, angle: r * Math.PI * 2 + i, rate: speed * (0.7 + r * 0.6) };
       }),
-    [seed],
+    [count, seed, speed],
   );
 
   useFrame((state) => {
@@ -988,12 +1026,12 @@ function EmberCloud({ color, seed, size }: { color: string; seed: number; size: 
     const array = attribute.array as Float32Array;
     const t = state.clock.elapsedTime;
     params.forEach((particle, i) => {
-      const life = (t * particle.speed + particle.phase) % 1;
-      const radius = 1.05 * (1 - life * 0.75) + Math.sin(t * 3 + i) * 0.04;
-      const angle = particle.angle + t * 0.6 + life * 2.2;
-      array[i * 3] = Math.cos(angle) * radius;
-      array[i * 3 + 1] = -0.95 + life * 2.6;
-      array[i * 3 + 2] = Math.sin(angle) * radius * 0.6;
+      const life = (t * particle.rate + particle.phase) % 1;
+      const r = radius * (1 - life * (1 - taper)) * (0.6 + particle.phase * 0.4);
+      const angle = particle.angle + t * 0.8 + life * 3;
+      array[i * 3] = Math.cos(angle) * r + Math.sin(t * 4 + i) * 0.02;
+      array[i * 3 + 1] = baseY + life * height;
+      array[i * 3 + 2] = Math.sin(angle) * r * 0.7;
     });
     attribute.needsUpdate = true;
   });
@@ -1005,7 +1043,7 @@ function EmberCloud({ color, seed, size }: { color: string; seed: number; size: 
         color={color}
         size={size}
         sizeAttenuation
-        opacity={0.85}
+        opacity={opacity}
         depthWrite={false}
         blending={THREE.AdditiveBlending}
       />
@@ -1013,11 +1051,7 @@ function EmberCloud({ color, seed, size }: { color: string; seed: number; size: 
   );
 }
 
-/**
- * Red cosmic sparks: a twinkling shell of points orbiting the skull on
- * tilted great circles. Size/opacity flicker per spark via a phase offset
- * baked into the radius (no per-point attributes needed).
- */
+/** Red cosmic sparks orbiting the skull on tilted great circles. */
 function CosmicSparks() {
   const geometry = useMemo(() => {
     const geo = new THREE.BufferGeometry();
@@ -1034,7 +1068,7 @@ function CosmicSparks() {
           tilt: (r - 0.5) * Math.PI,
           offset: r * Math.PI * 2 + i * 0.37,
           speed: (i % 2 === 0 ? 1 : -1) * (0.25 + r * 0.45),
-          radius: 1.15 + r * 0.55,
+          radius: 1.0 + r * 0.45,
         };
       }),
     [],
@@ -1046,9 +1080,8 @@ function CosmicSparks() {
     const t = state.clock.elapsedTime;
     params.forEach((spark, i) => {
       const a = spark.offset + t * spark.speed;
-      const twinkle = 1 + Math.sin(t * 6 + i) * 0.04;
-      const x = Math.cos(a) * spark.radius * twinkle;
-      const y = Math.sin(a) * spark.radius * twinkle;
+      const x = Math.cos(a) * spark.radius;
+      const y = Math.sin(a) * spark.radius;
       array[i * 3] = x;
       array[i * 3 + 1] = y * Math.cos(spark.tilt);
       array[i * 3 + 2] = y * Math.sin(spark.tilt);
@@ -1061,9 +1094,9 @@ function CosmicSparks() {
       <PointMaterial
         transparent
         color="#FF003C"
-        size={0.05}
+        size={0.045}
         sizeAttenuation
-        opacity={0.9}
+        opacity={0.75}
         depthWrite={false}
         blending={THREE.AdditiveBlending}
       />
@@ -1071,20 +1104,26 @@ function CosmicSparks() {
   );
 }
 
-function RelicEmbers() {
+/**
+ * Fire around the skull: a flame crown burning from the top of the cranium
+ * (white-hot core → orange → crimson), slow embers rising past the face, and
+ * a flickering fire light above the head.
+ */
+function SkullFire() {
   const light = useRef<THREE.PointLight>(null);
   useFrame((state) => {
     if (!light.current) return;
     const t = state.clock.elapsedTime;
-    light.current.intensity = 5 + Math.sin(t * 11) * 1.2 + Math.sin(t * 17.3) * 0.8;
+    light.current.intensity = 5 + Math.sin(t * 11) * 1.4 + Math.sin(t * 17.3) * 0.9;
   });
   return (
     <>
-      <EmberCloud color="#FF003C" seed={1} size={0.08} />
-      <EmberCloud color="#FF7A1A" seed={2} size={0.06} />
-      <EmberCloud color="#8B0000" seed={3} size={0.1} />
+      <FireCloud color="#FFD27A" seed={1} size={0.07} count={90} baseY={0.62} height={0.75} radius={0.22} taper={0.15} speed={0.9} />
+      <FireCloud color="#FF7A1A" seed={2} size={0.09} count={130} baseY={0.5} height={1.0} radius={0.42} taper={0.12} speed={0.7} />
+      <FireCloud color="#FF003C" seed={3} size={0.11} count={110} baseY={0.4} height={1.1} radius={0.58} taper={0.2} speed={0.55} opacity={0.75} />
+      <FireCloud color="#8B0000" seed={4} size={0.06} count={60} baseY={-0.9} height={2.6} radius={1.05} taper={0.5} speed={0.18} opacity={0.7} />
       <CosmicSparks />
-      <pointLight ref={light} position={[0, -0.9, 0.4]} color="#FF4A1A" intensity={5} distance={4} />
+      <pointLight ref={light} position={[0, 1.1, 0.3]} color="#FF6A1A" intensity={5} distance={4} />
     </>
   );
 }
@@ -1146,10 +1185,10 @@ function Graph({
         noise={0.65}
       />
 
-      <AltarRings aura={aura} />
-      <group scale={RELIC_SCALE}>
-        <CentralRelic aura={aura} />
-        <RelicEmbers />
+      <AltarPedestal aura={aura} />
+      <group position={[0, SKULL_Y, 0]} scale={RELIC_SCALE}>
+        <SkeletonSkull aura={aura} running={running} />
+        <SkullFire />
       </group>
       <RitualFx running={running} aura={aura} />
 
@@ -1166,6 +1205,7 @@ function Graph({
       {WORKFLOW_STAGES.map((stage) => (
         <StageNode3D
           key={stage.id}
+          stageId={stage.id}
           position={POSITIONS[stage.id]}
           status={nodes[stage.id]}
           selected={selected === stage.id}

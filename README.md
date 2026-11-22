@@ -467,7 +467,7 @@ runner. 🎉
 ### 1. Verify the studio loads
 
 1. Open **http://localhost:3000**.
-2. Confirm the header reads **NECROCODE // OCCULT CODE EXORCIST** and the live pills
+2. Confirm the header reads **NECROCODE // AI CODE EXORCIST** and the live pills
    show a phase + `SSE LIVE` + a 3D aura.
 3. Confirm the header also shows **API SIGILS**, **HISTORY**, and
    `BUILTIN SAFETY NET` while no keys are configured.
@@ -659,7 +659,7 @@ The build must finish with **zero TypeScript/ESLint errors**. Open
 | 🩹 **.PATCH** | Downloads `necrocode-fix.patch`, a unified diff for the artifact's path. Run `git apply necrocode-fix.patch` at the repo root to apply the fix. |
 | 🛡️ **Health badge** | The terminal header shows the Code Health & Security Score before → after, e.g. `46 → 100 /100`. Score = 100 − 15 per critical − 6 per warning − 2 per info (JS/TS/TSX only). |
 | 🎛️ **FX & Audio** | Header popover with four switches: **Horror BGM** (looped `/audio/horror-bgm.mp3`, on by default, `0.22` idle / `0.85` surge), **3D Audio FX** (synthesized SFX incl. the `DHUM!` slam, off by default), **CRT** (scanlines), and **Fog** (drifting fog + rune grid). |
-| 📑 **Grimoire tabs** | The right panel has **Logs**, **Spectral Diff**, and **Sandbox** tabs under a fixed toolbar (**Gen test**, **Test sandbox**, **Copy**, **Report**, **.patch**). Running a test switches to **Sandbox**. |
+| 📑 **Grimoire tabs** | The right panel has **Terminal**, **Spectral Diff**, and **Sandbox** tabs above the soul-purity bar and a fixed toolbar (**Gen test**, **Test sandbox**, **Copy**, **Report**, **.patch**). Running a test switches to **Sandbox**. |
 | 📱 **Mobile** | Below 1024px, a **Spellbook / 3D Ritual / Grimoire** switcher shows one panel at a time. |
 
 ---

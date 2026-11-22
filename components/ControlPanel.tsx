@@ -7,8 +7,6 @@ import {
   GitBranch,
   Loader2,
   RotateCcw,
-  Skull,
-  Sparkles,
   Upload,
   Wand2,
 } from "lucide-react";
@@ -29,6 +27,7 @@ import {
   languageIdFromFilename,
   RUNNER_LANGUAGES,
 } from "@/lib/languages";
+import { highlightCode, type TokenKind } from "@/lib/highlight";
 import { RITUAL_PRESETS } from "@/lib/presets";
 import type { AgentPhase } from "@/lib/types";
 
@@ -71,6 +70,17 @@ function WaxSigil() {
   );
 }
 
+/** Shared by the editor <pre> and <textarea> so glyphs line up exactly. */
+const EDITOR_TEXT =
+  "font-mono text-[13px] leading-[20px] [font-variant-ligatures:none] [tab-size:4]";
+
+const TOKEN_CLASS: Record<Exclude<TokenKind, "plain">, string> = {
+  keyword: "text-[#FF5C86]",
+  string: "text-[#3EF29A]",
+  comment: "text-gold-dim",
+  number: "text-amber-300",
+};
+
 const PHASE_LABEL: Record<AgentPhase, string> = {
   idle: "Dormant",
   thinking: "Channelling",
@@ -98,6 +108,13 @@ export function ControlPanel({
 }: ControlPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
+  const highlightRef = useRef<HTMLPreElement>(null);
+  const [directiveOpen, setDirectiveOpen] = useState(false);
+
+  // Reveal the directive slot whenever a directive is set (e.g. AUTO DEMO).
+  useEffect(() => {
+    if (directive.length > 0) setDirectiveOpen(true);
+  }, [directive]);
   const githubInputRef = useRef<HTMLInputElement>(null);
   const githubAbortRef = useRef<AbortController | null>(null);
   const [githubOpen, setGithubOpen] = useState(false);
@@ -154,6 +171,7 @@ export function ControlPanel({
   };
 
   const lines = useMemo(() => code.split("\n"), [code]);
+  const tokens = useMemo(() => highlightCode(code, language), [code, language]);
   const languageMeta = findLanguage(language);
   const selectedPreset = RITUAL_PRESETS.find(
     (preset) => preset.id === selectedPresetId,
@@ -176,41 +194,59 @@ export function ControlPanel({
     event.target.value = "";
   };
 
-  return (
-    <aside className="tome-panel relative flex h-full min-h-0 flex-col gap-3 overflow-x-hidden overflow-y-auto rounded-b-2xl py-4 pl-9 pr-4">
-      <header className="flex shrink-0 items-center gap-3 border-b border-gold/10 pb-3">
-        <div className="grid h-10 w-10 shrink-0 rotate-45 place-items-center rounded-md border border-gold/40 bg-[linear-gradient(135deg,rgba(139,0,0,0.55),rgba(74,21,75,0.5))] shadow-[0_0_22px_rgba(255,0,60,0.25),inset_0_0_10px_rgba(0,0,0,0.6)]">
-          <Skull className="h-4.5 w-4.5 -rotate-45 text-gold" aria-hidden />
-        </div>
-        <div className="min-w-0">
-          <h2 className="font-brand text-[15px] font-bold uppercase tracking-[0.14em] text-gold">
-            Cursed Spellbook
-          </h2>
-          <p className="font-sans text-[12px] font-medium uppercase tracking-[0.18em] text-bone/70">
-            Feed the pyre · write the curse
-          </p>
-        </div>
-      </header>
+  const toolButton =
+    "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border-b px-1.5 font-sans text-[12px] font-bold uppercase leading-none tracking-[0.08em] transition";
 
-      {/* Template selector */}
+  return (
+    <aside className="tome-panel relative flex h-full min-h-0 flex-col gap-2.5 overflow-x-hidden overflow-y-auto rounded-b-2xl py-3 pl-9 pr-4">
+      {/* 1 · Preset / GitHub / Upload (+ directive) and filename + runtime. */}
       <div className="shrink-0 space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="whitespace-nowrap font-sans text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim">
-            Presets
-          </span>
-          <span className="brass-slot flex shrink-0 items-center gap-1 px-1.5">
+        <div className="flex items-center gap-1.5">
+          <div
+            className="brass-slot relative flex min-w-0 flex-1 items-center gap-1 pl-1.5"
+            title={
+              selectedPreset?.blurb ??
+              "A custom curse, written by your own hand. The crypt reads every line."
+            }
+          >
+            <SelectedIcon className="h-4 w-4 shrink-0 text-amethyst-glow" aria-hidden />
+            <select
+              value={selectedPresetId ?? "custom"}
+              onChange={(event) => {
+                if (event.target.value !== "custom") {
+                  onSelectPreset(event.target.value);
+                }
+              }}
+              aria-label="Cursed preset"
+              className="h-8 w-full min-w-0 appearance-none border-0 bg-transparent pl-0.5 pr-6 font-sans text-[12px] font-bold uppercase tracking-[0.06em] text-bone outline-none [color-scheme:dark]"
+            >
+              <option value="custom" disabled className="bg-crypt text-bone">
+                Custom relic
+              </option>
+              {RITUAL_PRESETS.map((preset) => (
+                <option key={preset.id} value={preset.id} className="bg-crypt text-bone">
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-bone/70"
+              aria-hidden
+            />
+          </div>
+
+          <span className="brass-slot flex shrink-0 items-center px-1">
             <button
               type="button"
               onClick={() => setGithubOpen((open) => !open)}
               aria-expanded={githubOpen}
               aria-controls="github-summon"
               title="Summon a file from a public GitHub repository"
-              className={[
-                "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border-b px-1 font-sans text-[12px] font-bold uppercase leading-none tracking-[0.1em] transition",
+              className={`${toolButton} ${
                 githubOpen
                   ? "border-crimson text-bone [text-shadow:0_0_10px_rgba(255,0,60,0.8)]"
-                  : "border-transparent text-bone/85 hover:border-brass-light/60 hover:text-bone",
-              ].join(" ")}
+                  : "border-transparent text-bone/85 hover:border-brass-light/60 hover:text-bone"
+              }`}
             >
               <GitBranch className="h-4 w-4 shrink-0 text-amethyst-glow" aria-hidden />
               GitHub
@@ -220,10 +256,29 @@ export function ControlPanel({
               type="button"
               onClick={() => fileRef.current?.click()}
               title="Upload a cursed artifact in any supported language"
-              className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border-b px-1 font-sans text-[12px] font-bold uppercase leading-none tracking-[0.1em] transition border-transparent text-bone/85 hover:border-brass-light/60 hover:text-bone"
+              className={`${toolButton} border-transparent text-bone/85 hover:border-brass-light/60 hover:text-bone`}
             >
               <Upload className="h-4 w-4 shrink-0 text-brass-light" aria-hidden />
               Upload
+            </button>
+            <span aria-hidden className="h-4 w-px bg-brass/50" />
+            <button
+              type="button"
+              onClick={() => setDirectiveOpen((open) => !open)}
+              aria-expanded={directiveOpen}
+              aria-controls="ritual-directive-slot"
+              aria-label="Ritual directive"
+              title="Optional ritual directive for the live engine"
+              className={`${toolButton} relative ${
+                directiveOpen
+                  ? "border-crimson text-bone"
+                  : "border-transparent text-bone/85 hover:border-brass-light/60 hover:text-bone"
+              }`}
+            >
+              <Wand2 className="h-4 w-4 shrink-0 text-crimson" aria-hidden />
+              {directive.length > 0 && (
+                <span aria-hidden className="absolute right-0.5 top-1 h-1.5 w-1.5 rounded-full bg-crimson shadow-[0_0_6px_rgba(255,0,60,0.9)]" />
+              )}
             </button>
           </span>
           <input
@@ -238,11 +293,7 @@ export function ControlPanel({
         </div>
 
         {githubOpen && (
-          <form
-            id="github-summon"
-            onSubmit={handleGithubSummon}
-            className="space-y-1"
-          >
+          <form id="github-summon" onSubmit={handleGithubSummon} className="space-y-1">
             <div className="brass-slot flex items-center gap-1 p-1">
               <input
                 ref={githubInputRef}
@@ -285,141 +336,125 @@ export function ControlPanel({
           </form>
         )}
 
-        <div className="brass-slot relative flex items-center gap-1.5 pl-2">
-          <span className="grid h-8 w-6 shrink-0 place-items-center">
-            <SelectedIcon
-              className="h-4 w-4 text-amethyst-glow"
-              aria-hidden
+        {directiveOpen && (
+          <div id="ritual-directive-slot">
+            <label htmlFor="ritual-directive" className="sr-only">
+              Ritual directive (optional)
+            </label>
+            <input
+              id="ritual-directive"
+              type="text"
+              value={directive}
+              onChange={(event) => onDirectiveChange(event.target.value)}
+              maxLength={320}
+              placeholder="Ritual directive (optional): convert to strict TypeScript…"
+              className="brass-slot w-full px-2.5 py-1.5 font-mono text-[13px] text-bone outline-none placeholder:text-zinc-500"
             />
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-2">
+          <span className="min-w-0 truncate font-mono text-[13px] text-bone" title={filename}>
+            {filename}
           </span>
-          <div className="relative min-w-0 flex-1">
+          <span className="relative shrink-0">
             <select
-              value={selectedPresetId ?? "custom"}
-              onChange={(event) => {
-                if (event.target.value !== "custom") {
-                  onSelectPreset(event.target.value);
-                }
-              }}
-              aria-label="Cursed preset"
-              className="h-8 w-full appearance-none border-0 bg-transparent pl-1 pr-7 font-sans text-[13px] font-bold uppercase tracking-[0.08em] text-bone outline-none transition [color-scheme:dark] hover:border-gold/50 focus:border-amethyst"
+              value={language}
+              onChange={(event) => onLanguageChange(event.target.value)}
+              aria-label="Sandbox language"
+              title={`Sandbox language: ${languageMeta.label}`}
+              className="h-7 w-[78px] appearance-none rounded border border-amethyst/50 bg-black/70 pl-1.5 pr-5 font-mono text-[12px] font-bold uppercase tracking-[0.06em] text-amethyst-glow outline-none transition [color-scheme:dark] hover:border-amethyst focus:border-amethyst-glow"
             >
-              <option value="custom" disabled className="bg-crypt text-bone">
-                Custom relic
-              </option>
-              {RITUAL_PRESETS.map((preset) => (
-                <option
-                  key={preset.id}
-                  value={preset.id}
-                  className="bg-crypt text-bone"
-                >
-                  {preset.label}
+              {RUNNER_LANGUAGES.map((item) => (
+                <option key={item.id} value={item.id} className="bg-crypt text-bone">
+                  {item.short}
                 </option>
               ))}
             </select>
             <ChevronDown
-              className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-300"
+              className="pointer-events-none absolute right-1 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-amethyst-glow/80"
               aria-hidden
             />
-          </div>
+          </span>
         </div>
-
-        <p className="min-h-[2.2em] font-mono text-[13px] leading-relaxed text-zinc-300">
-          {selectedPreset?.blurb ??
-            "A custom curse, written by your own hand. The crypt reads every line."}
-        </p>
       </div>
 
-      {/* Optional ritual directive */}
-      <div className="shrink-0 space-y-1">
-        <label
-          htmlFor="ritual-directive"
-          className="flex items-center gap-1.5 font-sans text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim"
-        >
-          <Wand2 className="h-3.5 w-3.5 text-amethyst-glow" aria-hidden />
-          Ritual Directive
-          <span className="tracking-[0.16em] text-zinc-300">(optional)</span>
-        </label>
-        <input
-          id="ritual-directive"
-          type="text"
-          value={directive}
-          onChange={(event) => onDirectiveChange(event.target.value)}
-          maxLength={320}
-          placeholder="e.g., Fix infinite loops, convert to strict TypeScript, optimize performance..."
-          className="brass-slot w-full px-2.5 py-1.5 font-mono text-[13px] text-bone outline-none placeholder:text-zinc-500"
-        />
+      {/* 2 · LINES / CHARS, then phase + progress. */}
+      <div className="shrink-0 space-y-1.5">
+        <div className="grid grid-cols-2 gap-1.5" aria-live="off">
+          {(
+            [
+              [lines.length, lines.length === 1 ? "Line" : "Lines"],
+              [code.length, "Chars"],
+            ] as const
+          ).map(([value, label]) => (
+            <div key={label} className="brass-slot flex items-baseline gap-1.5 px-2.5 py-1.5">
+              <span className="font-mono text-[15px] font-bold leading-none text-crimson tabular-nums [text-shadow:0_0_8px_rgba(255,0,60,0.5)]">
+                {value.toLocaleString("en-US")}
+              </span>
+              <span className="font-sans text-[12px] font-semibold uppercase tracking-[0.1em] text-bone/80">
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-between font-sans text-[12px] font-bold uppercase leading-5 tracking-[0.12em] text-bone tabular-nums">
+          <span>{PHASE_LABEL[phase]}</span>
+          <span className={`font-mono ${running ? "text-crimson" : "text-bone"}`}>{progress}%</span>
+        </div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-white/5 shadow-[inset_0_0_0_1px_rgba(176,141,87,0.25)]">
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-dried via-crimson to-[#FF2BD6] shadow-[0_0_10px_rgba(255,0,60,0.6)]"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ ease: "easeOut", duration: 0.35 }}
+          />
+        </div>
       </div>
 
-      {/* Editor */}
       {/*
-        No min-h-0 here: the block keeps its min-content height (toolbar +
-        220px editor + counter ≈ 270px), so the counter can never be squeezed
-        under the ritual controls; the panel scrolls instead.
+        3 · Tall syntax-highlighted editor. A highlighted <pre> sits behind a
+        transparent <textarea> (same font, size, padding, line-height, tab
+        size, no ligatures) and follows its scroll via a transform; the
+        gutter follows the vertical scroll. Lines do not wrap.
       */}
-      <div className="flex flex-1 flex-col gap-2">
-        <div className="flex shrink-0 items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5 font-sans text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim">
-            <Sparkles className="h-3.5 w-3.5 text-crimson" aria-hidden />
-            Artifact
-          </span>
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate font-mono text-[13px] text-zinc-100">
-              {filename}
-            </span>
-            <span className="relative shrink-0">
-              <select
-                value={language}
-                onChange={(event) => onLanguageChange(event.target.value)}
-                aria-label="Sandbox language"
-                title={`Sandbox language: ${languageMeta.label}`}
-                className="w-[82px] appearance-none rounded border border-haunt/50 bg-black/80 py-0.5 pl-1.5 pr-4 font-mono text-[13px] uppercase tracking-[0.08em] text-haunt-glow outline-none transition [color-scheme:dark] hover:border-haunt/70 focus:border-haunt-glow"
-              >
-                {RUNNER_LANGUAGES.map((item) => (
-                  <option
-                    key={item.id}
-                    value={item.id}
-                    className="bg-crypt text-bone"
-                  >
-                    {item.short}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-haunt-glow/80"
-                aria-hidden
-              />
-            </span>
-          </span>
+      <div className="grimoire-editor flex min-h-[240px] w-full flex-1 overflow-hidden rounded-lg transition focus-within:shadow-[inset_0_0_0_1px_rgba(255,0,60,0.5),0_0_18px_rgba(255,0,60,0.15)]">
+        <div
+          ref={gutterRef}
+          aria-hidden
+          className="w-12 shrink-0 select-none overflow-hidden border-r-[3px] border-double border-brass/45 bg-black/30 pb-8 pr-2 pt-3 text-right font-mono text-[12px] font-medium leading-[20px] text-gold-dim/80 tabular-nums [background-image:repeating-linear-gradient(180deg,transparent_0_19px,rgba(176,141,87,0.12)_19px_20px)] [background-position:0_12px]"
+        >
+          {lines.map((_, index) => (
+            <div key={index} className={(index + 1) % 10 === 0 ? "text-crimson/80" : undefined}>
+              {(index + 1) % 10 === 0 ? `ᛟ${index + 1}` : index + 1}
+            </div>
+          ))}
         </div>
-
-        {/*
-          Obsidian editor with a rune-divided line gutter. Lines do not wrap
-          (horizontal scroll instead) so gutter numbers stay aligned; the
-          gutter mirrors the textarea's vertical scroll.
-        */}
-        <div className="grimoire-editor flex min-h-[220px] w-full flex-1 overflow-hidden rounded-lg transition focus-within:shadow-[inset_0_0_0_1px_rgba(157,78,221,0.55),0_0_18px_rgba(157,78,221,0.15)]">
-          <div
-            ref={gutterRef}
+        <div className="relative min-w-0 flex-1 overflow-hidden">
+          <pre
+            ref={highlightRef}
             aria-hidden
-            className="w-12 shrink-0 select-none overflow-hidden border-r-[3px] border-double border-brass/45 bg-black/30 pb-8 pr-2 pt-3 text-right font-mono text-[12px] font-medium leading-[20px] text-gold-dim/80 tabular-nums [background-image:repeating-linear-gradient(180deg,transparent_0_19px,rgba(176,141,87,0.12)_19px_20px)] [background-position:0_12px]"
+            className={`pointer-events-none absolute left-0 top-0 m-0 whitespace-pre px-3 py-3 ${EDITOR_TEXT} text-bone will-change-transform`}
           >
-            {lines.map((_, index) => (
-              <div
-                key={index}
-                className={
-                  (index + 1) % 10 === 0 ? "text-crimson/80" : undefined
-                }
-              >
-                {(index + 1) % 10 === 0 ? `ᛟ${index + 1}` : index + 1}
-              </div>
-            ))}
-          </div>
+            {tokens.map((token, index) =>
+              token.kind === "plain" ? (
+                token.text
+              ) : (
+                <span key={index} className={TOKEN_CLASS[token.kind]}>
+                  {token.text}
+                </span>
+              ),
+            )}
+            {"\n"}
+          </pre>
           <textarea
             value={code}
             onChange={(event) => onCodeChange(event.target.value)}
             onScroll={(event) => {
-              if (gutterRef.current) {
-                gutterRef.current.scrollTop = event.currentTarget.scrollTop;
+              const { scrollTop, scrollLeft } = event.currentTarget;
+              if (gutterRef.current) gutterRef.current.scrollTop = scrollTop;
+              if (highlightRef.current) {
+                highlightRef.current.style.transform = `translate(${-scrollLeft}px, ${-scrollTop}px)`;
               }
             }}
             rows={8}
@@ -427,59 +462,32 @@ export function ControlPanel({
             spellCheck={false}
             aria-label="Cursed code artifact"
             placeholder="// Paste a cursed artifact in any supported language…"
-            className="h-full min-h-[220px] w-full min-w-0 flex-1 resize-none overflow-auto whitespace-pre bg-transparent px-3 py-3 font-mono text-[13px] leading-[20px] text-bone caret-crimson outline-none placeholder:text-zinc-500"
+            className={`relative block h-full min-h-[240px] w-full resize-none overflow-auto whitespace-pre bg-transparent px-3 py-3 ${EDITOR_TEXT} text-transparent caret-crimson outline-none selection:bg-crimson/35 placeholder:text-zinc-500`}
           />
-        </div>
-
-        <div
-          className="flex min-h-[20px] shrink-0 items-center justify-between gap-3 font-sans text-[12px] font-medium uppercase leading-5 tracking-[0.1em] text-bone/85 tabular-nums"
-          aria-live="off"
-        >
-          <span className="whitespace-nowrap">
-            {lines.length.toLocaleString("en-US")} {lines.length === 1 ? "line" : "lines"}
-          </span>
-          <span className="whitespace-nowrap">
-            {code.length.toLocaleString("en-US")} chars
-          </span>
         </div>
       </div>
 
-      {/* Ritual controls */}
-      <div className="flex shrink-0 flex-col gap-2 border-t border-gold/10 pt-2.5">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between font-sans text-[12px] font-semibold uppercase leading-5 tracking-[0.16em] text-bone tabular-nums">
-            <span>{PHASE_LABEL[phase]}</span>
-            <span className={`font-mono ${running ? "text-crimson" : "text-bone"}`}>
-              {progress}%
-            </span>
-          </div>
-          <div className="h-1 overflow-hidden rounded-full bg-white/5">
-            <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-crimson via-haunt to-neon"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ ease: "easeOut", duration: 0.35 }}
-            />
-          </div>
-        </div>
-
+      {/* 4 · Ritual triggers. */}
+      <div className="flex shrink-0 flex-col gap-2 pt-1">
         <motion.button
           type="button"
           onClick={onRun}
           disabled={running}
           whileHover={running ? undefined : { scale: 1.012 }}
           whileTap={running ? undefined : { scale: 0.985 }}
-          className="ritual-trigger flex h-12 min-h-[48px] w-full shrink-0 items-center justify-center rounded-xl px-4 font-brand text-[16px] font-bold uppercase tracking-[0.14em] text-bone shadow-[0_0_36px_rgba(255,0,60,0.4),0_0_60px_rgba(157,78,221,0.18)] transition-shadow [text-shadow:0_0_12px_rgba(255,0,60,0.8)] hover:shadow-[0_0_52px_rgba(255,0,60,0.55),0_0_80px_rgba(157,78,221,0.25)] disabled:cursor-not-allowed disabled:opacity-80"
+          className="ritual-trigger flex h-[60px] min-h-[60px] w-full shrink-0 items-center justify-center rounded-xl px-4 font-brand text-[18px] font-bold uppercase tracking-[0.12em] text-bone shadow-[0_0_36px_rgba(255,0,60,0.4),0_0_60px_rgba(157,78,221,0.18)] transition-shadow [text-shadow:0_0_12px_rgba(255,0,60,0.8)] hover:shadow-[0_0_52px_rgba(255,0,60,0.55),0_0_80px_rgba(157,78,221,0.25)] disabled:cursor-not-allowed disabled:opacity-80"
         >
-          <span className="flex items-center justify-center gap-2.5">
+          <span className="flex items-center justify-center gap-3">
             {running ? (
-              <Loader2 className="h-5 w-5 animate-spin text-bone" aria-hidden />
+              <Loader2 className="h-6 w-6 animate-spin text-bone" aria-hidden />
             ) : (
               <WaxSigil />
             )}
-            {running ? "Exorcising…" : "Exorcise Code"}
-            <span className="font-mono text-[12px] tracking-[0.12em] text-bone/70 [text-shadow:none]">
-              {running ? `${progress}%` : "SSE"}
+            <span className="flex flex-col items-center leading-none">
+              {running ? "Exorcising…" : "Exorcise Code"}
+              <span className="mt-1 rounded-full border border-bone/40 bg-black/40 px-2 py-0.5 font-mono text-[12px] font-bold tracking-[0.14em] text-bone/85 [text-shadow:none]">
+                {running ? `${progress}%` : "SSE"}
+              </span>
             </span>
           </span>
         </motion.button>
@@ -488,9 +496,9 @@ export function ControlPanel({
           type="button"
           onClick={onReset}
           disabled={running}
-          className="flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gold/10 bg-black/25 px-3 font-sans text-[12px] font-semibold uppercase tracking-[0.18em] text-bone/75 transition hover:border-amethyst/45 hover:text-bone disabled:cursor-not-allowed disabled:opacity-40"
+          className="medieval-btn mx-auto flex h-9 w-3/4 shrink-0 items-center justify-center gap-1.5 bg-[#140f13] px-3 font-sans text-[12px] font-bold uppercase tracking-[0.16em] text-bone/80 transition hover:text-bone disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <RotateCcw className="h-3 w-3" aria-hidden />
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden />
           Banish ritual
         </button>
       </div>

@@ -63,27 +63,26 @@ function RoseWindow() {
   );
 }
 
-/** Stained-glass pane colors across the arch window, left → right. */
-const ARCH_PANES = ["#8B0000", "#4A154B", "#FF003C", "#00FF66", "#FF003C", "#4A154B", "#8B0000"];
-
 /**
- * Gothic pointed-arch crown over a panel: a weathered stone gable (its edge
- * roughened by an feTurbulence + feDisplacementMap filter) framing a pointed
- * stained-glass window of translucent dried-blood / amethyst / emerald panes
- * with lead mullions, finials at both ends, and a rose window at the apex.
- * It sits above the panel in normal flow, so it never covers panel content.
+ * Tall Gothic pointed-arch header carrying the panel title. A weathered stone
+ * gable (feTurbulence + feDisplacementMap) with a double moulding, a glowing
+ * stained-glass rim, two small lancet windows at the sides (kept clear of the
+ * title), finials, and a rose window at the apex.
  */
-function ArchCrown() {
+function ArchHeader({ title, glass }: { title: string; glass: FrameGlass }) {
   const id = useId().replace(/:/g, "");
-  const arch = "M14 36 V27 Q66 26 100 4 Q134 26 186 27 V36 Z";
-  const windowPath = "M30 36 V30 Q70 29 100 10 Q130 29 170 30 V36 Z";
+  const outer = "M4 60 V30 Q58 30 100 3 Q142 30 196 30 V60 Z";
+  const moulding = "M12 60 V34 Q62 33 100 10 Q138 33 188 34 V60";
+  const rim = GLASS_RIM[glass];
+  const lancet = (x: number) => `M${x - 5} 56 V44 Q${x - 5} 38 ${x} 35 Q${x + 5} 38 ${x + 5} 44 V56 Z`;
   return (
-    <div aria-hidden className="pointer-events-none relative h-9 shrink-0">
+    <div className="relative h-[60px] shrink-0">
       <svg
-        viewBox="0 0 200 36"
+        aria-hidden
+        viewBox="0 0 200 60"
         preserveAspectRatio="none"
         focusable="false"
-        className="absolute inset-0 h-full w-full overflow-visible"
+        className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
       >
         <defs>
           <filter id={`${id}-weather`} x="-5%" y="-20%" width="110%" height="140%">
@@ -91,92 +90,75 @@ function ArchCrown() {
             <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.6" xChannelSelector="R" yChannelSelector="G" />
           </filter>
           <linearGradient id={`${id}-rim`} x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0" stopColor="#8B0000" />
-            <stop offset="0.3" stopColor="#FF003C" />
+            <stop offset="0" stopColor={rim[0]} />
             <stop offset="0.5" stopColor="#D9B77E" />
-            <stop offset="0.7" stopColor="#9D4EDD" />
-            <stop offset="1" stopColor="#4A154B" />
+            <stop offset="1" stopColor={rim[1]} />
           </linearGradient>
           <linearGradient id={`${id}-stone`} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor="#1a1218" />
-            <stop offset="1" stopColor="#0b080c" />
+            <stop offset="0" stopColor="#1d1419" />
+            <stop offset="1" stopColor="#0d090c" />
           </linearGradient>
-          <clipPath id={`${id}-window`}>
-            <path d={windowPath} />
-          </clipPath>
         </defs>
-
-        {/* Weathered stone gable. */}
         <g filter={`url(#${id}-weather)`}>
-          <path d={arch} fill={`url(#${id}-stone)`} />
-          <path
-            d={arch.replace(" V36 Z", "")}
-            fill="none"
-            stroke="#B08D57"
-            strokeOpacity="0.55"
-            strokeWidth="1.1"
-            vectorEffect="non-scaling-stroke"
-          />
-        </g>
-
-        {/* Stained-glass window inside the arch. */}
-        <g clipPath={`url(#${id}-window)`}>
-          {ARCH_PANES.map((color, index) => (
-            <rect
-              key={index}
-              x={30 + (index * 140) / ARCH_PANES.length}
-              y="0"
-              width={140 / ARCH_PANES.length}
-              height="36"
-              fill={color}
-              fillOpacity="0.38"
-            />
-          ))}
-          {/* Lead mullions + transom. */}
-          {ARCH_PANES.slice(1).map((_, index) => (
-            <line
-              key={index}
-              x1={30 + ((index + 1) * 140) / ARCH_PANES.length}
-              x2={30 + ((index + 1) * 140) / ARCH_PANES.length}
-              y1="0"
-              y2="36"
-              stroke="#120c0a"
-              strokeWidth="1.4"
-              vectorEffect="non-scaling-stroke"
-            />
-          ))}
-          <line x1="0" x2="200" y1="31" y2="31" stroke="#120c0a" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+          <path d={outer} fill={`url(#${id}-stone)`} />
+          <path d={outer.replace(" V60 Z", "")} fill="none" stroke="#B08D57" strokeOpacity="0.6" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
         </g>
         <path
-          d={windowPath.replace(" V36 Z", "")}
+          d={moulding}
           fill="none"
           stroke={`url(#${id}-rim)`}
           strokeWidth="1.8"
           vectorEffect="non-scaling-stroke"
-          style={{ filter: "drop-shadow(0 0 3px rgba(255,0,60,0.8))" }}
+          style={{ filter: `drop-shadow(0 0 3px ${rim[0]})` }}
         />
+        {[22, 178].map((x, index) => (
+          <path key={x} d={lancet(x)} fill={rim[index]} fillOpacity="0.55" stroke="#B08D57" strokeWidth="0.8" vectorEffect="non-scaling-stroke" />
+        ))}
       </svg>
-      {/* Finials. */}
-      <span className="absolute bottom-1 left-1 h-4 w-2 bg-[linear-gradient(180deg,#FF003C,#3a0006)] [clip-path:polygon(50%_0,100%_100%,0_100%)]" />
-      <span className="absolute bottom-1 right-1 h-4 w-2 bg-[linear-gradient(180deg,#9D4EDD,#1e0a2e)] [clip-path:polygon(50%_0,100%_100%,0_100%)]" />
-      <div className="absolute left-1/2 top-[-8px] -translate-x-1/2">
+      <span aria-hidden className="pointer-events-none absolute bottom-1 left-1 h-4 w-2 bg-[linear-gradient(180deg,#FF003C,#3a0006)] [clip-path:polygon(50%_0,100%_100%,0_100%)]" />
+      <span aria-hidden className="pointer-events-none absolute bottom-1 right-1 h-4 w-2 bg-[linear-gradient(180deg,#9D4EDD,#1e0a2e)] [clip-path:polygon(50%_0,100%_100%,0_100%)]" />
+      <div aria-hidden className="pointer-events-none absolute left-1/2 top-[-9px] -translate-x-1/2">
         <RoseWindow />
       </div>
+      <h2 className="absolute inset-x-8 bottom-2 truncate text-center font-brand text-[15px] font-bold uppercase leading-none tracking-[0.12em] text-bone [text-shadow:0_0_14px_rgba(255,0,60,0.55),0_1px_0_rgba(0,0,0,0.9)]">
+        {title}
+      </h2>
     </div>
   );
 }
 
+export type FrameGlass = "crimson" | "violet" | "stone";
+
+/** [left, right] stained-glass rim colors per frame. */
+const GLASS_RIM: Record<FrameGlass, [string, string]> = {
+  crimson: ["#FF003C", "#8B0000"],
+  violet: ["#9D4EDD", "#4A154B"],
+  stone: ["#8B0000", "#4A154B"],
+};
+
 /**
- * Wraps a dashboard panel as a cathedral window: a pointed-arch crown on top
- * and filigree corners at the base. Decorations are overlays/in-flow strips
- * outside the panel's scroll area. The panel (second child) fills the frame.
+ * Wraps a dashboard panel as a cathedral window: a tall pointed-arch header
+ * holding the panel title, stained-glass filigree strips down both sides
+ * (`.glass-strip-crimson` / `.glass-strip-violet`, or carved stone for the
+ * center), and filigree corners at the base. Decorations never cover panel
+ * content; the panel (second child) fills the frame.
  */
-export function SigilFrame({ children }: { children: ReactNode }) {
+export function SigilFrame({
+  children,
+  title,
+  glass = "stone",
+}: {
+  children: ReactNode;
+  title: string;
+  glass?: FrameGlass;
+}) {
   return (
     <div className="relative flex h-full min-h-0 flex-col [&>*:nth-child(2)]:min-h-0 [&>*:nth-child(2)]:flex-1 [&>*:nth-child(2)]:rounded-t-none">
-      <ArchCrown />
+      <ArchHeader title={title} glass={glass} />
       {children}
-      <div aria-hidden className="pointer-events-none absolute -inset-x-[3px] -bottom-[3px] top-8 z-40">
+      <div aria-hidden className="pointer-events-none absolute -inset-x-[3px] -bottom-[3px] top-[52px] z-40">
+        <span className={`glass-strip glass-strip-${glass} left-0`} />
+        <span className={`glass-strip glass-strip-${glass} right-0`} />
         <Corner className="bottom-0 left-0 -scale-y-100" />
         <Corner className="bottom-0 right-0 -scale-x-100 -scale-y-100" />
       </div>

@@ -58,28 +58,30 @@ const HEADER_PILL =
 const GHOST_PILL =
   "border-gold/15 bg-white/[0.03] text-bone/85 backdrop-blur-md hover:border-gold/35 hover:bg-white/[0.06] hover:text-bone focus-visible:border-gold/45 focus-visible:text-bone";
 
-/** Header emblem: gold sigil circle with a blood inverted triangle and runes. */
-function SigilEmblem() {
+/** Header crest: a gothic shield with a crimson field and a gold "N". */
+function GothicCrest() {
   return (
-    <div className="relative grid h-12 w-12 shrink-0 place-items-center">
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,0,60,0.35),transparent_65%)] blur-[6px]"
-      />
-      <svg
-        viewBox="0 0 48 48"
-        aria-hidden
-        focusable="false"
-        className="rune-ring relative h-12 w-12 text-gold [animation-duration:40s] [filter:drop-shadow(0_0_6px_rgba(255,0,60,0.55))]"
+    <svg
+      viewBox="0 0 44 50"
+      aria-hidden
+      focusable="false"
+      className="h-12 w-11 shrink-0 [filter:drop-shadow(0_0_8px_rgba(255,0,60,0.55))]"
+    >
+      <path d="M22 2 L40 8 V24 C40 36 31 44 22 48 C13 44 4 36 4 24 V8 Z" fill="#2a0408" stroke="#B08D57" strokeWidth="2" />
+      <path d="M22 6 L36 11 V24 C36 33 29 40 22 43.5 C15 40 8 33 8 24 V11 Z" fill="#8B0000" stroke="#FF003C" strokeWidth="1" strokeOpacity="0.8" />
+      <text
+        x="22"
+        y="32"
+        textAnchor="middle"
+        fontSize="22"
+        fontWeight="900"
+        fill="#E2D9C8"
+        style={{ fontFamily: "var(--font-brand), serif" }}
       >
-        <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" strokeWidth="1" strokeOpacity="0.8" />
-        <circle cx="24" cy="24" r="18.5" fill="none" stroke="currentColor" strokeWidth="0.6" strokeDasharray="2 3" strokeOpacity="0.6" />
-        <path d="M24 39 9.7 14.2h28.6Z" fill="none" stroke="#FF003C" strokeWidth="1.4" strokeLinejoin="round" />
-        <path d="M24 9v6M24 33v6M9 24h6M33 24h6" stroke="currentColor" strokeWidth="1" strokeOpacity="0.7" />
-        <circle cx="24" cy="22.5" r="3.2" fill="#FF003C" />
-        <circle cx="24" cy="22.5" r="1.2" fill="#E2D9C8" />
-      </svg>
-    </div>
+        N
+      </text>
+      <path d="M14 6 L22 0 L30 6" fill="none" stroke="#B08D57" strokeWidth="1.5" />
+    </svg>
   );
 }
 
@@ -291,6 +293,13 @@ export default function Home() {
     play("click");
   };
 
+  const engineLabel = liveEngineActive ? "live AI engine" : "builtin safety net";
+  const engineTitle = liveKeys
+    ? liveEngineActive
+      ? "Live AI engine: a live API sigil will be used on the next exorcism."
+      : "Builtin safety net: a sigil is configured, but the last run used the builtin engine."
+    : "Builtin safety net: no API sigil configured.";
+
   const handleFxToggle = (key: keyof UiSettings) => {
     // The click SFX only sounds when 3D Audio FX is (or is about to be) on.
     if (key !== "soundOn" || !settings.soundOn) play("click");
@@ -348,47 +357,15 @@ export default function Home() {
           />
           {/* Left · brand + active engine */}
           <div className="flex min-w-0 items-center gap-3">
-            <SigilEmblem />
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <h1 className="font-brand text-[22px] font-black uppercase leading-none tracking-[0.12em] text-gold [text-shadow:0_0_18px_rgba(255,0,60,0.45),0_0_2px_rgba(226,217,200,0.6)]">
-                  NecroCode
-                </h1>
-                <span className="font-brand text-[12px] font-semibold uppercase tracking-[0.22em] text-crimson [text-shadow:0_0_10px_rgba(255,0,60,0.5)]">
-                  {"// Occult Code Exorcist"}
-                </span>
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <span
-                  title={
-                    liveKeys
-                      ? liveEngineActive
-                        ? "A live API sigil will be used on the next exorcism."
-                        : "A live sigil is configured, but the last run used the builtin safety net."
-                      : "No API sigil configured — the builtin deterministic engine is active."
-                  }
-                  className={[
-                    HEADER_PILL,
-                    "h-6 bg-black/50",
-                    liveEngineActive
-                      ? "border-neon/45 text-neon"
-                      : "border-white/20 text-zinc-200",
-                  ].join(" ")}
-                >
-                  <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                      liveEngineActive
-                        ? "animate-pulse bg-neon shadow-[0_0_8px_rgba(0,255,102,0.9)]"
-                        : "bg-zinc-400"
-                    }`}
-                  />
-                  {liveEngineActive ? "Live AI engine" : "Builtin safety net"}
-                </span>
-                <span className="hidden font-sans text-[12px] font-semibold uppercase tracking-[0.2em] text-gold-dim md:inline">
-                  Kiroween 2026
-                </span>
-              </div>
-            </div>
+            <GothicCrest />
+            <h1 className="flex min-w-0 flex-wrap items-baseline gap-x-3 font-brand text-[24px] font-black uppercase leading-none tracking-[0.06em]">
+              <span className="text-bone [text-shadow:0_0_16px_rgba(255,0,60,0.45),0_1px_0_rgba(0,0,0,0.9)]">
+                NecroCode
+              </span>
+              <span className="text-crimson [text-shadow:0_0_14px_rgba(255,0,60,0.65)]">
+                {"// AI Code Exorcist"}
+              </span>
+            </h1>
           </div>
 
           {/* Right · utilities + FX popover */}
@@ -399,24 +376,10 @@ export default function Home() {
               disabled={state.running}
               aria-label="Run the one-click judge auto demo"
               title="Load the cursed async memory leak and run the full exorcism"
-              className={`${HEADER_PILL} border-crimson bg-[linear-gradient(180deg,#8B0000_0%,#3a0004_55%,#4A154B_100%)] font-bold text-gold shadow-[0_0_22px_rgba(255,0,60,0.45),0_0_40px_rgba(157,78,221,0.25),inset_0_1px_0_rgba(226,217,200,0.35),inset_0_0_14px_rgba(255,0,60,0.35)] hover:text-white hover:shadow-[0_0_30px_rgba(255,0,60,0.6),0_0_52px_rgba(157,78,221,0.32),inset_0_1px_0_rgba(226,217,200,0.45),inset_0_0_18px_rgba(255,0,60,0.45)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none`}
+              className={`${HEADER_PILL} rounded-md border-crimson bg-[linear-gradient(180deg,#8B0000_0%,#3a0004_55%,#4A154B_100%)] px-4 font-bold text-bone shadow-[0_0_22px_rgba(255,0,60,0.45),0_0_40px_rgba(157,78,221,0.25),inset_0_1px_0_rgba(226,217,200,0.35),inset_0_0_14px_rgba(255,0,60,0.35)] hover:text-white hover:shadow-[0_0_30px_rgba(255,0,60,0.6),0_0_52px_rgba(157,78,221,0.32),inset_0_1px_0_rgba(226,217,200,0.45),inset_0_0_18px_rgba(255,0,60,0.45)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none`}
             >
               <Sparkles className="h-4 w-4 shrink-0 text-crimson" aria-hidden />
               Auto demo
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                play("click");
-                setHistoryOpen(false);
-                setApiOpen(true);
-              }}
-              aria-haspopup="dialog"
-              aria-label="Open API sigils"
-              className={`${HEADER_PILL} ${GHOST_PILL}`}
-            >
-              <KeyRound className="h-4 w-4 shrink-0" aria-hidden />
-              <span className="hidden sm:inline">API Sigils</span>
             </button>
             <button
               type="button"
@@ -431,9 +394,34 @@ export default function Home() {
             >
               <History className="h-4 w-4 shrink-0" aria-hidden />
               <span className="hidden sm:inline">History</span>
-              <span className="rounded border border-white/15 px-1 py-px text-[12px] leading-none text-zinc-300">
-                {entries.length}
+              <span className="font-mono text-[12px] leading-none text-crimson">
+                [{entries.length}]
               </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                play("click");
+                setHistoryOpen(false);
+                setApiOpen(true);
+              }}
+              aria-haspopup="dialog"
+              aria-label={`Open API sigils (${engineLabel})`}
+              title={engineTitle}
+              className={`${HEADER_PILL} ${GHOST_PILL}`}
+            >
+              <KeyRound className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="hidden sm:inline">API Sigils</span>
+              {/* Engine status: green = live AI engine, dim = builtin safety net. */}
+              <span
+                data-engine={liveEngineActive ? "live" : "builtin"}
+                aria-hidden
+                className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                  liveEngineActive
+                    ? "animate-pulse bg-neon shadow-[0_0_8px_rgba(0,255,102,0.9)]"
+                    : "bg-zinc-500"
+                }`}
+              />
             </button>
             <FxMenu
               settings={settings}
@@ -487,7 +475,7 @@ export default function Home() {
 
         <div className="pb-safe grid min-h-0 flex-1 grid-cols-1 gap-4 pt-4 lg:pb-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1.1fr)] lg:items-stretch xl:grid-cols-[minmax(330px,1fr)_minmax(440px,1.35fr)_minmax(360px,1.1fr)]">
           <div id="panel-spellbook" className={mobilePanel("spellbook")}>
-            <SigilFrame>
+            <SigilFrame title="Cursed Spellbook" glass="crimson">
               <ControlPanel
                 code={code}
                 onCodeChange={handleCodeChange}
@@ -509,7 +497,7 @@ export default function Home() {
           </div>
 
           <div id="panel-ritual" className={mobilePanel("ritual")}>
-            <SigilFrame>
+            <SigilFrame title="Ritual Graph" glass="stone">
               <AgentCanvas
                 nodes={state.nodes}
                 activeStage={state.activeStage}
@@ -527,7 +515,7 @@ export default function Home() {
           </div>
 
           <div id="panel-grimoire" className={mobilePanel("grimoire")}>
-            <SigilFrame>
+            <SigilFrame title="Grimoire Terminal" glass="violet">
               <Terminal
                 logs={state.logs}
                 running={state.running}
@@ -549,7 +537,7 @@ export default function Home() {
           </div>
         </div>
 
-        <footer className="hidden shrink-0 items-center justify-between border-t border-white/5 py-1.5 font-mono text-[12px] uppercase tracking-[0.2em] text-zinc-400 lg:flex">
+        <footer className="hidden shrink-0 items-center justify-between border-t border-brass/20 py-1.5 font-brand text-[13px] font-bold uppercase tracking-[0.14em] text-bone/70 lg:flex">
           <span>the crypt is always listening</span>
           <span>WebGL · SSE · Kiro</span>
         </footer>

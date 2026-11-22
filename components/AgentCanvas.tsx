@@ -55,10 +55,18 @@ const HELPER_STEPS = [
 /** Same wording in 2D: the stage cards are the altar seals there. */
 const HELPER_STEPS_2D = HELPER_STEPS;
 
-/** Bottom strip reserved for the first-run helper (up to two wrapped lines). */
-const FOOTER_HELPER_PX = 64;
+/** Bottom strip reserved for the status line + four stage cards. */
+const FOOTER_PX = 104;
+
+/** Stage-card status words (the card title already names the stage). */
+const CARD_STATUS: Record<NodeStatus, string> = {
+  pending: "Awaiting",
+  active: "Channelling",
+  done: "Sealed",
+  error: "Cursed",
+};
 /** Top strip reserved for the panel header (title, view toggle, hint, aura). */
-const GRAPH_TOP_PX = 80;
+const GRAPH_TOP_PX = 64;
 
 type GraphMode = "2d" | "3d";
 
@@ -180,6 +188,64 @@ function RitualGraph2D({
         })}
       </ol>
     </div>
+  );
+}
+
+/**
+ * Cathedral nave behind the WebGL canvas: a central pointed arch with a
+ * lancet window, flanking arcades, clustered piers, and rib vaulting, drawn
+ * as low-contrast carved stone with a faint ruby glow. Purely decorative.
+ */
+function CathedralNave() {
+  const arch = (x: number, w: number, spring: number, top: number) =>
+    `M${x - w} 600 V${spring} Q${x - w} ${spring - (spring - top) * 0.72} ${x} ${top} Q${x + w} ${spring - (spring - top) * 0.72} ${x + w} ${spring} V600`;
+  return (
+    <svg
+      aria-hidden
+      focusable="false"
+      viewBox="0 0 400 600"
+      preserveAspectRatio="xMidYMid slice"
+      className="pointer-events-none absolute inset-0 h-full w-full"
+    >
+      <defs>
+        <linearGradient id="nave-stone" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#241a20" />
+          <stop offset="1" stopColor="#0c080b" />
+        </linearGradient>
+        <radialGradient id="nave-glow" cx="0.5" cy="0.45" r="0.5">
+          <stop offset="0" stopColor="#FF003C" stopOpacity="0.16" />
+          <stop offset="1" stopColor="#FF003C" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width="400" height="600" fill="url(#nave-glow)" />
+      {/* Rib vaulting. */}
+      <g stroke="#3a2c33" strokeWidth="2" fill="none" opacity="0.7">
+        <path d="M0 120 Q200 -40 400 120" />
+        <path d="M40 150 Q200 10 360 150" />
+        <path d="M0 40 L200 170 L400 40" />
+      </g>
+      {/* Side arcades. */}
+      {[60, 340].map((x) => (
+        <g key={x} fill="none" stroke="#3d2e36" strokeWidth="3" opacity="0.8">
+          <path d={arch(x, 46, 260, 150)} fill="#0a0709" fillOpacity="0.6" />
+          <path d={arch(x, 34, 270, 175)} strokeWidth="1.5" />
+        </g>
+      ))}
+      {/* Central arch + lancet. */}
+      <g fill="none" stroke="#4a3840" strokeWidth="4" opacity="0.85">
+        <path d={arch(200, 92, 230, 40)} fill="#09060a" fillOpacity="0.55" />
+        <path d={arch(200, 78, 240, 66)} strokeWidth="2" />
+      </g>
+      <path d={arch(200, 26, 170, 96).replace(/V600$/, "V250 H174 Z")} fill="#4A154B" fillOpacity="0.22" stroke="#5E4524" strokeWidth="1.5" />
+      {/* Clustered piers. */}
+      {[118, 282, 10, 390].map((x) => (
+        <g key={x}>
+          <rect x={x - 9} y="150" width="18" height="450" fill="url(#nave-stone)" opacity="0.85" />
+          <rect x={x - 3} y="150" width="6" height="450" fill="#2e2329" opacity="0.8" />
+          <rect x={x - 12} y="146" width="24" height="8" fill="#3a2c33" />
+        </g>
+      ))}
+    </svg>
   );
 }
 
@@ -380,8 +446,7 @@ export function AgentCanvas({
 
   /** First-run guide: only before any ritual has produced events. */
   const showHelper = phase === "idle" && !running && logs.length === 0;
-  const reserveBottomPx =
-    phase === "complete" ? 104 : showHelper ? FOOTER_HELPER_PX : 44;
+  const reserveBottomPx = FOOTER_PX;
 
   const RITUAL_TIMELINE_STEPS: Array<{
     id: string;
@@ -400,7 +465,7 @@ export function AgentCanvas({
         scanlines ? "scanlines" : ""
       }`}
     >
-      <div className="haunted-grid pointer-events-none absolute inset-0 opacity-[0.14]" />
+      <CathedralNave />
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -411,9 +476,6 @@ export function AgentCanvas({
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 p-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="font-brand text-[15px] font-bold uppercase tracking-[0.14em] text-gold [text-shadow:0_0_12px_rgba(255,0,60,0.45)]">
-              Ritual Graph
-            </h2>
             <div
               role="group"
               aria-label="Graph view"
@@ -531,9 +593,7 @@ export function AgentCanvas({
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 14 }}
-            className={`absolute inset-x-3 z-40 overflow-hidden rounded-xl border border-white/10 bg-[#0a0b14]/95 px-3 pb-3 pt-3 backdrop-blur-xl ${
-              phase === "complete" ? "bottom-[108px]" : "bottom-14"
-            }`}
+            className="absolute inset-x-3 bottom-[112px] z-40 overflow-hidden rounded-xl border border-white/10 bg-[#0a0b14]/95 px-3 pb-3 pt-3 backdrop-blur-xl"
             style={{ boxShadow: `0 0 34px ${STATUS_HEX[selectedStatus]}22` }}
           >
             <div className="flex items-start justify-between gap-3">
@@ -615,52 +675,17 @@ export function AgentCanvas({
         )}
       </AnimatePresence>
 
-      {phase === "complete" ? (
-        <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0a0b14]/90 px-3 py-2 backdrop-blur-xl">
-          <div className="grid grid-cols-4 gap-1.5">
-            {RITUAL_TIMELINE_STEPS.map((step) => (
-              <button
-                key={step.id}
-                type="button"
-                onClick={() => setSelected(step.stageId)}
-                aria-pressed={selected === step.stageId}
-                className={[
-                  "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1.5 font-sans text-[12px] font-bold uppercase leading-tight tracking-[0.06em] transition",
-                  selected === step.stageId
-                    ? "border-crimson/60 bg-crimson/10 text-crimson"
-                    : "border-white/15 bg-black/50 text-zinc-200 hover:border-haunt/50 hover:text-haunt-glow",
-                ].join(" ")}
-              >
-                <span className="max-w-full truncate">{step.label}</span>
-                <span className="max-w-full truncate text-[12px] font-normal tracking-[0.06em] text-zinc-400">
-                  {STATUS_LABEL[nodes[step.stageId]]}
-                </span>
-              </button>
-            ))}
-          </div>
-          <div className="mt-1.5 flex items-center justify-between gap-2 font-mono text-[12px] uppercase tracking-[0.22em] text-zinc-300">
-            <span>SSE ↔ 3D sync</span>
-            <span className={running ? "text-crimson" : phase === "complete" ? "text-neon" : "text-zinc-300"}>
-              {running
-                ? `ritual ${progress}%`
-                : summary
-                  ? summary.unresolved > 0
-                    ? "residual curse"
-                    : "sealed"
-                  : "awaiting offering"}
-            </span>
-          </div>
-        </div>
-      ) : showHelper ? (
-        <div
-          data-ritual-helper
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0a0b14]/85 px-3 py-2.5 backdrop-blur-md"
-        >
-          <ol className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-sans text-[12px] font-medium leading-snug text-bone">
+      {/* Base of the panel: one status line, then the four stage cards. */}
+      <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-30 border-t border-brass/25 bg-[#0a070b]/92 px-3 pb-2.5 pt-1.5 backdrop-blur-xl">
+        {showHelper ? (
+          <ol
+            data-ritual-helper
+            className="mb-1.5 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 font-sans text-[12px] font-medium leading-snug text-bone"
+          >
             {(mode === "2d" ? HELPER_STEPS_2D : HELPER_STEPS).map((step, index) => (
               <li key={step} className="flex items-center gap-2">
                 {index > 0 && (
-                  <span className="text-haunt-glow" aria-hidden>
+                  <span className="text-crimson" aria-hidden>
                     →
                   </span>
                 )}
@@ -670,21 +695,55 @@ export function AgentCanvas({
               </li>
             ))}
           </ol>
+        ) : (
+          <div className="mb-1.5 flex items-center justify-between gap-2 font-mono text-[12px] uppercase tracking-[0.16em] text-bone/75">
+            <span>SSE ↔ 3D sync</span>
+            <span className={running ? "text-crimson" : summary ? (summary.unresolved > 0 ? "text-crimson" : "text-neon") : ""}>
+              {running
+                ? `ritual ${progress}%`
+                : summary
+                  ? summary.unresolved > 0
+                    ? "residual curse"
+                    : "sealed"
+                  : "awaiting offering"}
+            </span>
+          </div>
+        )}
+        <div className="grid grid-cols-4 gap-1.5">
+          {RITUAL_TIMELINE_STEPS.map((step) => {
+            const status = nodes[step.stageId];
+            const color = STATUS_HEX[status];
+            const isSelected = selected === step.stageId;
+            return (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => setSelected(isSelected ? null : step.stageId)}
+                aria-pressed={isSelected}
+                aria-label={`${step.label}: ${CARD_STATUS[status]}`}
+                data-stage-card={step.stageId}
+                data-status={status}
+                className="medieval-btn flex min-w-0 flex-col items-center justify-center gap-0.5 bg-[#140f13] px-1 py-1.5 transition hover:bg-[#1d151b]"
+                style={
+                  status === "pending"
+                    ? undefined
+                    : { boxShadow: `inset 0 0 0 1px ${color}${isSelected ? "" : "88"}, inset 0 0 14px ${color}33` }
+                }
+              >
+                <span
+                  className="max-w-full truncate font-brand text-[12px] font-bold uppercase leading-tight tracking-[0.04em]"
+                  style={{ color: status === "pending" ? "#E2D9C8" : color }}
+                >
+                  {step.label}
+                </span>
+                <span className="max-w-full truncate font-sans text-[12px] font-semibold uppercase tracking-[0.08em] text-bone/70">
+                  {CARD_STATUS[status]}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      ) : (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex items-center justify-between gap-2 p-3 font-mono text-[12px] uppercase tracking-[0.22em] text-zinc-300">
-          <span>SSE ↔ 3D sync</span>
-          <span className={running ? "text-crimson" : "text-zinc-300"}>
-            {running
-              ? `ritual ${progress}%`
-              : summary
-                ? summary.unresolved > 0
-                  ? "residual curse"
-                  : "sealed"
-                : "awaiting offering"}
-          </span>
-        </div>
-      )}
+      </div>
     </section>
   );
 }

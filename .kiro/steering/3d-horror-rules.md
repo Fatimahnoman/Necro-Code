@@ -85,31 +85,42 @@ Two dedicated, dynamically imported client-only canvases:
 
 ## Cathedral ritual altar
 
-- **Seals** (`StageNode3D`): a faceted obsidian octahedron (the click target)
-  with glowing status-colored edges, a pulsing core shard, one rotating
-  energy halo, and behind it a **stained-glass rose disc**: 12 panes
-  (r 0.56–0.86) alternating the status color and a darker shade, gold lead
-  came (radial bars + rims) with brass rivets where came meets rim. Pane opacity pulses with the status (faster
-  when active/error). Pending seals use tarnished gold `#6B5E45`.
-- **Altar floor** (`AltarRings`): counter-rotating rune circles beneath the
-  relic, tilted toward the floor. Outer sigils burn ruby `#E0115F`, inner
-  sigils violet `#7B2CBF`, both tinted 25% toward the aura and breathing.
-- **Relic**: the wireframe skull/polyhedron is scaled `RELIC_SCALE = 1.3`
-  and wrapped in dense flames (`RelicEmbers`): three ember clouds of 140
-  points each (crimson `#FF003C`, ember `#FF7A1A`, dried blood `#8B0000`)
-  spiral upward and taper, plus `CosmicSparks` (120 red points orbiting on
-  tilted great circles), over a flickering hellfire point light.
-- **Conduits** (`ConduitStream`) and **Ritual FX** (`RitualFx`: run-start
-  zoom pulse + aura shockwaves, skipped under reduced motion) are unchanged.
-- `SEAL_REACH = 1.07` and `LABEL_OFFSET.y = -1.12` so labels clear the glass
-  disc; `fitGraph()` uses both.
-- **Gothic banners:** each seal's label is a swallowtail stone pennant with
-  brass edging. Line 1: stage title (Cinzel Decorative, status color).
-  Line 2: `stageMeta` from `AgentCanvas` (`<STATUS> · <stage time>`, ticking
-  every 250ms while running). `LABEL_HALF_HEIGHT_PX = 28` reserves room for
-  it in `fitGraph()`. The 2D cards show the same line.
-- Footer helper (3D and 2D): `1. Feed the Crypt → 2. Ignite EXORCISE CODE →
-  3. Inspect the Altar Seals`.
+- **Skull** (`SkeletonSkull`): a procedural skeleton skull, not a
+  polyhedron. Cranium and maxilla spheres, cheekbones, recessed black eye
+  sockets with fiery pupils (`#FF5A1F` leaning 45% toward the aura) and a
+  flickering eye light, an inverted-triangle nasal cavity, an upper tooth row,
+  and a separate hinged jaw with lower teeth that chatters while a ritual
+  runs. Bone is lit by a warm front fill plus an aura rim light and an
+  amethyst rim light behind. It bobs, sways ±0.32 rad, and beats on crimson.
+  `RELIC_SCALE = 1.35`, `SKULL_Y = 0.2`.
+- **Fire** (`SkullFire`): a flame crown from the top of the cranium
+  (`FireCloud` × 3: white-hot `#FFD27A`, orange `#FF7A1A`, crimson
+  `#FF003C`; particles rise and taper), slow dried-blood embers rising past
+  the face, 60 orbiting `CosmicSparks`, and a flickering fire light.
+- **Altar** (`AltarPedestal`): a stone slab (3.8 × 2.6 × 0.16, brass edges)
+  tilted `rotation={[-Math.PI / 2.4, 0, 0]}` at `ALTAR_Y = -1.05`, with a
+  ritual circle on its top face: rune rings and ticks (`ALTAR_TINT[aura]`),
+  a {5/2} pentagram and inner rings in magenta `#FF2BD6` mixed 50% with the
+  tint, counter-rotating, breathing. Tint: idle/crimson `#FF003C` → purple
+  `#9D4EDD` → green `#00FF66`.
+- **Seals** (`StageNode3D`): tall Gothic lancet windows: a carved stone
+  frame (`archShape()`, half-width 0.6, height 2.06; the click target) with a
+  brass moulding, a pointed stained-glass light in the stage hue
+  (`SEAL_GLASS`: Corrupted Code / Purified Output emerald, Spectral Scanner
+  violet, Kiro Exorcism Reasoning crimson; crimson on `error`), lead mullion
+  and transoms, a brass rose roundel, and a faceted crystal emblem in the
+  live `STATUS_HEX` color. The glass line also takes the status color. Glass
+  opacity: pending 0.2, active/error pulsing, done 0.62.
+- **Banners** sit on each window's lower stone plaque (`LABEL_OFFSET.y =
+  -0.64`), so they never collide: checked down to a 380×560 canvas with
+  worst-case two-line titles (≥ 39px vertical and ≥ 43px horizontal gaps).
+  Line 1: stage title; line 2: `stageMeta` (`<STATUS> · <stage time>`).
+- **Conduits** run at `CONDUIT_Z = -0.9`, behind the windows and the skull.
+  **Ritual FX** (run-start zoom pulse + aura shockwaves) are unchanged.
+- **Nave** (`CathedralNave` in `AgentCanvas.tsx`): a decorative SVG behind
+  the transparent canvas: central pointed arch with a lancet, side arcades,
+  clustered piers, rib vaulting, faint ruby glow.
+
 
 ## Screen-space labels over WebGL
 
@@ -120,26 +131,19 @@ Two dedicated, dynamically imported client-only canvases:
   clicks. Use `will-change: transform` and direct style writes, not state.
 - Labels are clamped inside the canvas every frame using their measured
   width (`EDGE_GAP_PX` = 8), however the graph is orbited.
-- Labels are HUD tags: `font-mono text-[12px] font-medium uppercase
-  leading-tight tracking-[0.08em] px-2 py-1 rounded-md bg-[#0a0b14]/90 border
-  backdrop-blur-md text-zinc-200`, `w-max max-w-[var(--label-max,176px)]`
-  (`labelMaxPx()` = 30% of canvas width, 112–176px). Long names may wrap to
-  two lines. No solid white cards.
-- Camera is `[0, 0.18, 6.0]` with `fov: 45`. Seals sit at `(±2.75, ±1.58)`
-  (`ORBIT_X`, `ORBIT_Y`), farther from the relic than before.
+- Labels are swallowtail stone banners: Cinzel Decorative 12px title in the
+  status color, a JetBrains Mono 12px meta line, brass edging,
+  `max-w-[var(--label-max,176px)]` (`labelMaxPx()` = 30% of canvas width,
+  112–176px). Long names wrap to two lines.
+- Camera is `[0, 0.18, 6.0]` with `fov: 45`. Seals sit at `(±2.75, ±1.58)`.
 - Graph scale comes from `fitGraph(width, height, reserveTopPx,
   reserveBottomPx)`: the largest scale up to `1.15` (floor `0.4`) that keeps
-  the seals (width) and seals + labels + both HUD strips (height) inside the
-  canvas, plus a vertical offset that centres the graph between the strips.
-  `AgentCanvas` reserves 72px on top and, at the bottom, 104px with the
-  timeline, 64px with the first-run helper, 44px otherwise, so the
-  `Purified Output` label never overlaps the footer.
-- The seal inspection card sits above the footer (`bottom-[108px]` with the
-  timeline, `bottom-14` otherwise).
-- Central relic: additive outer wireframe, back-face rim shell (pulsing
-  opacity), inner counter-rotating wireframe lattice, crisp dodecahedron
-  edge lines, and two rim point lights behind it (aura color + `AURA_HEX.purple`).
-  All geometry stays at icosahedron detail ≤ 1.
+  the windows (`SEAL_HALF_W`, `SEAL_HALF_H`, incl. hover scale 1.06 and
+  float) and both HUD strips inside the canvas, plus a vertical offset that
+  centres the graph between them. `AgentCanvas` reserves 64px on top and
+  104px at the bottom (status line + four stage cards).
+- The seal inspection card sits above the stage cards (`bottom-[112px]`).
+
 
 ## Interaction contract
 

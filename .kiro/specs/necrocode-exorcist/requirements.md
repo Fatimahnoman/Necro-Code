@@ -133,7 +133,7 @@ so that I can evaluate it quickly.
 
 #### Acceptance criteria
 
-1. WHEN the header renders, THE dashboard SHALL display `NECROCODE`, `// OCCULT CODE EXORCIST`, and the active engine badge on the left, and `Auto demo`, `API Sigils`, `History`, and an `FX & Audio` popover (Horror BGM, 3D Audio FX, CRT, Fog switches) on the right.
+1. WHEN the header renders, THE dashboard SHALL display a crest and `NECROCODE // AI CODE EXORCIST` on the left, and `AUTO DEMO`, `HISTORY [n]`, `API SIGILS` (with the active engine's status dot and text alternative), and an `FX & Audio` popover (Horror BGM, 3D Audio FX, CRT, Fog switches) on the right.
 2. WHEN the viewport is `lg` or wider, THE dashboard SHALL lay out Spellbook, Ritual Graph, and Grimoire Terminal as three proportional columns (`1fr / 1.35fr / 1.1fr`, with 330 / 440 / 360px minimums from `xl`).
 8. WHILE the viewport is narrower than `lg`, THE dashboard SHALL show a `Spellbook | 3D Ritual | Grimoire` tab switcher and only the selected panel, keeping all three mounted.
 9. WHILE no ritual has produced events, THE Ritual Graph footer SHALL show `1. Feed the Crypt → 2. Ignite EXORCISE CODE → 3. Inspect the Altar Seals`.
@@ -143,6 +143,8 @@ so that I can evaluate it quickly.
 5. WHEN a run completes, THE client SHALL save it to the Grimoire History in `localStorage` (`necrocode.grimoire-history.v1`), keeping the last 10 entries.
 6. WHEN the user selects a history entry, THE client SHALL restore its code, directive, findings, fixes, engine, summary, and logs.
 7. WHEN the user clicks `Export report`, THE Terminal SHALL download a Markdown autopsy report built by `lib/report.ts`.
+11. THE Ritual Graph SHALL always show four stage cards (`DORMANT`, `SCANNING`, `EXORCISING`, `PURIFIED`) at its base with each stage's live status; clicking a card SHALL select that stage for inspection.
+12. WHEN the editor renders code, THE Spellbook SHALL syntax-highlight comments, strings, numbers, and keywords for the selected runtime without changing the code.
 
 ### Requirement 9 — Direct GitHub file summon
 
