@@ -122,3 +122,13 @@ when the code exists in this repository.
 - [ ] 22. Visual and build verification for task 21
   - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build`. The sandbox had no npm registry access; files were typechecked only against hand-written stubs. ESLint was not run.
   - Check at 390px (mobile tabs), 1024px, 1280px, 1440px, and 1920px: header pills, FX popover, terminal toolbar, and the `Purified Output` label vs. the timeline.
+
+- [x] 23. Micro-polish
+  - [x] 23.1 Single-row Grimoire toolbar with density fallback; `Export ▾` menu (`ExportMenu.tsx`) for report, patch, and artifact downloads.
+  - [x] 23.2 Gradient `Auto demo` CTA; ghost `API Sigils` / `History` / `FX & Audio`.
+  - [x] 23.3 `2D | 3D` Ritual Graph toggle; 2D default on reduced motion or no WebGL; `WebGLBoundary` + context-loss fallback.
+  - [x] 23.4 Mobile panels `min-h-[420px] max-h-[78dvh]`, `.pb-safe`, smooth scroll on tab switch; line/char counter no longer squeezed.
+
+- [ ] 24. Visual and build verification for task 23
+  - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` (sandbox: stub typecheck only; no ESLint, no browser).
+  - Check the toolbar at 300px, 360px, and 440px panel widths; the Export menu with the keyboard; 2D mode with reduced motion enabled and with WebGL disabled; mobile tab scroll on an iPhone-sized viewport.

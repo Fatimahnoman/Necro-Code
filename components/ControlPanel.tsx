@@ -231,7 +231,7 @@ export function ControlPanel({
                 aria-label="Public GitHub file URL"
                 spellCheck={false}
                 autoComplete="off"
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/60 px-2.5 py-1.5 font-mono text-[13px] text-bone outline-none transition placeholder:text-slate-700 focus:border-haunt/50"
+                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/60 px-2.5 py-1.5 font-mono text-[13px] text-bone outline-none transition placeholder:text-zinc-500 focus:border-haunt/50"
               />
               <button
                 type="submit"
@@ -323,12 +323,17 @@ export function ControlPanel({
           onChange={(event) => onDirectiveChange(event.target.value)}
           maxLength={320}
           placeholder="e.g., Fix infinite loops, convert to strict TypeScript, optimize performance..."
-          className="w-full rounded-lg border border-white/10 bg-black/60 px-2.5 py-1.5 font-mono text-[13px] text-bone outline-none transition placeholder:text-slate-700 focus:border-spectral/50 focus:shadow-[0_0_16px_rgba(6,182,212,0.07)]"
+          className="w-full rounded-lg border border-white/10 bg-black/60 px-2.5 py-1.5 font-mono text-[13px] text-bone outline-none transition placeholder:text-zinc-500 focus:border-spectral/50 focus:shadow-[0_0_16px_rgba(6,182,212,0.07)]"
         />
       </div>
 
       {/* Editor */}
-      <div className="flex min-h-[260px] flex-1 flex-col gap-2">
+      {/*
+        No min-h-0 here: the block keeps its min-content height (toolbar +
+        220px editor + counter ≈ 270px), so the counter can never be squeezed
+        under the ritual controls; the panel scrolls instead.
+      */}
+      <div className="flex flex-1 flex-col gap-2">
         <div className="flex shrink-0 items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 font-mono text-[13px] uppercase tracking-[0.24em] text-zinc-300">
             <Sparkles className="h-2.5 w-2.5 text-haunt" aria-hidden />
@@ -377,18 +382,25 @@ export function ControlPanel({
           />
         </div>
 
-        <div className="flex shrink-0 items-center justify-between font-mono text-[13px] uppercase tracking-[0.18em] text-zinc-300">
-          <span>{lines.length} lines</span>
-          <span>{code.length} chars</span>
+        <div
+          className="flex min-h-[20px] shrink-0 items-center justify-between gap-3 font-mono text-[12px] uppercase leading-5 tracking-[0.1em] text-zinc-200 tabular-nums"
+          aria-live="off"
+        >
+          <span className="whitespace-nowrap">
+            {lines.length.toLocaleString("en-US")} {lines.length === 1 ? "line" : "lines"}
+          </span>
+          <span className="whitespace-nowrap">
+            {code.length.toLocaleString("en-US")} chars
+          </span>
         </div>
       </div>
 
       {/* Ritual controls */}
-      <div className="flex shrink-0 flex-col gap-2 border-t border-purple-900/30 bg-[#0D111D] pt-2">
-        <div className="space-y-1">
-          <div className="flex justify-between font-mono text-[13px] uppercase tracking-[0.2em] text-zinc-300">
+      <div className="flex shrink-0 flex-col gap-2 border-t border-purple-900/30 bg-[#0D111D] pt-2.5">
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between font-mono text-[12px] font-medium uppercase leading-5 tracking-[0.12em] text-zinc-200 tabular-nums">
             <span>{PHASE_LABEL[phase]}</span>
-            <span className={running ? "text-crimson" : "text-zinc-300"}>
+            <span className={running ? "text-crimson" : "text-zinc-200"}>
               {progress}%
             </span>
           </div>

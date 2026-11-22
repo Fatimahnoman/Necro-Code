@@ -147,8 +147,11 @@ Selecting a node only changes the HTML inspection card and its ring highlight.
   and terminal logs remain the accessible source of truth.
 - Buttons are real `<button>` elements with `aria-label` / `aria-pressed`.
 - The terminal keeps `role="log"` and `aria-live="polite"`.
-- If WebGL fails or is unavailable, the dashboard must still function; the
-  dynamic loader falls back to a rune spinner and the rest of the UI continues.
+- If WebGL fails or is unavailable, the dashboard must still function: the
+  Ritual Graph renders the 2D pipeline, and the page backdrop is wrapped in
+  `WebGLBoundary` so a failed canvas renders nothing instead of crashing.
+- `prefers-reduced-motion` defaults the Ritual Graph to 2D (the user can still
+  pick 3D).
 - `prefers-reduced-motion` is not allowed to break the app; keep CSS animations
   subtle and avoid scroll-jacking.
 

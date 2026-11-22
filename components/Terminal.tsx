@@ -4,8 +4,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Check,
   Copy,
-  Download,
-  FileDiff,
   FileText,
   FlaskConical,
   Loader2,
@@ -14,7 +12,19 @@ import {
   SquareTerminal,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  EXPORT_ICONS,
+  ExportMenu,
+  type ExportMenuItem,
+} from "@/components/ExportMenu";
 import {
   diffLines,
   diffStats,
@@ -104,9 +114,13 @@ function downloadText(content: string, filename: string, type: string) {
 
 /** Uniform pinned-toolbar button: single line, never shrinks or truncates. */
 const ACTION_BUTTON =
-  "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.08em] transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-zinc-500 disabled:shadow-none";
+  "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border font-mono text-[12px] font-medium uppercase leading-none tracking-[0.08em] transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-zinc-500 disabled:shadow-none";
 
 type GrimoireTab = "logs" | "diff" | "sandbox";
+
+/** Toolbar label density: full labels → shorter labels → icon-heavy. */
+type ToolbarDensity = "full" | "compact" | "tight";
+const DENSITY_STEPS: ToolbarDensity[] = ["full", "compact", "tight"];
 
 const GRIMOIRE_TABS: Array<{ id: GrimoireTab; label: string }> = [
   { id: "logs", label: "Logs" },
@@ -206,6 +220,8 @@ export function Terminal({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState<GrimoireTab>("logs");
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [density, setDensity] = useState<ToolbarDensity>("full");
   const [testStatus, setTestStatus] = useState<
     "idle" | "running" | "passed" | "failed"
   >("idle");
@@ -362,6 +378,46 @@ export function Terminal({
     onExported?.();
   }, [onExported, patch]);
 
+  const testResult =
+    testHarness && (testStatus === "passed" || testStatus === "failed")
+      ? smokeLabel(testHarness, testStatus === "passed")
+      : null;
+
+  const exportItems: ExportMenuItem[] = [
+    {
+      id: "report",
+      label: "Export Report (.md)",
+      hint: "necrocode-exorcism-report.md",
+      icon: EXPORT_ICONS.report,
+      disabledReason:
+        !hasCode || originalCode === null
+          ? "Available after the ritual completes"
+          : undefined,
+      onSelect: handleExport,
+    },
+    {
+      id: "patch",
+      label: "Download Git Patch (.patch)",
+      hint: `necrocode-fix.patch · git apply → ${patchPath(filename, runnerLanguage.extension)}`,
+      icon: EXPORT_ICONS.patch,
+      disabledReason:
+        originalCode === null
+          ? "Available after the ritual completes"
+          : !patch
+            ? "No changes to patch"
+            : undefined,
+      onSelect: handlePatch,
+    },
+    {
+      id: "artifact",
+      label: "Download Artifact",
+      hint: "purified-artifact.ts",
+      icon: EXPORT_ICONS.artifact,
+      disabledReason: hasCode ? undefined : "No artifact yet",
+      onSelect: handleDownload,
+    },
+  ];
+
   const healthBefore = summary?.healthBefore;
   const healthAfter = summary?.healthAfter;
 
@@ -418,6 +474,36 @@ export function Terminal({
     startSandbox(false);
   }, [autoDemoNonce, finalCode, running, summary, startSandbox]);
 
+  // Toolbar density: start from "full" whenever the width or the content
+  // changes, then step down until the single row fits (before paint).
+  useLayoutEffect(() => {
+    setDensity("full");
+  }, [copied, testResult]);
+
+  useLayoutEffect(() => {
+    const element = toolbarRef.current;
+    if (!element) return;
+    if (element.scrollWidth > element.clientWidth + 1) {
+      const next = DENSITY_STEPS[DENSITY_STEPS.indexOf(density) + 1];
+      if (next) setDensity(next);
+    }
+  });
+
+  useEffect(() => {
+    const element = toolbarRef.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    let lastWidth = element.clientWidth;
+    const observer = new ResizeObserver(() => {
+      const width = element.clientWidth;
+      if (width !== lastWidth) {
+        lastWidth = width;
+        setDensity("full");
+      }
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
   // A new ritual always starts on the live log.
   useEffect(() => {
     if (running) setView("logs");
@@ -473,129 +559,122 @@ export function Terminal({
                 <span className="text-zinc-400">/100</span>
               </span>
             )}
-            <button
-              type="button"
-              onClick={handleDownload}
-              disabled={!hasCode}
-              title={hasCode ? "Download purified artifact" : "No artifact yet"}
-              className={[
-                "grid h-6 w-6 place-items-center rounded-md border transition",
-                hasCode
-                  ? "border-haunt/40 text-haunt hover:bg-haunt/10"
-                  : "cursor-not-allowed border-white/10 text-zinc-300",
-              ].join(" ")}
-            >
-              <Download className="h-3 w-3" aria-hidden />
-            </button>
           </div>
         </div>
 
 
-        <div data-terminal-actions className="px-2.5 pb-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={handleGenerateTest}
-            disabled={!finalCode || testStatus === "running"}
-            title={
-              runnerLanguage.id === "python" ||
-              runnerLanguage.id === "javascript" ||
-              runnerLanguage.id === "typescript" ||
-              runnerLanguage.id === "tsx"
-                ? `Generate and run a native ${runnerLanguage.label} assertion suite for the purified functions`
-                : `Run a ${runnerLanguage.label} smoke check: passes when the purified artifact exits with code 0`
-            }
-            className={`${ACTION_BUTTON} border-spectral/45 bg-spectral/10 text-spectral hover:bg-spectral/15 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)]`}
+        {/*
+          Single-row toolbar. Primary actions stay visible; exports live in
+          the Export menu. `density` steps down (labels → icons) only when the
+          row would overflow, measured in a layout effect before paint.
+        */}
+        <div
+          data-terminal-actions
+          data-density={density}
+          className={`flex items-center px-2.5 pb-2 ${density === "tight" ? "gap-1" : "gap-1.5"}`}
+        >
+          {/* Primary actions. Only this row scrolls (last resort); the Export
+              menu sits outside it so its dropdown is never clipped. */}
+          <div
+            ref={toolbarRef}
+            className={`flex min-w-0 flex-1 flex-nowrap items-center overflow-x-auto overflow-y-hidden ${
+              density === "tight" ? "gap-1" : "gap-1.5"
+            }`}
           >
-            {testStatus === "running" ? (
-              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
-            ) : (
-              <FlaskConical className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            )}
-            {testStatus === "running" ? "Testing" : "Gen test"}
-          </button>
-          <button
-            type="button"
-            onClick={handleSandbox}
-            disabled={!finalCode || sandboxStatus === "running"}
-            title={
-              finalCode
-                ? runnerLanguage.local
-                  ? "Run the purified JavaScript in a 2-second sandboxed Web Worker"
-                  : `Run the purified ${runnerLanguage.label} on the remote 25-second sandbox`
-                : "The sandbox is sealed until the purified artifact arrives"
-            }
-            className={`${ACTION_BUTTON} border-haunt/45 bg-haunt/10 text-haunt-glow hover:bg-haunt/15 hover:shadow-[0_0_20px_rgba(147,51,234,0.22)]`}
-          >
-            {sandboxStatus === "running" ? (
-              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
-            ) : (
-              <Play className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            )}
-            Test sandbox
-          </button>
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={!hasCode}
-            title={hasCode ? "Copy the purified artifact" : "No artifact yet"}
-            className={`${ACTION_BUTTON} border-neon/45 bg-neon/10 text-neon hover:bg-neon/15 hover:shadow-[0_0_20px_rgba(0,255,102,0.2)]`}
-          >
-            {copied ? (
-              <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            ) : (
-              <Copy className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            )}
-            {copied ? "Copied" : "Copy"}
-          </button>
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={!hasCode || originalCode === null}
-            title={
-              originalCode === null
-                ? "The autopsy is sealed until the ritual completes"
-                : "Download the exorcism autopsy report"
-            }
-            className={`${ACTION_BUTTON} border-spectral/45 bg-spectral/10 text-zinc-100 hover:bg-spectral/15 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)]`}
-          >
-            <FileText className="h-3.5 w-3.5 shrink-0 text-spectral" aria-hidden />
-            Report
-          </button>
-          <button
-            type="button"
-            onClick={handlePatch}
-            disabled={!patch}
-            title={
-              patch
-                ? `Download necrocode-fix.patch for ${patchPath(filename, runnerLanguage.extension)} — apply with: git apply necrocode-fix.patch`
-                : originalCode === null
-                  ? "The patch is sealed until the ritual completes"
-                  : "No changes to patch"
-            }
-            className={`${ACTION_BUTTON} border-neon/45 bg-neon/10 text-neon hover:bg-neon/15 hover:shadow-[0_0_20px_rgba(0,255,102,0.2)]`}
-          >
-            <FileDiff className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            .patch
-          </button>
-          <span
-            aria-live="polite"
-            className={[
-              "inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-full border px-2.5 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.08em]",
-              testStatus === "passed"
-                ? "border-neon/50 bg-neon/10 text-neon"
-                : testStatus === "failed"
-                  ? "border-crimson/50 bg-crimson/10 text-crimson"
-                  : "border-white/15 text-zinc-300",
-            ].join(" ")}
-          >
-            {testHarness && (testStatus === "passed" || testStatus === "failed")
-              ? smokeLabel(testHarness, testStatus === "passed")
-              : testStatus === "running"
-                ? "…"
-                : "Test"}
-          </span>
-        </div>
+            <button
+              type="button"
+              onClick={handleSandbox}
+              disabled={!finalCode || sandboxStatus === "running"}
+              aria-label="Test sandbox"
+              title={
+                finalCode
+                  ? runnerLanguage.local
+                    ? "Run the purified JavaScript in a 2-second sandboxed Web Worker"
+                    : `Run the purified ${runnerLanguage.label} on the remote 25-second sandbox`
+                  : "The sandbox is sealed until the purified artifact arrives"
+              }
+              className={`${ACTION_BUTTON} ${density === "tight" ? "px-2" : "px-2.5"} border-haunt/50 bg-haunt/15 text-haunt-glow hover:bg-haunt/20 hover:shadow-[0_0_20px_rgba(147,51,234,0.24)]`}
+            >
+              {sandboxStatus === "running" ? (
+                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+              ) : (
+                <Play className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              )}
+              {density === "full" ? "Test sandbox" : "Sandbox"}
+            </button>
+
+            <span className="inline-flex shrink-0 items-center">
+              <button
+                type="button"
+                onClick={handleGenerateTest}
+                disabled={!finalCode || testStatus === "running"}
+                aria-label="Gen test"
+                title={
+                  runnerLanguage.id === "python" ||
+                  runnerLanguage.id === "javascript" ||
+                  runnerLanguage.id === "typescript" ||
+                  runnerLanguage.id === "tsx"
+                    ? `Generate and run a native ${runnerLanguage.label} assertion suite for the purified functions`
+                    : `Run a ${runnerLanguage.label} smoke check: passes when the purified artifact exits with code 0`
+                }
+                className={`${ACTION_BUTTON} ${density === "tight" ? "px-2" : "px-2.5"} ${
+                  testResult ? "rounded-r-none border-r-0" : ""
+                } border-spectral/50 bg-spectral/10 text-spectral hover:bg-spectral/15 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)]`}
+              >
+                {testStatus === "running" ? (
+                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+                ) : (
+                  <FlaskConical className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                )}
+                {density === "tight" ? "Test" : "Gen test"}
+              </button>
+              {testResult && (
+                <span
+                  data-test-result={testStatus}
+                  title={testResult}
+                  className={[
+                    "inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-r-lg border px-2 font-mono text-[12px] font-bold uppercase leading-none tracking-[0.06em]",
+                    testStatus === "passed"
+                      ? "border-neon/50 bg-neon/15 text-neon"
+                      : "border-crimson/50 bg-crimson/15 text-crimson",
+                  ].join(" ")}
+                >
+                  {testStatus === "passed" ? (
+                    <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  ) : (
+                    <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  )}
+                  {density !== "tight" && (testStatus === "passed" ? "Pass" : "Fail")}
+                  <span className="sr-only">{testResult}</span>
+                </span>
+              )}
+            </span>
+            <span className="sr-only" aria-live="polite">
+              {testStatus === "running" ? "Smoke test running" : testResult ?? ""}
+            </span>
+
+            <button
+              type="button"
+              onClick={handleCopy}
+              disabled={!hasCode}
+              aria-label={copied ? "Copied" : "Copy purified code"}
+              title={hasCode ? "Copy the purified artifact" : "No artifact yet"}
+              className={`${ACTION_BUTTON} ${density === "full" ? "px-2.5" : "px-2"} border-neon/45 bg-neon/10 text-neon hover:bg-neon/15 hover:shadow-[0_0_20px_rgba(0,255,102,0.2)]`}
+            >
+              {copied ? (
+                <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              ) : (
+                <Copy className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              )}
+              {density === "full" && (copied ? "Copied" : "Copy")}
+            </button>
+
+          </div>
+          <ExportMenu
+            compact={density !== "full"}
+            items={exportItems}
+            className={`${ACTION_BUTTON} ${density === "full" ? "px-2.5" : "px-2"} border-white/20 bg-black/40 text-zinc-100 hover:border-white/35 hover:bg-white/[0.06] aria-expanded:border-haunt/60 aria-expanded:bg-haunt/10`}
+          />
         </div>
 
         <div

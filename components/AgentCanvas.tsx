@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
+import { supportsWebGL, WebGLBoundary } from "@/components/WebGLBoundary";
 import {
   AURA_HEX,
   AURA_LABEL,
@@ -51,8 +52,137 @@ const HELPER_STEPS = [
   "Click any 3D seal to inspect",
 ] as const;
 
+const HELPER_STEPS_2D = [
+  "Paste or fetch code",
+  "Click EXORCISE CODE",
+  "Click any stage to inspect",
+] as const;
+
 /** Bottom strip reserved for the first-run helper (up to two wrapped lines). */
 const FOOTER_HELPER_PX = 64;
+/** Top strip reserved for the panel header (title, view toggle, hint, aura). */
+const GRAPH_TOP_PX = 80;
+
+type GraphMode = "2d" | "3d";
+
+/**
+ * Lightweight 2D ritual pipeline: the same four stages, SSE status colors,
+ * bug badge, and click-to-inspect as the 3D graph, rendered as plain DOM.
+ * Used when the user picks 2D, `prefers-reduced-motion` is set, or WebGL is
+ * unavailable or lost.
+ */
+function RitualGraph2D({
+  nodes,
+  activeStage,
+  bugCount,
+  selected,
+  onSelect,
+  onClear,
+  reserveTopPx,
+  reserveBottomPx,
+}: {
+  nodes: NodeStatusMap;
+  activeStage: StageId | null;
+  bugCount: number;
+  selected: StageId | null;
+  onSelect: (stage: StageId) => void;
+  onClear: () => void;
+  reserveTopPx: number;
+  reserveBottomPx: number;
+}) {
+  return (
+    <div
+      data-graph-mode="2d"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClear();
+      }}
+      className="absolute inset-0 flex items-center justify-center overflow-y-auto px-4"
+      style={{ paddingTop: reserveTopPx, paddingBottom: reserveBottomPx + 8 }}
+    >
+      <ol
+        aria-label="Ritual pipeline"
+        className="flex w-full max-w-[360px] flex-col items-stretch"
+      >
+        {WORKFLOW_STAGES.map((stage, index) => {
+          const status = nodes[stage.id];
+          const color = STATUS_HEX[status];
+          const isSelected = selected === stage.id;
+          const isActive = activeStage === stage.id && status === "active";
+          const lit = status !== "pending";
+          return (
+            <li key={stage.id} className="flex flex-col items-center">
+              {index > 0 && (
+                <span
+                  aria-hidden
+                  className="my-1 h-5 w-px"
+                  style={{
+                    background: lit
+                      ? `linear-gradient(${STATUS_HEX[nodes[WORKFLOW_STAGES[index - 1].id]]}, ${color})`
+                      : "rgba(255,255,255,0.15)",
+                  }}
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => onSelect(stage.id)}
+                aria-pressed={isSelected}
+                aria-label={`${stage.label}: ${STATUS_LABEL[status]}${
+                  stage.id === "glitch_scanner" && bugCount > 0
+                    ? `, ${bugCount} bugs`
+                    : ""
+                }`}
+                data-stage-2d={stage.id}
+                data-status={status}
+                className={[
+                  "relative flex w-full items-center gap-3 rounded-xl border bg-[#0a0b14]/90 px-3 py-2.5 text-left transition hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
+                  isSelected ? "ring-2 ring-white/35" : "",
+                  isActive ? "motion-safe:animate-pulse" : "",
+                ].join(" ")}
+                style={{
+                  borderColor: `${color}${lit ? "99" : "40"}`,
+                  boxShadow: lit
+                    ? `0 0 ${isSelected ? 26 : 18}px ${color}33, inset 0 0 16px ${color}14`
+                    : "none",
+                }}
+              >
+                <span
+                  aria-hidden
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full border font-mono text-[15px]"
+                  style={{
+                    borderColor: `${color}80`,
+                    color: lit ? color : "#A1A1AA",
+                    background: `${color}14`,
+                  }}
+                >
+                  {stage.glyph}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-mono text-[13px] font-medium uppercase leading-tight tracking-[0.06em] text-zinc-100">
+                    {stage.label}
+                  </span>
+                  <span
+                    className="mt-0.5 block font-mono text-[12px] uppercase tracking-[0.1em]"
+                    style={{ color: lit ? color : "#A1A1AA" }}
+                  >
+                    {STATUS_LABEL[status]}
+                  </span>
+                </span>
+                {stage.id === "glitch_scanner" && bugCount > 0 && (
+                  <span
+                    data-bug-badge
+                    className="grid h-6 min-w-6 shrink-0 place-items-center rounded-full border border-crimson/60 bg-crimson px-1.5 font-mono text-[12px] font-bold text-black shadow-[0_0_16px_rgba(255,0,60,0.7)]"
+                  >
+                    {bugCount}
+                  </span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
 
 function formatMs(value: number | null): string {
   return value === null ? "—" : `${Math.round(value)} ms`;
@@ -171,6 +301,28 @@ export function AgentCanvas({
   const [selected, setSelected] = useState<StageId | null>(null);
   const [now, setNow] = useState(0);
 
+  // 2D / 3D view. `autoMode` stays null until mounted so SSR and the first
+  // client render match; it resolves to 2D for reduced motion or no WebGL.
+  const [autoMode, setAutoMode] = useState<GraphMode | null>(null);
+  const [userMode, setUserMode] = useState<GraphMode | null>(null);
+  const [webglOk, setWebglOk] = useState(true);
+
+  useEffect(() => {
+    const ok = supportsWebGL();
+    setWebglOk(ok);
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setAutoMode(!ok || query.matches ? "2d" : "3d");
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  const mode: GraphMode | null = !webglOk ? "2d" : (userMode ?? autoMode);
+  const disableWebGL = () => {
+    setWebglOk(false);
+    setSelected(null);
+  };
+
   useEffect(() => {
     setNow(Date.now());
     if (!running || !selected) return;
@@ -217,6 +369,8 @@ export function AgentCanvas({
 
   /** First-run guide: only before any ritual has produced events. */
   const showHelper = phase === "idle" && !running && logs.length === 0;
+  const reserveBottomPx =
+    phase === "complete" ? 104 : showHelper ? FOOTER_HELPER_PX : 44;
 
   const RITUAL_TIMELINE_STEPS: Array<{
     id: string;
@@ -245,11 +399,50 @@ export function AgentCanvas({
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 p-3">
         <div>
-          <h2 className="font-display text-xs font-bold uppercase tracking-[0.15em] text-white">
-            Ritual Graph
-          </h2>
-          <p className="mt-0.5 font-mono text-[12px] uppercase tracking-[0.2em] text-zinc-300">
-            Drag to orbit · click a seal
+          <div className="flex items-center gap-2">
+            <h2 className="font-display text-xs font-bold uppercase tracking-[0.15em] text-white">
+              Ritual Graph
+            </h2>
+            <div
+              role="group"
+              aria-label="Graph view"
+              className="pointer-events-auto flex rounded-md border border-white/15 bg-black/55 p-0.5 backdrop-blur-md"
+            >
+              {(["2d", "3d"] as const).map((option) => {
+                const unavailable = option === "3d" && !webglOk;
+                const pressed = mode === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={pressed}
+                    disabled={unavailable}
+                    onClick={() => {
+                      setUserMode(option);
+                      setSelected(null);
+                    }}
+                    title={
+                      unavailable
+                        ? "WebGL is unavailable on this device"
+                        : option === "2d"
+                          ? "Lightweight 2D pipeline"
+                          : "Interactive WebGL ritual graph"
+                    }
+                    className={[
+                      "h-6 min-w-[32px] rounded px-1.5 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.06em] transition disabled:cursor-not-allowed disabled:opacity-40",
+                      pressed
+                        ? "bg-white/15 text-white"
+                        : "text-zinc-300 hover:text-white",
+                    ].join(" ")}
+                  >
+                    {option.toUpperCase()}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <p className="mt-1 font-mono text-[12px] uppercase tracking-[0.16em] text-zinc-300">
+            {mode === "2d" ? "Click a stage to inspect" : "Drag to orbit · click a seal"}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1.5">
@@ -277,19 +470,35 @@ export function AgentCanvas({
       </header>
 
       <div className="absolute inset-0 z-10 flex min-h-0 flex-1">
-        <ExecutionGraph3D
-          nodes={nodes}
-          activeStage={activeStage}
-          bugCount={bugCount}
-          aura={aura}
-          selected={selected}
-          onSelect={setSelected}
-          onClear={() => setSelected(null)}
-          reserveTopPx={72}
-          reserveBottomPx={
-            phase === "complete" ? 104 : showHelper ? FOOTER_HELPER_PX : 44
-          }
-        />
+        {mode === null ? (
+          <GraphFallback />
+        ) : mode === "3d" ? (
+          <WebGLBoundary onError={disableWebGL}>
+            <ExecutionGraph3D
+              nodes={nodes}
+              activeStage={activeStage}
+              bugCount={bugCount}
+              aura={aura}
+              selected={selected}
+              onSelect={setSelected}
+              onClear={() => setSelected(null)}
+              reserveTopPx={GRAPH_TOP_PX}
+              reserveBottomPx={reserveBottomPx}
+              onContextLost={disableWebGL}
+            />
+          </WebGLBoundary>
+        ) : (
+          <RitualGraph2D
+            nodes={nodes}
+            activeStage={activeStage}
+            bugCount={bugCount}
+            selected={selected}
+            onSelect={setSelected}
+            onClear={() => setSelected(null)}
+            reserveTopPx={GRAPH_TOP_PX}
+            reserveBottomPx={reserveBottomPx}
+          />
+        )}
       </div>
 
       <div
@@ -434,7 +643,7 @@ export function AgentCanvas({
           className="pointer-events-none absolute inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0a0b14]/85 px-3 py-2.5 backdrop-blur-md"
         >
           <ol className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-[12px] leading-snug text-zinc-200">
-            {HELPER_STEPS.map((step, index) => (
+            {(mode === "2d" ? HELPER_STEPS_2D : HELPER_STEPS).map((step, index) => (
               <li key={step} className="flex items-center gap-2">
                 {index > 0 && (
                   <span className="text-haunt-glow" aria-hidden>

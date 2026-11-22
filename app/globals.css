@@ -124,6 +124,14 @@ body {
   }
 }
 
+@layer utilities {
+  /* Bottom padding that clears the iOS home indicator (needs viewport-fit=cover).
+     In the utilities layer so responsive variants like `lg:pb-4` still win. */
+  .pb-safe {
+    padding-bottom: max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem));
+  }
+}
+
 /* Drifting eerie fog */
 .fog-layer {
   background-image:

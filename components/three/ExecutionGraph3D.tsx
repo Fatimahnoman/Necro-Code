@@ -673,6 +673,7 @@ export function ExecutionGraph3D({
   onClear,
   reserveTopPx = 64,
   reserveBottomPx = 44,
+  onContextLost,
 }: {
   nodes: NodeStatusMap;
   activeStage: StageId | null;
@@ -685,6 +686,8 @@ export function ExecutionGraph3D({
   reserveTopPx?: number;
   /** Height of the HUD strip (footer or timeline) over the bottom, in px. */
   reserveBottomPx?: number;
+  /** Called if the browser drops the WebGL context (GPU reset, low memory). */
+  onContextLost?: () => void;
 }) {
   const nodeRefs = useRef<NodeRefMap>({
     input_code: { current: null },
@@ -701,7 +704,14 @@ export function ExecutionGraph3D({
         camera={{ position: [0, 0.18, CAMERA_Z], fov: CAMERA_FOV }}
         dpr={[1, 1.8]}
         gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
-        onCreated={({ gl }) => gl.setClearColor(0x06060c, 0)}
+        onCreated={({ gl }) => {
+          gl.setClearColor(0x06060c, 0);
+          gl.domElement.addEventListener(
+            "webglcontextlost",
+            () => onContextLost?.(),
+            { once: true },
+          );
+        }}
         onPointerMissed={onClear}
         style={{ touchAction: "none" }}
       >

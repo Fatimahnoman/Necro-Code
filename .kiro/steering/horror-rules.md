@@ -51,7 +51,9 @@ Three-pane HUD, responsive, zero horizontal scroll:
 0. **Header** (`app/page.tsx`)
    - Left: brand `NECROCODE` + `// AI CODE EXORCIST`, and one engine badge
      (`Live AI engine` / `Builtin safety net`).
-   - Right: `Auto demo` (crimson outline, secondary), `API Sigils`, `History`,
+   - Right: `Auto demo` (crimson → violet gradient fill + glow, the header's
+     one accent CTA), then quiet ghost buttons (`GHOST_PILL`: no fill,
+     `border-white/10 text-zinc-300`) for `API Sigils`, `History`,
      and one `FX & Audio` popover (`components/FxMenu.tsx`) holding the
      `Horror BGM`, `3D Audio FX`, `CRT`, and `Fog` switches. No phase, SSE, or
      aura pills in the header (the Spellbook shows the phase, the Ritual Graph
@@ -75,15 +77,25 @@ Three-pane HUD, responsive, zero horizontal scroll:
    - Click a seal to inspect its curse. Red pulsing border/aura on `error`.
    - After `complete`, a four-step timeline (`DORMANT · SCANNING · EXORCISING ·
      PURIFIED`) selects each stage for inspection.
+   - Header `2D | 3D` toggle. 2D (`RitualGraph2D` in `AgentCanvas.tsx`) is a
+     vertical DOM pipeline with the same `STATUS_HEX` colors, bug badge, and
+     click-to-inspect card. It is the default when `prefers-reduced-motion`
+     is set or WebGL is unavailable; a thrown canvas (`WebGLBoundary`) or a
+     `webglcontextlost` event switches to 2D and disables the 3D option.
    - Before the first run (`idle`, no logs), the footer shows the helper
      `1. Paste or fetch code → 2. Click EXORCISE CODE → 3. Click any 3D seal to
      inspect`; it is replaced by the SSE sync line once a run starts.
 3. **Right · Grimoire Terminal** (`Terminal`)
-   - Fixed top block that never scrolls: title row (health badge, download),
-     the action toolbar (`Gen test`, `Test sandbox`, `Copy`, `Report`,
-     `.patch`, test badge; `ACTION_BUTTON`, `h-8 whitespace-nowrap
-     text-[12px]`, disabled until an artifact exists), then three tabs:
-     `Logs`, `Spectral Diff`, `Sandbox`.
+   - Fixed top block that never scrolls: title row (health badge), one
+     toolbar row, then three tabs: `Logs`, `Spectral Diff`, `Sandbox`.
+   - Toolbar row: `Test sandbox`, `Gen test` with an attached PASS/FAIL pill
+     (full `smokeLabel()` text in the tooltip and for screen readers),
+     `Copy`, and an `Export ▾` menu (`components/ExportMenu.tsx`) holding
+     `Export Report (.md)`, `Download Git Patch (.patch)`, and
+     `Download Artifact`. The row never wraps: a layout effect steps
+     `density` full → compact → tight (shorter labels, then icons) until it
+     fits; only the primary group may scroll as a last resort. Buttons share
+     `ACTION_BUTTON` (`h-8 whitespace-nowrap text-[12px]`).
    - Tab badges: `Logs` pulses while running, `Spectral Diff` shows `-n +n`,
      `Sandbox` shows a status dot once output exists.
    - `Test sandbox` and `Gen test` switch to `Sandbox` (also on a language
@@ -105,10 +117,14 @@ Desktop grid (`lg+`), center column widest:
 `h-full min-h-0 flex flex-col rounded-2xl`.
 
 Mobile (`< lg`): a sticky three-tab switcher (`Spellbook` | `3D Ritual` |
-`Grimoire`) shows one panel at a time (`h-[calc(100dvh-210px)]
-min-h-[520px]`). All three panels stay mounted (hidden with CSS) so sandbox
-output and WebGL state survive tab switches. `Exorcise Code` and `AUTO DEMO`
-switch to `3D Ritual`; restoring a history entry switches to `Grimoire`.
+`Grimoire`) shows one panel at a time. Panel wrappers are flex columns
+sized by content between `min-h-[420px]` and `max-h-[78dvh]` (Ritual:
+`min-h-[max(420px,60dvh)]`, since all its layers are absolute); the panel
+inside fills the wrapper (`[&>*]:flex-1`). Switching tabs smooth-scrolls the
+panel under the tab bar (`scroll-mt-16`; instant with reduced motion). The
+grid uses `.pb-safe` (safe-area inset, `viewport-fit=cover`). All three
+panels stay mounted. `Exorcise Code` and `AUTO DEMO` switch to `3D Ritual`;
+restoring a history entry switches to `Grimoire`.
 
 Glass: panels are `#0a0b14` at 90% with a 12px backdrop blur, keeping the
 gradient rune border. CRT layers are faded by `--crt-opacity: 0.16` in

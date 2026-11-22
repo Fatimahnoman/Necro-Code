@@ -31,6 +31,8 @@ export const viewport: Viewport = {
   themeColor: "#06060c",
   width: "device-width",
   initialScale: 1,
+  // Lets `env(safe-area-inset-*)` (used by `.pb-safe`) report the notch/home bar.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
