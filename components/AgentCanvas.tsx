@@ -40,7 +40,7 @@ const STATUS_LABEL: Record<NodeStatus, string> = {
 };
 
 const STATUS_HEX: Record<NodeStatus, string> = {
-  pending: "#64748B",
+  pending: "#8A7D62",
   active: AURA_HEX.purple,
   done: AURA_HEX.green,
   error: AURA_HEX.crimson,
@@ -157,7 +157,7 @@ function RitualGraph2D({
                   {stage.glyph}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-mono text-[13px] font-medium uppercase leading-tight tracking-[0.06em] text-zinc-100">
+                  <span className="block font-display text-[13px] font-bold uppercase leading-tight tracking-[0.06em] text-bone">
                     {stage.label}
                   </span>
                   <span
@@ -385,7 +385,7 @@ export function AgentCanvas({
 
   return (
     <section
-      className={`rune-border horror-panel relative flex h-full min-h-0 flex-col justify-between overflow-hidden rounded-2xl bg-[#06060c]/55 ${
+      className={`rune-border horror-panel relative flex h-full min-h-0 flex-col justify-between overflow-hidden rounded-2xl bg-[#040408]/55 ${
         scanlines ? "scanlines" : ""
       }`}
     >
@@ -400,7 +400,7 @@ export function AgentCanvas({
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 p-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="font-display text-xs font-bold uppercase tracking-[0.15em] text-white">
+            <h2 className="font-display text-[15px] font-bold uppercase tracking-[0.18em] text-gold [text-shadow:0_0_12px_rgba(255,0,60,0.45)]">
               Ritual Graph
             </h2>
             <div
@@ -429,10 +429,10 @@ export function AgentCanvas({
                           : "Interactive WebGL ritual graph"
                     }
                     className={[
-                      "h-6 min-w-[32px] rounded px-1.5 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.06em] transition disabled:cursor-not-allowed disabled:opacity-40",
+                      "h-6 min-w-[32px] rounded px-1.5 font-sans text-[12px] font-bold uppercase leading-none tracking-[0.06em] transition disabled:cursor-not-allowed disabled:opacity-40",
                       pressed
-                        ? "bg-white/15 text-white"
-                        : "text-zinc-300 hover:text-white",
+                        ? "bg-gold/20 text-bone shadow-[inset_0_0_0_1px_rgba(226,217,200,0.45)]"
+                        : "text-bone/70 hover:text-bone",
                     ].join(" ")}
                   >
                     {option.toUpperCase()}
@@ -441,7 +441,7 @@ export function AgentCanvas({
               })}
             </div>
           </div>
-          <p className="mt-1 font-mono text-[12px] uppercase tracking-[0.16em] text-zinc-300">
+          <p className="mt-1 font-sans text-[12px] font-medium uppercase tracking-[0.14em] text-bone/75">
             {mode === "2d" ? "Click a stage to inspect" : "Drag to orbit · click a seal"}
           </p>
         </div>
@@ -485,6 +485,7 @@ export function AgentCanvas({
               reserveTopPx={GRAPH_TOP_PX}
               reserveBottomPx={reserveBottomPx}
               onContextLost={disableWebGL}
+              running={running}
             />
           </WebGLBoundary>
         ) : (
@@ -611,7 +612,7 @@ export function AgentCanvas({
                 onClick={() => setSelected(step.stageId)}
                 aria-pressed={selected === step.stageId}
                 className={[
-                  "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1.5 font-mono text-[12px] font-medium uppercase leading-tight tracking-[0.06em] transition",
+                  "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1.5 font-display text-[12px] font-bold uppercase leading-tight tracking-[0.06em] transition",
                   selected === step.stageId
                     ? "border-crimson/60 bg-crimson/10 text-crimson"
                     : "border-white/15 bg-black/50 text-zinc-200 hover:border-haunt/50 hover:text-haunt-glow",
@@ -642,7 +643,7 @@ export function AgentCanvas({
           data-ritual-helper
           className="pointer-events-none absolute inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0a0b14]/85 px-3 py-2.5 backdrop-blur-md"
         >
-          <ol className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-[12px] leading-snug text-zinc-200">
+          <ol className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-sans text-[12px] font-medium leading-snug text-bone">
             {(mode === "2d" ? HELPER_STEPS_2D : HELPER_STEPS).map((step, index) => (
               <li key={step} className="flex items-center gap-2">
                 {index > 0 && (

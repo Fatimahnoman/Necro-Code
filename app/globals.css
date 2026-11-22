@@ -3,16 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  /* Font variables (--font-brand, --font-ritual, --font-mono, --font-sans)
+     come from next/font in app/layout.tsx. */
+  --occult-blood: #ff003c;
+  --occult-amethyst: #9d4edd;
+  --occult-emerald: #00ff66;
+  --occult-gold: #e2d9c8;
 }
 
 html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  background-color: #06060c;
-  color: #e5e7eb;
+  background-color: #040408;
+  color: #e2d9c8;
 }
 
 * {
@@ -66,10 +70,126 @@ body {
       );
     backdrop-filter: blur(12px) saturate(140%);
     -webkit-backdrop-filter: blur(12px) saturate(140%);
+    /* Illuminated-artifact aura: gold top rim, blood + amethyst inner glow. */
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.04),
-      inset 0 0 60px rgba(0, 0, 0, 0.55),
-      0 26px 80px rgba(0, 0, 0, 0.6);
+      inset 0 1px 0 rgba(226, 217, 200, 0.07),
+      inset 0 0 0 1px rgba(226, 217, 200, 0.03),
+      inset 0 0 38px rgba(255, 0, 60, 0.06),
+      inset 0 -40px 70px rgba(157, 78, 221, 0.06),
+      inset 0 0 70px rgba(0, 0, 0, 0.55),
+      0 26px 80px rgba(0, 0, 0, 0.65);
+  }
+
+  /* Gothic sigil corners (see components/SigilFrame.tsx). */
+  .sigil-corner {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    pointer-events: none;
+    color: rgba(226, 217, 200, 0.72);
+    filter: drop-shadow(0 0 4px rgba(255, 0, 60, 0.35))
+      drop-shadow(0 0 10px rgba(157, 78, 221, 0.25));
+  }
+
+  /* Etched arcane plate: chamfered corners, engraved inner rim. */
+  .arcane-plate {
+    --plate: 226, 217, 200;
+    clip-path: polygon(
+      7px 0,
+      calc(100% - 7px) 0,
+      100% 7px,
+      100% calc(100% - 7px),
+      calc(100% - 7px) 100%,
+      7px 100%,
+      0 calc(100% - 7px),
+      0 7px
+    );
+    background: linear-gradient(
+      180deg,
+      rgba(var(--plate), 0.07),
+      rgba(var(--plate), 0.02)
+    );
+    box-shadow:
+      inset 0 0 0 1px rgba(var(--plate), 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      inset 0 -6px 12px rgba(0, 0, 0, 0.45);
+  }
+  .arcane-plate[aria-selected="true"] {
+    background: linear-gradient(
+      180deg,
+      rgba(var(--plate), 0.22),
+      rgba(var(--plate), 0.06)
+    );
+    box-shadow:
+      inset 0 0 0 1px rgba(var(--plate), 0.7),
+      inset 0 0 14px rgba(var(--plate), 0.28),
+      0 0 18px rgba(var(--plate), 0.2);
+  }
+
+  /* Ancient obsidian-parchment editor surface. */
+  .grimoire-editor {
+    background:
+      radial-gradient(
+        ellipse 120% 90% at 50% 0%,
+        rgba(226, 217, 200, 0.05),
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse at 50% 120%,
+        rgba(255, 0, 60, 0.06),
+        transparent 55%
+      ),
+      linear-gradient(180deg, #0b0a0c 0%, #060508 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(226, 217, 200, 0.1),
+      inset 0 0 40px rgba(0, 0, 0, 0.85),
+      inset 0 0 90px rgba(157, 78, 221, 0.05);
+  }
+
+  /*
+   * EXORCISE CODE trigger: a rotating conic "energy" border drawn by
+   * ::before, the blood-etched fill by ::after, content above both.
+   */
+  .ritual-trigger {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  .ritual-trigger::before {
+    content: "";
+    position: absolute;
+    inset: -150%;
+    z-index: -2;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(255, 0, 60, 0.95) 60deg,
+      rgba(226, 217, 200, 0.9) 95deg,
+      rgba(157, 78, 221, 0.9) 140deg,
+      transparent 200deg,
+      transparent 360deg
+    );
+    animation: spin 3.2s linear infinite;
+  }
+  .ritual-trigger::after {
+    content: "";
+    position: absolute;
+    inset: 1.5px;
+    z-index: -1;
+    border-radius: inherit;
+    background:
+      radial-gradient(
+        ellipse at 50% 0%,
+        rgba(255, 0, 60, 0.45),
+        transparent 70%
+      ),
+      linear-gradient(180deg, #3a0612 0%, #1a0309 60%, #12020a 100%);
+    box-shadow:
+      inset 0 0 18px rgba(255, 0, 60, 0.35),
+      inset 0 1px 0 rgba(226, 217, 200, 0.18);
+  }
+  .ritual-trigger:disabled::before {
+    animation-duration: 1.1s;
   }
 
   /* Glowing gradient rune border */
@@ -161,12 +281,12 @@ body {
 
 /*
  * CRT scanlines. The layers draw at full pattern strength and are faded by
- * `--crt-opacity` (0.16), so one variable tunes the whole effect. The overlay
+ * `--crt-opacity` (0.10), so one variable tunes the whole effect. The overlay
  * element itself keeps `animate-flicker`, which animates its own opacity.
- * Effective line alpha ≈ 0.075 × 0.16 ≈ 0.012.
+ * Effective line alpha ≈ 0.075 × 0.10 ≈ 0.0075.
  */
 :root {
-  --crt-opacity: 0.16;
+  --crt-opacity: 0.1;
 }
 
 .crt-overlay {
@@ -289,5 +409,15 @@ body {
   }
   100% {
     transform: translateY(100vh);
+  }
+}
+
+/* Respect reduced motion for the purely decorative loops. */
+@media (prefers-reduced-motion: reduce) {
+  .ritual-trigger::before,
+  .crt-overlay::after,
+  .scanlines::after,
+  .rune-ring {
+    animation: none;
   }
 }

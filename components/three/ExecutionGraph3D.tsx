@@ -1,6 +1,6 @@
 "use client";
 
-import { Line, OrbitControls, Sparkles } from "@react-three/drei";
+import { Line, OrbitControls, PointMaterial, Sparkles } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Suspense,
@@ -22,7 +22,7 @@ type NodeStatusMap = Record<StageId, NodeStatus>;
 type NodeRefMap = Record<StageId, MutableRefObject<THREE.Group | null>>;
 type LabelRefMap = Partial<Record<StageId, HTMLDivElement | null>>;
 
-const LABEL_OFFSET = new THREE.Vector3(0, -0.88, 0);
+const LABEL_OFFSET = new THREE.Vector3(0, -1.02, 0);
 const BADGE_OFFSET = new THREE.Vector3(0.52, 0.5, 0);
 
 /** Seal orbit: half-width / half-height of the ritual square (local units). */
@@ -40,8 +40,8 @@ const CAMERA_Z = 6.0;
 const CAMERA_FOV = 45;
 const MAX_GRAPH_SCALE = 1.15;
 const MIN_GRAPH_SCALE = 0.4;
-/** Seal ring radius × hover scale + float amplitude. */
-const SEAL_REACH = 0.82;
+/** Outer halo radius (0.8) × hover scale (1.16) + float amplitude. */
+const SEAL_REACH = 0.99;
 /** Half the height of a projected stage label (up to two 12px lines), in px. */
 const LABEL_HALF_HEIGHT_PX = 20;
 /** Gap kept between labels and the canvas edge, in px. */
@@ -94,8 +94,8 @@ const EDGES: Array<[StageId, StageId]> = [
 ];
 
 const STATUS_HEX: Record<NodeStatus, string> = {
-  pending: "#4B5563",
-  active: "#A855F7",
+  pending: "#6B5E45",
+  active: "#9D4EDD",
   done: "#00FF66",
   error: "#FF003C",
 };
@@ -113,10 +113,10 @@ function StageLabel({
 
   return (
     <div
-      className="flex w-max max-w-[var(--label-max,176px)] items-center justify-center gap-1.5 rounded-md border border-white/15 bg-[#0a0b14]/90 px-2 py-1 text-center font-mono text-[12px] font-medium uppercase leading-tight tracking-[0.08em] text-zinc-200 backdrop-blur-md"
+      className="flex w-max max-w-[var(--label-max,176px)] items-center justify-center gap-1.5 rounded-md border border-white/15 bg-[#0a0b14]/90 px-2 py-1 text-center font-display text-[12px] font-bold uppercase leading-tight tracking-[0.08em] text-bone backdrop-blur-md"
       style={{
         borderColor: `${color}66`,
-        color: status === "pending" ? "#E5E7EB" : color,
+        color: status === "pending" ? "#E2D9C8" : color,
         boxShadow:
           status === "pending"
             ? "none"
@@ -148,10 +148,23 @@ function StageNode3D({
   nodeRef: MutableRefObject<THREE.Group | null>;
 }) {
   const spinGroup = useRef<THREE.Group>(null);
+  const core = useRef<THREE.Mesh>(null);
+  const haloA = useRef<THREE.Mesh>(null);
+  const haloB = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
   const targetScale = useMemo(() => new THREE.Vector3(1, 1, 1), []);
   const color = STATUS_HEX[status];
+  const pending = status === "pending";
   const lit = status === "active" || status === "error";
+
+  // Faceted crystal edges, shared by the outline of this seal.
+  const crystalEdges = useMemo(() => {
+    const source = new THREE.OctahedronGeometry(0.5, 0);
+    const edges = new THREE.EdgesGeometry(source);
+    source.dispose();
+    return edges;
+  }, []);
+  useEffect(() => () => crystalEdges.dispose(), [crystalEdges]);
 
   useEffect(() => {
     return () => {
@@ -160,9 +173,9 @@ function StageNode3D({
   }, []);
 
   useFrame((state, delta) => {
+    const t = state.clock.elapsedTime;
     if (nodeRef.current) {
       const group = nodeRef.current;
-      const t = state.clock.elapsedTime;
       group.position.y = position[1] + Math.sin(t * 1.45 + position[0]) * 0.065;
       const desired = hovered || selected ? 1.16 : 1;
       targetScale.setScalar(desired);
@@ -171,12 +184,26 @@ function StageNode3D({
     if (spinGroup.current) {
       spinGroup.current.rotation.y += delta * (lit ? 0.85 : 0.22);
     }
+    if (core.current) {
+      const beat = lit ? 1 + Math.sin(t * (status === "error" ? 9 : 5)) * 0.22 : 1;
+      core.current.scale.setScalar(beat);
+    }
+    if (haloA.current) {
+      haloA.current.rotation.x += delta * (lit ? 1.1 : 0.35);
+      haloA.current.rotation.y += delta * 0.4;
+    }
+    if (haloB.current) {
+      haloB.current.rotation.y -= delta * (lit ? 0.9 : 0.28);
+      haloB.current.rotation.z += delta * 0.3;
+    }
   });
 
   return (
     <group ref={nodeRef} position={position}>
       <group ref={spinGroup}>
+        {/* Faceted obsidian crystal (the click target). */}
         <mesh
+          scale={[1, 1.25, 1]}
           onClick={(event) => {
             event.stopPropagation();
             onSelect();
@@ -191,41 +218,66 @@ function StageNode3D({
             document.body.style.cursor = "auto";
           }}
         >
-          <icosahedronGeometry args={[0.48, 1]} />
+          <octahedronGeometry args={[0.5, 0]} />
           <meshStandardMaterial
-            color={status === "pending" ? "#111827" : color}
+            color="#0b0a10"
             emissive={color}
-            emissiveIntensity={status === "pending" ? 0.08 : 1.15}
-            metalness={0.58}
-            roughness={0.3}
-            wireframe={status === "pending"}
+            emissiveIntensity={pending ? 0.05 : 0.32}
+            metalness={0.92}
+            roughness={0.16}
+            flatShading
             transparent
-            opacity={0.96}
+            opacity={0.9}
           />
         </mesh>
-        <mesh scale={0.62}>
-          <octahedronGeometry args={[0.48, 0]} />
+        <lineSegments geometry={crystalEdges} scale={[1.005, 1.256, 1.005]}>
+          <lineBasicMaterial
+            color={color}
+            transparent
+            opacity={pending ? 0.35 : 0.95}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </lineSegments>
+        {/* Glowing core shard. */}
+        <mesh ref={core}>
+          <icosahedronGeometry args={[0.19, 0]} />
           <meshBasicMaterial
             color={color}
-            wireframe
             transparent
-            opacity={status === "pending" ? 0.18 : 0.65}
+            opacity={pending ? 0.3 : 1}
+            blending={THREE.AdditiveBlending}
             depthWrite={false}
           />
         </mesh>
         <pointLight
           color={color}
-          intensity={lit ? 4.2 : 1.15}
+          intensity={lit ? 4.2 : pending ? 0.6 : 1.6}
           distance={3.6}
         />
       </group>
 
-      {selected && (
-        <mesh>
-          <torusGeometry args={[0.64, 0.009, 8, 72]} />
-          <meshBasicMaterial color={color} transparent opacity={0.85} />
-        </mesh>
-      )}
+      {/* Rotating energy halos. */}
+      <mesh ref={haloA}>
+        <torusGeometry args={[0.7, 0.008, 6, 72]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={pending ? 0.14 : selected ? 1 : 0.7}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh ref={haloB} rotation={[Math.PI / 2.6, 0, 0]}>
+        <torusGeometry args={[0.8, 0.005, 6, 72]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={pending ? 0.08 : selected ? 0.8 : 0.4}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
     </group>
   );
 }
@@ -429,11 +481,11 @@ function CentralRelic({ aura }: { aura: AuraState }) {
       {/* Skull sockets + glowing pupils */}
       <mesh position={[-0.25, 0.17, 0.72]} scale={[0.17, 0.11, 0.06]}>
         <sphereGeometry args={[1, 16, 16]} />
-        <meshBasicMaterial color="#06060c" />
+        <meshBasicMaterial color="#040408" />
       </mesh>
       <mesh position={[0.25, 0.17, 0.72]} scale={[0.17, 0.11, 0.06]}>
         <sphereGeometry args={[1, 16, 16]} />
-        <meshBasicMaterial color="#06060c" />
+        <meshBasicMaterial color="#040408" />
       </mesh>
       <mesh position={[-0.25, 0.17, 0.77]} scale={[0.048, 0.048, 0.02]}>
         <sphereGeometry args={[1, 12, 12]} />
@@ -445,7 +497,7 @@ function CentralRelic({ aura }: { aura: AuraState }) {
       </mesh>
       <mesh position={[0, -0.1, 0.75]} rotation={[Math.PI / 2, 0, 0]}>
         <coneGeometry args={[0.06, 0.16, 3]} />
-        <meshBasicMaterial color="#06060c" />
+        <meshBasicMaterial color="#040408" />
       </mesh>
 
       <pointLight
@@ -502,32 +554,68 @@ function CentralRelic({ aura }: { aura: AuraState }) {
   );
 }
 
-function FlowOrb({
+/**
+ * Particle stream along a conduit. Positions are rewritten every frame into
+ * one preallocated buffer (no per-frame allocation).
+ */
+function ConduitStream({
   from,
   to,
   color,
+  count,
+  speed,
+  opacity,
 }: {
   from: [number, number, number];
   to: [number, number, number];
   color: string;
+  count: number;
+  speed: number;
+  opacity: number;
 }) {
-  const ref = useRef<THREE.Mesh>(null);
-  const a = useMemo(() => new THREE.Vector3(from[0], from[1], from[2]), [from]);
-  const b = useMemo(() => new THREE.Vector3(to[0], to[1], to[2]), [to]);
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(count * 3), 3),
+    );
+    return geo;
+  }, [count]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  const len = Math.hypot(dx, dy) || 1;
+  // Unit normal in the graph plane, for a slight sinuous wobble.
+  const nx = -dy / len;
+  const ny = dx / len;
 
   useFrame((state) => {
-    if (!ref.current) return;
-    const t = (state.clock.elapsedTime * 0.55) % 1;
-    ref.current.position.lerpVectors(a, b, t);
-    const material = ref.current.material as THREE.MeshBasicMaterial;
-    material.opacity = 0.55 + Math.sin(t * Math.PI) * 0.45;
+    const attribute = geometry.getAttribute("position") as THREE.BufferAttribute;
+    const array = attribute.array as Float32Array;
+    const t = state.clock.elapsedTime;
+    for (let i = 0; i < count; i++) {
+      const p = (t * speed + i / count) % 1;
+      const wobble = Math.sin(p * Math.PI * 4 + t * 3 + i) * 0.045;
+      array[i * 3] = from[0] + dx * p + nx * wobble;
+      array[i * 3 + 1] = from[1] + dy * p + ny * wobble;
+      array[i * 3 + 2] = from[2] + Math.sin(p * Math.PI) * 0.12;
+    }
+    attribute.needsUpdate = true;
   });
 
   return (
-    <mesh ref={ref}>
-      <sphereGeometry args={[0.06, 10, 10]} />
-      <meshBasicMaterial color={color} transparent opacity={0.9} />
-    </mesh>
+    <points geometry={geometry} frustumCulled={false}>
+      <PointMaterial
+        transparent
+        color={color}
+        size={0.11}
+        sizeAttenuation
+        opacity={opacity}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
   );
 }
 
@@ -570,7 +658,203 @@ function Segment({
         opacity={lit ? 0.62 : 0.18}
         depthWrite={false}
       />
-      {flowing && <FlowOrb from={POSITIONS[from]} to={POSITIONS[to]} color={color} />}
+      {lit && (
+        <ConduitStream
+          from={POSITIONS[from]}
+          to={POSITIONS[to]}
+          color={color}
+          count={flowing ? 14 : 6}
+          speed={flowing ? 0.5 : 0.16}
+          opacity={flowing ? 0.95 : 0.45}
+        />
+      )}
+    </>
+  );
+}
+
+/** Radial rune ticks (varying lengths) for one altar ring, as line segments. */
+function runeTicks(count: number, inner: number, outer: number): THREE.BufferGeometry {
+  const positions = new Float32Array(count * 6);
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    // Deterministic rune rhythm: long, short, short, medium.
+    const reach = [1, 0.45, 0.45, 0.72][i % 4];
+    const r2 = inner + (outer - inner) * reach;
+    positions.set(
+      [Math.cos(angle) * inner, Math.sin(angle) * inner, 0, Math.cos(angle) * r2, Math.sin(angle) * r2, 0],
+      i * 6,
+    );
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  return geometry;
+}
+
+/**
+ * Summoning-altar floor beneath the relic: concentric glowing rune rings,
+ * tilted toward the floor and counter-rotating. Colors lerp to the aura.
+ */
+function AltarRings({ aura }: { aura: AuraState }) {
+  const outer = useRef<THREE.Group>(null);
+  const inner = useRef<THREE.Group>(null);
+  const materials = useRef<Array<THREE.MeshBasicMaterial | THREE.LineBasicMaterial | null>>([]);
+  const target = useMemo(() => new THREE.Color(AURA_HEX[aura]), [aura]);
+  const current = useRef(new THREE.Color(AURA_HEX[aura]));
+
+  const outerTicks = useMemo(() => runeTicks(72, 1.62, 1.86), []);
+  const innerTicks = useMemo(() => runeTicks(36, 1.06, 1.24), []);
+  useEffect(
+    () => () => {
+      outerTicks.dispose();
+      innerTicks.dispose();
+    },
+    [innerTicks, outerTicks],
+  );
+
+  useFrame((_, delta) => {
+    current.current.lerp(target, 0.05);
+    for (const material of materials.current) material?.color.copy(current.current);
+    if (outer.current) outer.current.rotation.z += delta * 0.12;
+    if (inner.current) inner.current.rotation.z -= delta * 0.2;
+  });
+
+  const bind = (index: number) => (material: THREE.MeshBasicMaterial | THREE.LineBasicMaterial | null) => {
+    materials.current[index] = material;
+  };
+
+  const glow = {
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  } as const;
+
+  return (
+    <group position={[0, -0.92, -0.6]} rotation={[-1.12, 0, 0]}>
+      <group ref={outer}>
+        <mesh>
+          <ringGeometry args={[1.9, 1.94, 128]} />
+          <meshBasicMaterial ref={bind(0)} {...glow} opacity={0.55} side={THREE.DoubleSide} />
+        </mesh>
+        <mesh>
+          <ringGeometry args={[1.56, 1.59, 128]} />
+          <meshBasicMaterial ref={bind(1)} {...glow} opacity={0.4} side={THREE.DoubleSide} />
+        </mesh>
+        <lineSegments geometry={outerTicks}>
+          <lineBasicMaterial ref={bind(2)} {...glow} opacity={0.6} />
+        </lineSegments>
+      </group>
+      <group ref={inner}>
+        <mesh>
+          <ringGeometry args={[1.28, 1.3, 96]} />
+          <meshBasicMaterial ref={bind(3)} {...glow} opacity={0.5} side={THREE.DoubleSide} />
+        </mesh>
+        <lineSegments geometry={innerTicks}>
+          <lineBasicMaterial ref={bind(4)} {...glow} opacity={0.55} />
+        </lineSegments>
+        {/* Inner sigil: a triangle inscribed in the ring. */}
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <ringGeometry args={[0.98, 1.0, 3]} />
+          <meshBasicMaterial ref={bind(5)} {...glow} opacity={0.35} side={THREE.DoubleSide} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+const SHOCKWAVE_POOL = 3;
+const SHOCKWAVE_SECONDS = 1.3;
+const PULSE_SECONDS = 1.2;
+const PULSE_ZOOM = 0.08;
+
+/**
+ * Ritual effects: a shockwave ring expands from the relic whenever the aura
+ * changes (and when a run starts), and the camera does a short zoom pulse
+ * when a run starts. Both are skipped under `prefers-reduced-motion`.
+ */
+function RitualFx({ running, aura }: { running: boolean; aura: AuraState }) {
+  const { camera } = useThree();
+  const waves = useRef<Array<THREE.Mesh | null>>([]);
+  const starts = useRef<number[]>(Array(SHOCKWAVE_POOL).fill(-Infinity));
+  const nextWave = useRef(0);
+  const pulseStart = useRef(-Infinity);
+  const clockNow = useRef(0);
+  const reduced = useRef(false);
+  const prevRunning = useRef(running);
+  const prevAura = useRef(aura);
+
+  useEffect(() => {
+    reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  const fireWave = (hex: string) => {
+    if (reduced.current) return;
+    const index = nextWave.current;
+    nextWave.current = (index + 1) % SHOCKWAVE_POOL;
+    starts.current[index] = clockNow.current;
+    const mesh = waves.current[index];
+    if (mesh) (mesh.material as THREE.MeshBasicMaterial).color.set(hex);
+  };
+
+  useEffect(() => {
+    if (running && !prevRunning.current && !reduced.current) {
+      pulseStart.current = clockNow.current;
+      fireWave(AURA_HEX[aura]);
+    }
+    prevRunning.current = running;
+    // Only the rising edge of `running` matters here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
+
+  useEffect(() => {
+    if (aura !== prevAura.current && aura !== "idle") fireWave(AURA_HEX[aura]);
+    prevAura.current = aura;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aura]);
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    clockNow.current = t;
+
+    waves.current.forEach((mesh, index) => {
+      if (!mesh) return;
+      const p = (t - starts.current[index]) / SHOCKWAVE_SECONDS;
+      const alive = p >= 0 && p < 1;
+      mesh.visible = alive;
+      if (!alive) return;
+      mesh.scale.setScalar(0.7 + p * 3.4);
+      (mesh.material as THREE.MeshBasicMaterial).opacity = (1 - p) * (1 - p) * 0.9;
+    });
+
+    const perspective = camera as THREE.PerspectiveCamera;
+    if (!perspective.isPerspectiveCamera) return;
+    const p = (t - pulseStart.current) / PULSE_SECONDS;
+    const zoom = p >= 0 && p < 1 ? 1 + Math.sin(p * Math.PI) * PULSE_ZOOM : 1;
+    if (perspective.zoom !== zoom) {
+      perspective.zoom = zoom;
+      perspective.updateProjectionMatrix();
+    }
+  });
+
+  return (
+    <>
+      {Array.from({ length: SHOCKWAVE_POOL }, (_, index) => (
+        <mesh
+          key={index}
+          visible={false}
+          ref={(mesh) => {
+            waves.current[index] = mesh;
+          }}
+        >
+          <ringGeometry args={[0.92, 1, 96]} />
+          <meshBasicMaterial
+            transparent
+            opacity={0}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      ))}
     </>
   );
 }
@@ -587,6 +871,7 @@ function Graph({
   badgeRef,
   reserveTopPx,
   reserveBottomPx,
+  running,
 }: {
   nodes: NodeStatusMap;
   activeStage: StageId | null;
@@ -599,6 +884,7 @@ function Graph({
   badgeRef: MutableRefObject<HTMLDivElement | null>;
   reserveTopPx: number;
   reserveBottomPx: number;
+  running: boolean;
 }) {
   const { size } = useThree();
   const { scale, offsetY } = fitGraph(
@@ -630,7 +916,9 @@ function Graph({
         noise={0.65}
       />
 
+      <AltarRings aura={aura} />
       <CentralRelic aura={aura} />
+      <RitualFx running={running} aura={aura} />
 
       {EDGES.map(([from, to]) => (
         <Segment
@@ -674,6 +962,7 @@ export function ExecutionGraph3D({
   reserveTopPx = 64,
   reserveBottomPx = 44,
   onContextLost,
+  running = false,
 }: {
   nodes: NodeStatusMap;
   activeStage: StageId | null;
@@ -688,6 +977,8 @@ export function ExecutionGraph3D({
   reserveBottomPx?: number;
   /** Called if the browser drops the WebGL context (GPU reset, low memory). */
   onContextLost?: () => void;
+  /** A ritual is streaming; its rising edge triggers the summoning pulse. */
+  running?: boolean;
 }) {
   const nodeRefs = useRef<NodeRefMap>({
     input_code: { current: null },
@@ -705,7 +996,7 @@ export function ExecutionGraph3D({
         dpr={[1, 1.8]}
         gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
         onCreated={({ gl }) => {
-          gl.setClearColor(0x06060c, 0);
+          gl.setClearColor(0x040408, 0);
           gl.domElement.addEventListener(
             "webglcontextlost",
             () => onContextLost?.(),
@@ -735,6 +1026,7 @@ export function ExecutionGraph3D({
             badgeRef={badgeRef}
             reserveTopPx={reserveTopPx}
             reserveBottomPx={reserveBottomPx}
+            running={running}
           />
         </Suspense>
         <OrbitControls

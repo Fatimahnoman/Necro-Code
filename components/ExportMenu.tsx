@@ -135,7 +135,7 @@ export function ExportMenu({
               >
                 <Icon className="mt-0.5 h-4 w-4 shrink-0 text-haunt-glow" aria-hidden />
                 <span className="min-w-0">
-                  <span className="block font-mono text-[13px] font-medium text-zinc-100">
+                  <span className="block font-sans text-[13px] font-semibold text-bone">
                     {item.label}
                   </span>
                   <span className="block truncate font-mono text-[12px] text-zinc-400">

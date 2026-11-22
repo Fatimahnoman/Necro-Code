@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, History, KeyRound, Skull, Sparkles } from "lucide-react";
+import { AlertTriangle, History, KeyRound, Sparkles } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { AgentCanvas } from "@/components/AgentCanvas";
@@ -9,6 +9,7 @@ import { ApiSigilsModal } from "@/components/ApiSigilsModal";
 import { ControlPanel } from "@/components/ControlPanel";
 import { HistoryDrawer } from "@/components/HistoryDrawer";
 import { FxMenu } from "@/components/FxMenu";
+import { SigilFrame } from "@/components/SigilFrame";
 import { Terminal } from "@/components/Terminal";
 import { WebGLBoundary } from "@/components/WebGLBoundary";
 import { auraFromState } from "@/lib/aura";
@@ -51,11 +52,36 @@ const DEFAULT_CODE = initialArtifact?.code ?? DEFAULT_CURSED_CODE;
 const DEFAULT_FILENAME = "cursed-ouroboros-loop.js";
 /** Shared header pill: 11px, single line, never shrinks, so pills never clip. */
 const HEADER_PILL =
-  "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.1em] transition";
+  "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-sans text-[12px] font-semibold uppercase leading-none tracking-[0.12em] transition";
 
 /** Quiet utility button: no fill, faint border, brightens on hover/focus. */
 const GHOST_PILL =
-  "border-white/10 bg-transparent text-zinc-300 hover:border-white/25 hover:bg-white/[0.04] hover:text-white focus-visible:border-white/30 focus-visible:text-white";
+  "border-gold/15 bg-white/[0.03] text-bone/85 backdrop-blur-md hover:border-gold/35 hover:bg-white/[0.06] hover:text-bone focus-visible:border-gold/45 focus-visible:text-bone";
+
+/** Header emblem: gold sigil circle with a blood inverted triangle and runes. */
+function SigilEmblem() {
+  return (
+    <div className="relative grid h-12 w-12 shrink-0 place-items-center">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,0,60,0.35),transparent_65%)] blur-[6px]"
+      />
+      <svg
+        viewBox="0 0 48 48"
+        aria-hidden
+        focusable="false"
+        className="rune-ring relative h-12 w-12 text-gold [animation-duration:40s] [filter:drop-shadow(0_0_6px_rgba(255,0,60,0.55))]"
+      >
+        <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" strokeWidth="1" strokeOpacity="0.8" />
+        <circle cx="24" cy="24" r="18.5" fill="none" stroke="currentColor" strokeWidth="0.6" strokeDasharray="2 3" strokeOpacity="0.6" />
+        <path d="M24 39 9.7 14.2h28.6Z" fill="none" stroke="#FF003C" strokeWidth="1.4" strokeLinejoin="round" />
+        <path d="M24 9v6M24 33v6M9 24h6M33 24h6" stroke="currentColor" strokeWidth="1" strokeOpacity="0.7" />
+        <circle cx="24" cy="22.5" r="3.2" fill="#FF003C" />
+        <circle cx="24" cy="22.5" r="1.2" fill="#E2D9C8" />
+      </svg>
+    </div>
+  );
+}
 
 type MobileTab = "spellbook" | "ritual" | "grimoire";
 
@@ -312,20 +338,22 @@ export default function Home() {
       )}
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-4 py-3 lg:h-screen lg:min-h-0 lg:py-4">
-        <header className="relative z-40 flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-crimson/15 py-3">
+        <header className="relative z-40 flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 py-3">
+          {/* Summoning-bar rule: gold hairline with a blood core. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,rgba(226,217,200,0.35)_20%,rgba(255,0,60,0.7)_50%,rgba(226,217,200,0.35)_80%,transparent)]"
+          />
           {/* Left · brand + active engine */}
           <div className="flex min-w-0 items-center gap-3">
-            <div className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full border border-crimson/40 bg-black/70 shadow-[0_0_26px_rgba(255,0,60,0.22)]">
-              <span className="pointer-events-none absolute -inset-1.5 animate-[spin_26s_linear_infinite] rounded-full border border-dashed border-haunt/25" />
-              <Skull className="h-5 w-5 text-crimson" aria-hidden />
-            </div>
+            <SigilEmblem />
             <div className="min-w-0">
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <h1 className="animate-flicker font-display text-xl font-extrabold uppercase tracking-[0.16em] text-white">
-                  NECROCODE
+                <h1 className="font-brand text-[22px] font-black uppercase leading-none tracking-[0.12em] text-gold [text-shadow:0_0_18px_rgba(255,0,60,0.45),0_0_2px_rgba(226,217,200,0.6)]">
+                  NecroCode
                 </h1>
-                <span className="font-mono text-[12px] uppercase tracking-[0.24em] text-crimson">
-                  {"// AI CODE EXORCIST"}
+                <span className="font-display text-[12px] font-semibold uppercase tracking-[0.22em] text-crimson [text-shadow:0_0_10px_rgba(255,0,60,0.5)]">
+                  {"// Occult Code Exorcist"}
                 </span>
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -354,7 +382,7 @@ export default function Home() {
                   />
                   {liveEngineActive ? "Live AI engine" : "Builtin safety net"}
                 </span>
-                <span className="hidden font-mono text-[12px] uppercase tracking-[0.18em] text-zinc-400 md:inline">
+                <span className="hidden font-display text-[12px] font-semibold uppercase tracking-[0.2em] text-gold-dim md:inline">
                   Kiroween 2026
                 </span>
               </div>
@@ -369,9 +397,9 @@ export default function Home() {
               disabled={state.running}
               aria-label="Run the one-click judge auto demo"
               title="Load the cursed async memory leak and run the full exorcism"
-              className={`${HEADER_PILL} border-crimson/70 bg-gradient-to-r from-crimson/35 via-crimson/20 to-haunt/40 font-bold text-white shadow-[0_0_22px_rgba(255,0,60,0.35),0_0_34px_rgba(147,51,234,0.22),inset_0_0_12px_rgba(255,0,60,0.2)] hover:from-crimson/45 hover:to-haunt/50 hover:shadow-[0_0_28px_rgba(255,0,60,0.45),0_0_42px_rgba(147,51,234,0.3),inset_0_0_14px_rgba(255,0,60,0.25)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none`}
+              className={`${HEADER_PILL} border-crimson bg-[linear-gradient(180deg,#5a0718_0%,#2a030c_55%,#3b0a2e_100%)] font-bold text-gold shadow-[0_0_22px_rgba(255,0,60,0.45),0_0_40px_rgba(157,78,221,0.25),inset_0_1px_0_rgba(226,217,200,0.35),inset_0_0_14px_rgba(255,0,60,0.35)] hover:text-white hover:shadow-[0_0_30px_rgba(255,0,60,0.6),0_0_52px_rgba(157,78,221,0.32),inset_0_1px_0_rgba(226,217,200,0.45),inset_0_0_18px_rgba(255,0,60,0.45)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none`}
             >
-              <Sparkles className="h-4 w-4 shrink-0 text-white" aria-hidden />
+              <Sparkles className="h-4 w-4 shrink-0 text-crimson" aria-hidden />
               Auto demo
             </button>
             <button
@@ -457,59 +485,65 @@ export default function Home() {
 
         <div className="pb-safe grid min-h-0 flex-1 grid-cols-1 gap-4 pt-4 lg:pb-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1.1fr)] lg:items-stretch xl:grid-cols-[minmax(330px,1fr)_minmax(440px,1.35fr)_minmax(360px,1.1fr)]">
           <div id="panel-spellbook" className={mobilePanel("spellbook")}>
-            <ControlPanel
-              code={code}
-              onCodeChange={handleCodeChange}
-              directive={directive}
-              onDirectiveChange={setDirective}
-              filename={filename}
-              onFilenameChange={setFilename}
-              language={language}
-              onLanguageChange={setLanguage}
-              onSelectPreset={handleSelectPreset}
-              selectedPresetId={selectedPresetId}
-              onRun={handleRun}
-              onReset={handleReset}
-              running={state.running}
-              phase={state.phase}
-              progress={state.progress}
-            />
+            <SigilFrame>
+              <ControlPanel
+                code={code}
+                onCodeChange={handleCodeChange}
+                directive={directive}
+                onDirectiveChange={setDirective}
+                filename={filename}
+                onFilenameChange={setFilename}
+                language={language}
+                onLanguageChange={setLanguage}
+                onSelectPreset={handleSelectPreset}
+                selectedPresetId={selectedPresetId}
+                onRun={handleRun}
+                onReset={handleReset}
+                running={state.running}
+                phase={state.phase}
+                progress={state.progress}
+              />
+            </SigilFrame>
           </div>
 
           <div id="panel-ritual" className={mobilePanel("ritual")}>
-            <AgentCanvas
-              nodes={state.nodes}
-              activeStage={state.activeStage}
-              bugCount={state.bugCount}
-              aura={aura}
-              progress={state.progress}
-              running={state.running}
-              phase={state.phase}
-              summary={state.summary}
-              logs={state.logs}
-              engine={state.engine}
-              scanlines={settings.scanlinesOn}
-            />
+            <SigilFrame>
+              <AgentCanvas
+                nodes={state.nodes}
+                activeStage={state.activeStage}
+                bugCount={state.bugCount}
+                aura={aura}
+                progress={state.progress}
+                running={state.running}
+                phase={state.phase}
+                summary={state.summary}
+                logs={state.logs}
+                engine={state.engine}
+                scanlines={settings.scanlinesOn}
+              />
+            </SigilFrame>
           </div>
 
           <div id="panel-grimoire" className={mobilePanel("grimoire")}>
-            <Terminal
-              logs={state.logs}
-              running={state.running}
-              scanlines={settings.scanlinesOn}
-              summary={state.summary}
-              finalCode={state.finalCode}
-              originalCode={state.originalCode}
-              findings={state.findings}
-              appliedFixes={state.appliedFixes}
-              engine={state.engine}
-              language={language}
-              filename={filename}
-              onCopied={() => play("copy")}
-              onExported={() => play("click")}
-              onSandbox={() => play("click")}
-              autoDemoNonce={autoDemoNonce}
-            />
+            <SigilFrame>
+              <Terminal
+                logs={state.logs}
+                running={state.running}
+                scanlines={settings.scanlinesOn}
+                summary={state.summary}
+                finalCode={state.finalCode}
+                originalCode={state.originalCode}
+                findings={state.findings}
+                appliedFixes={state.appliedFixes}
+                engine={state.engine}
+                language={language}
+                filename={filename}
+                onCopied={() => play("copy")}
+                onExported={() => play("click")}
+                onSandbox={() => play("click")}
+                autoDemoNonce={autoDemoNonce}
+              />
+            </SigilFrame>
           </div>
         </div>
 

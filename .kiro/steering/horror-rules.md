@@ -15,23 +15,56 @@ piece **and** a working analysis tool — never a fake spinner.
 
 Spec: `#[[file:../specs/necrocode-exorcist/design.md]]`
 
-## Palette (locked)
+## Occult Cyber-Gothic palette (locked)
 
 | Token | Hex | Role |
 | --- | --- | --- |
-| `void` | `#06060c` | Pitch-black base (`tailwind.config.ts`, `globals.css`) |
-| `crypt` / `charnel` | `#070A10` / `#0B0F17` | Panel depths |
-| `blood` | `#EF4444` | Bugs, danger, active curses |
-| `haunt` | `#9333EA` | Reasoning, runes, secondary glow |
-| `spectral` | `#06B6D4` | Scanning, system logs, active seals |
-| `ectoplasm` | `#4ADE80` | Cleansed / fixed / success |
-| `crimson` | `#FF003C` | 3D processing bugs / corruption aura |
-| `neon` | `#00FF66` | 3D exorcised aura / purified seals |
-| `bone` | `#E5E7EB` | Primary text |
+| `void` | `#040408` | Abyssal obsidian base (page, WebGL clear color) |
+| `crimson` | `#FF003C` | Blood crimson: bugs, corruption aura, CTAs, rune dots |
+| `amethyst` | `#9D4EDD` | Eldritch amethyst: channeling aura (`AURA_HEX.purple`), active seals |
+| `neon` | `#00FF66` | Necrotic emerald: purified aura, sealed stages |
+| `gold` / `bone` | `#E2D9C8` | Tarnished gold/bone: headings, primary text, sigil filigree |
+| `gold.dim` / `gold.deep` | `#A89C82` / `#6B5E45` | Secondary labels, pending seals |
+| `blood` / `haunt` / `spectral` | `#EF4444` / `#9333EA` / `#06B6D4` | Legacy accents still used by older components |
 
-No electric-blue `#00F0FF` palette from the old visual-agent build. No stock
-images, no remote audio assets (the only audio file is the bundled
-`public/audio/horror-bgm.mp3`), no inline SVG icons (use `lucide-react`).
+No electric-blue `#00F0FF`. No stock images or remote audio (only
+`public/audio/horror-bgm.mp3`). No inline SVG *icons* (use `lucide-react`);
+decorative SVG ornaments (`SigilFrame`, `SigilEmblem`, `SoulGauge`) are allowed.
+
+## Typography
+
+Loaded with `next/font/google` in `app/layout.tsx` (self-hosted at build time,
+no runtime request to Google), exposed as CSS variables:
+
+| Tailwind | Font | Use |
+| --- | --- | --- |
+| `font-brand` | Cinzel Decorative 700/900 | Brand wordmark only |
+| `font-display` | Cinzel 500–700 | Panel titles, stage titles, tabs, ritual trigger, small headings |
+| `font-sans` | Space Grotesk 400–700 | UI controls: buttons, pills, menus, hints |
+| `font-mono` | JetBrains Mono 400–700 | Code, logs, diffs, numbers |
+
+Minimum text size 12px. Primary text `text-bone`; secondary `text-bone/70–85`
+or `text-gold-dim`.
+
+## Sigil frames and surfaces
+
+- Every dashboard panel is wrapped in `SigilFrame` (`components/SigilFrame.tsx`):
+  four mirrored SVG corner brackets with filigree curls, a diamond rivet, and a
+  blood rune dot, drawn as a non-scrolling overlay (`.sigil-corner`).
+- `.horror-panel` adds a gold top rim and blood + amethyst inner aura shadows.
+- Grimoire tabs are etched plates (`.arcane-plate`): chamfered `clip-path`,
+  engraved inset rim, color from `--plate` (gold logs, amethyst diff,
+  emerald sandbox).
+- Editor surface `.grimoire-editor`: obsidian-parchment vignette with a dashed
+  gold rune gutter (line numbers; every 10th line marked `ᛟ` in crimson).
+  Lines do not wrap so the gutter stays aligned.
+- `EXORCISE CODE` uses `.ritual-trigger`: a rotating conic energy border
+  (`::before`) over a blood-etched fill (`::after`). It stays the only filled
+  CTA in the Spellbook; `AUTO DEMO` is the header's blood-forged CTA.
+- Health badge is a soul-purity gauge (`SoulGauge` in `Terminal.tsx`): a ring
+  filled to the purified score with a gold tick at the original score.
+- CRT layers are faded by `--crt-opacity: 0.10`. Decorative loops (ritual
+  border, CRT sweeps, emblem ring) stop under `prefers-reduced-motion`.
 
 ## Theme primitives
 
@@ -49,7 +82,7 @@ images, no remote audio assets (the only audio file is the bundled
 Three-pane HUD, responsive, zero horizontal scroll:
 
 0. **Header** (`app/page.tsx`)
-   - Left: brand `NECROCODE` + `// AI CODE EXORCIST`, and one engine badge
+   - Left: `SigilEmblem`, brand `NECROCODE` + `// OCCULT CODE EXORCIST`, and one engine badge
      (`Live AI engine` / `Builtin safety net`).
    - Right: `Auto demo` (crimson → violet gradient fill + glow, the header's
      one accent CTA), then quiet ghost buttons (`GHOST_PILL`: no fill,

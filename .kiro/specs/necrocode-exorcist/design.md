@@ -185,7 +185,7 @@ interface AgentCanvasProps {
 
 ### Header (`app/page.tsx`)
 
-- Brand `NECROCODE` (`text-xl font-extrabold tracking-[0.16em]`) with `// AI CODE EXORCIST`.
+- Header emblem `SigilEmblem` (gold circle, blood inverted triangle) + brand `NecroCode` in Cinzel Decorative (`font-brand`, uppercase) with `// Occult Code Exorcist` in Cinzel.
 - Left: brand + engine badge. Right: `Auto demo` (outline), `API Sigils`, `History`, `FxMenu` popover (`components/FxMenu.tsx`: four `role="switch"` rows; closes on outside click and Escape).
 - Below `lg`: sticky `Spellbook | 3D Ritual | Grimoire` tabs (`mobileTab` state). Panels stay mounted and are hidden with `hidden lg:block`.
 

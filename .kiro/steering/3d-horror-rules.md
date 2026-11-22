@@ -17,7 +17,7 @@ state.
 | --- | --- | --- |
 | `void` | `#06060c` | Page background, WebGL clear color (alpha 0), relic sockets |
 | `crimson` | `#FF003C` | Processing bugs, corruption aura, error seals |
-| `purple` | `#A855F7` | Channeling, reasoning, interactive hover |
+| `purple` | `#9D4EDD` | Eldritch amethyst: channeling, reasoning, active seals |
 | `neon` | `#00FF66` | Exorcised code, purified aura, completed seals |
 | `bone` | `#E5E7EB` | HTML labels and UI text over the canvas |
 
@@ -82,6 +82,29 @@ Two dedicated, dynamically imported client-only canvases:
 - Transparent materials set `depthWrite={false}` when they are additive or
   decorative.
 - Dispose/cleanup DOM cursor changes in `useEffect` returns.
+
+## Summoning altar
+
+- **Seals** (`StageNode3D`): a faceted obsidian octahedron (`flatShading`,
+  metalness 0.92, roughness 0.16, stretched 1.25× vertically) with glowing
+  status-colored edges (`EdgesGeometry`), a pulsing icosahedron core shard
+  (faster heartbeat on `error`), and two rotating energy halos (r 0.70 / 0.80).
+  The crystal mesh is the click target. Pending seals use tarnished gold
+  `#6B5E45`.
+- **Altar floor** (`AltarRings`): concentric additive rune rings and radial
+  rune ticks beneath the relic, tilted toward the floor (`rotation.x = -1.12`)
+  and counter-rotating (outer +0.12 rad/s, inner −0.2 rad/s), with an
+  inscribed triangle sigil. Colors lerp to the aura.
+- **Conduits** (`ConduitStream`): each lit edge carries a particle stream
+  (`points` + Drei `PointMaterial`, one preallocated buffer). Flowing edges:
+  14 particles, fast; sealed edges: 6, slow and dim.
+- **Ritual FX** (`RitualFx`): when a run starts, a 1.2s camera zoom pulse
+  (`camera.zoom` up to 1.08, so OrbitControls is untouched) and a shockwave
+  ring from the relic. Every later aura change (crimson ↔ amethyst → emerald)
+  emits another shockwave in the new color. Pool of 3 rings, 1.3s each.
+  Skipped under `prefers-reduced-motion`.
+- Stage labels use `font-display` (Cinzel) 12px bold; `LABEL_OFFSET` is
+  `-1.02` and `SEAL_REACH` `0.99` so labels clear the outer halo.
 
 ## Screen-space labels over WebGL
 

@@ -62,7 +62,7 @@ when the code exists in this repository.
   - [x] 10.3 Independent `Horror BGM` / `3D Audio FX` toggles in `useUiSettings`. _R7.6_
 
 - [x] 11. Dashboard and judge tools (`app/page.tsx`)
-  - [x] 11.1 `NECROCODE // AI CODE EXORCIST` header with status pill and toggles. _R8.1_
+  - [x] 11.1 `NECROCODE // OCCULT CODE EXORCIST` header with engine badge and utility controls. _R8.1_
   - [x] 11.2 Responsive grid: stacked on mobile; proportional `1.05fr / 1.35fr / 1.1fr` from `lg`, with 340 / 440 / 360px minimums from `xl`; `gap-4`. _R8.2_
   - [x] 11.3 `AUTO DEMO` with the `async-memory-leak` artifact, auto diff and sandbox. _R8.3, R8.4_
   - [x] 11.4 Grimoire History drawer (last 10, `localStorage`). _R8.5, R8.6_
@@ -132,3 +132,14 @@ when the code exists in this repository.
 - [ ] 24. Visual and build verification for task 23
   - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` (sandbox: stub typecheck only; no ESLint, no browser).
   - Check the toolbar at 300px, 360px, and 440px panel widths; the Export menu with the keyboard; 2D mode with reduced motion enabled and with WebGL disabled; mobile tab scroll on an iPhone-sized viewport.
+
+- [x] 25. Occult Cyber-Gothic visual upgrade
+  - [x] 25.1 `next/font` Cinzel Decorative / Cinzel / Space Grotesk / JetBrains Mono; obsidian / crimson / amethyst / emerald / gold palette.
+  - [x] 25.2 `SigilFrame` corner filigree on all three panels; `.arcane-plate` tabs; `SoulGauge` health badge; `SigilEmblem` header.
+  - [x] 25.3 Spellbook: obsidian editor with rune line gutter; `.ritual-trigger` energy border on `EXORCISE CODE`.
+  - [x] 25.4 Summoning altar: obsidian crystal seals with halos, altar rune rings, conduit particle streams, run-start camera pulse + aura shockwaves.
+  - [x] 25.5 `--crt-opacity: 0.10`; decorative loops stop under reduced motion.
+
+- [ ] 26. Visual and build verification for task 25
+  - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` (sandbox: stub typecheck only; `next/font` was not downloaded and the scene was not rendered).
+  - Check: fonts load, sigil corners at all three panels, gutter alignment at the bottom of a long file, the shockwave + zoom pulse on `EXORCISE CODE`, and 2D mode under reduced motion.

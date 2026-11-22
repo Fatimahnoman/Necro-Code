@@ -9,7 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        void: "#06060c",
+        void: "#040408",
         crypt: "#070A10",
         charnel: "#0B0F17",
         blood: {
@@ -31,14 +31,28 @@ const config: Config = {
           DEFAULT: "#4ADE80",
           dark: "#14532D",
         },
-        bone: "#E5E7EB",
+        bone: "#E2D9C8",
+        gold: {
+          DEFAULT: "#E2D9C8",
+          dim: "#A89C82",
+          deep: "#6B5E45",
+        },
+        amethyst: {
+          DEFAULT: "#9D4EDD",
+          glow: "#B67CF0",
+        },
         crimson: "#FF003C",
         neon: "#00FF66",
       },
       fontFamily: {
+        // Code + logs.
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
+        // UI controls (buttons, pills, tabs, labels).
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ["Georgia", "Cambria", "Times New Roman", "serif"],
+        // Ritual headers + stage titles.
+        display: ["var(--font-ritual)", "Georgia", "Cambria", "serif"],
+        // Brand wordmark only.
+        brand: ["var(--font-brand)", "var(--font-ritual)", "Georgia", "serif"],
       },
       boxShadow: {
         "glow-blood":

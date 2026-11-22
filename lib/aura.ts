@@ -9,7 +9,7 @@ export type AuraState = "idle" | "crimson" | "purple" | "green";
 export const AURA_HEX: Record<AuraState, string> = {
   idle: "#7C3AED",
   crimson: "#FF003C",
-  purple: "#A855F7",
+  purple: "#9D4EDD",
   green: "#00FF66",
 };
 

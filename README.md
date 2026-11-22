@@ -467,7 +467,7 @@ runner. 🎉
 ### 1. Verify the studio loads
 
 1. Open **http://localhost:3000**.
-2. Confirm the header reads **NECROCODE // AI CODE EXORCIST** and the live pills
+2. Confirm the header reads **NECROCODE // OCCULT CODE EXORCIST** and the live pills
    show a phase + `SSE LIVE` + a 3D aura.
 3. Confirm the header also shows **API SIGILS**, **HISTORY**, and
    `BUILTIN SAFETY NET` while no keys are configured.

@@ -76,6 +76,7 @@ export function ControlPanel({
   progress,
 }: ControlPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
   const githubInputRef = useRef<HTMLInputElement>(null);
   const githubAbortRef = useRef<AbortController | null>(null);
   const [githubOpen, setGithubOpen] = useState(false);
@@ -156,16 +157,16 @@ export function ControlPanel({
 
   return (
     <aside className="rune-border horror-panel relative flex h-full min-h-0 flex-col gap-3 overflow-x-hidden overflow-y-auto rounded-2xl p-4">
-      <header className="flex shrink-0 items-center gap-3 border-b border-white/5 pb-3">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-crimson/40 bg-crimson/10 shadow-[0_0_22px_rgba(255,0,60,0.22)]">
-          <Skull className="h-4.5 w-4.5 text-crimson" aria-hidden />
+      <header className="flex shrink-0 items-center gap-3 border-b border-gold/10 pb-3">
+        <div className="grid h-10 w-10 shrink-0 rotate-45 place-items-center rounded-md border border-gold/40 bg-[linear-gradient(135deg,rgba(255,0,60,0.25),rgba(157,78,221,0.15))] shadow-[0_0_22px_rgba(255,0,60,0.25),inset_0_0_10px_rgba(0,0,0,0.6)]">
+          <Skull className="h-4.5 w-4.5 -rotate-45 text-gold" aria-hidden />
         </div>
         <div className="min-w-0">
-          <h2 className="font-display text-xs font-bold uppercase tracking-[0.15em] text-white">
-            Spellbook
+          <h2 className="font-display text-[15px] font-bold uppercase tracking-[0.18em] text-gold">
+            Cursed Spellbook
           </h2>
-          <p className="font-mono text-[13px] uppercase tracking-[0.24em] text-zinc-300">
-            Cursed code editor · feed the pyre
+          <p className="font-sans text-[12px] font-medium uppercase tracking-[0.18em] text-bone/70">
+            Feed the pyre · write the curse
           </p>
         </div>
       </header>
@@ -173,7 +174,7 @@ export function ControlPanel({
       {/* Template selector */}
       <div className="shrink-0 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="whitespace-nowrap font-mono text-[12px] font-medium uppercase tracking-[0.18em] text-zinc-300">
+          <span className="whitespace-nowrap font-display text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim">
             Presets
           </span>
           <span className="flex shrink-0 items-center gap-1.5">
@@ -184,22 +185,22 @@ export function ControlPanel({
               aria-controls="github-summon"
               title="Summon a file from a public GitHub repository"
               className={[
-                "inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.12em] transition",
+                "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 font-sans text-[12px] font-semibold uppercase leading-none tracking-[0.1em] transition",
                 githubOpen
-                  ? "border-haunt/60 bg-haunt/15 text-haunt-glow"
-                  : "border-haunt/40 bg-haunt/5 text-zinc-200 hover:bg-haunt/10 hover:text-white",
+                  ? "border-amethyst/70 bg-amethyst/15 text-bone shadow-[0_0_14px_rgba(157,78,221,0.3)]"
+                  : "border-amethyst/35 bg-amethyst/5 text-bone/90 hover:border-amethyst/60 hover:bg-amethyst/10 hover:text-bone",
               ].join(" ")}
             >
-              <GitBranch className="h-3.5 w-3.5 shrink-0 text-haunt-glow" aria-hidden />
+              <GitBranch className="h-4 w-4 shrink-0 text-amethyst-glow" aria-hidden />
               GitHub
             </button>
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               title="Upload a cursed artifact in any supported language"
-              className="inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-spectral/40 bg-spectral/5 px-2 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.12em] text-zinc-200 transition hover:bg-spectral/10 hover:text-white"
+              className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-gold/25 bg-gold/5 px-2.5 font-sans text-[12px] font-semibold uppercase leading-none tracking-[0.1em] text-bone/90 transition hover:border-gold/50 hover:bg-gold/10 hover:text-bone"
             >
-              <Upload className="h-3.5 w-3.5 shrink-0 text-spectral" aria-hidden />
+              <Upload className="h-4 w-4 shrink-0 text-gold" aria-hidden />
               Upload
             </button>
           </span>
@@ -263,9 +264,9 @@ export function ControlPanel({
         )}
 
         <div className="relative flex items-center gap-2">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-black/50">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-amethyst/40 bg-amethyst/10 shadow-[inset_0_0_10px_rgba(157,78,221,0.2)]">
             <SelectedIcon
-              className="h-3.5 w-3.5 text-haunt"
+              className="h-4 w-4 text-amethyst-glow"
               aria-hidden
             />
           </span>
@@ -278,7 +279,7 @@ export function ControlPanel({
                 }
               }}
               aria-label="Cursed preset"
-              className="w-full appearance-none rounded-lg border border-white/10 bg-black/60 py-1.5 pl-2.5 pr-8 font-mono text-[13px] uppercase tracking-[0.12em] text-bone outline-none transition [color-scheme:dark] focus:border-haunt/50"
+              className="h-8 w-full appearance-none rounded-lg border border-gold/15 bg-black/60 pl-2.5 pr-8 font-sans text-[13px] font-medium uppercase tracking-[0.08em] text-bone outline-none transition [color-scheme:dark] hover:border-gold/30 focus:border-amethyst/60"
             >
               <option value="custom" disabled className="bg-crypt text-bone">
                 Custom relic
@@ -310,9 +311,9 @@ export function ControlPanel({
       <div className="shrink-0 space-y-1">
         <label
           htmlFor="ritual-directive"
-          className="flex items-center gap-1.5 font-mono text-[13px] uppercase tracking-[0.24em] text-zinc-300"
+          className="flex items-center gap-1.5 font-display text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim"
         >
-          <Wand2 className="h-2.5 w-2.5 text-spectral" aria-hidden />
+          <Wand2 className="h-3.5 w-3.5 text-amethyst-glow" aria-hidden />
           Ritual Directive
           <span className="tracking-[0.16em] text-zinc-300">(optional)</span>
         </label>
@@ -335,8 +336,8 @@ export function ControlPanel({
       */}
       <div className="flex flex-1 flex-col gap-2">
         <div className="flex shrink-0 items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5 font-mono text-[13px] uppercase tracking-[0.24em] text-zinc-300">
-            <Sparkles className="h-2.5 w-2.5 text-haunt" aria-hidden />
+          <span className="flex items-center gap-1.5 font-display text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim">
+            <Sparkles className="h-3.5 w-3.5 text-crimson" aria-hidden />
             Artifact
           </span>
           <span className="flex min-w-0 items-center gap-1.5">
@@ -369,21 +370,47 @@ export function ControlPanel({
           </span>
         </div>
 
-        <div className="flex min-h-[220px] w-full flex-1">
+        {/*
+          Obsidian editor with a rune-divided line gutter. Lines do not wrap
+          (horizontal scroll instead) so gutter numbers stay aligned; the
+          gutter mirrors the textarea's vertical scroll.
+        */}
+        <div className="grimoire-editor flex min-h-[220px] w-full flex-1 overflow-hidden rounded-lg transition focus-within:shadow-[inset_0_0_0_1px_rgba(157,78,221,0.55),0_0_18px_rgba(157,78,221,0.15)]">
+          <div
+            ref={gutterRef}
+            aria-hidden
+            className="w-11 shrink-0 select-none overflow-hidden border-r border-dashed border-gold/20 bg-black/30 pb-8 pr-2 pt-3 text-right font-mono text-[12px] leading-[20px] text-gold-dim/70 tabular-nums"
+          >
+            {lines.map((_, index) => (
+              <div
+                key={index}
+                className={
+                  (index + 1) % 10 === 0 ? "text-crimson/80" : undefined
+                }
+              >
+                {(index + 1) % 10 === 0 ? `ᛟ${index + 1}` : index + 1}
+              </div>
+            ))}
+          </div>
           <textarea
             value={code}
             onChange={(event) => onCodeChange(event.target.value)}
+            onScroll={(event) => {
+              if (gutterRef.current) {
+                gutterRef.current.scrollTop = event.currentTarget.scrollTop;
+              }
+            }}
             rows={8}
-            wrap="soft"
+            wrap="off"
             spellCheck={false}
             aria-label="Cursed code artifact"
             placeholder="// Paste a cursed artifact in any supported language…"
-            className="h-full min-h-[220px] w-full flex-1 resize-none overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-purple-800/50 bg-black/80 p-3 font-mono text-[13px] leading-relaxed text-purple-100 outline-none transition placeholder:text-purple-300/30 focus:border-haunt/60 focus:shadow-[0_0_18px_rgba(147,51,234,0.12)]"
+            className="h-full min-h-[220px] w-full min-w-0 flex-1 resize-none overflow-auto whitespace-pre bg-transparent px-3 py-3 font-mono text-[13px] leading-[20px] text-bone caret-crimson outline-none placeholder:text-zinc-500"
           />
         </div>
 
         <div
-          className="flex min-h-[20px] shrink-0 items-center justify-between gap-3 font-mono text-[12px] uppercase leading-5 tracking-[0.1em] text-zinc-200 tabular-nums"
+          className="flex min-h-[20px] shrink-0 items-center justify-between gap-3 font-sans text-[12px] font-medium uppercase leading-5 tracking-[0.1em] text-bone/85 tabular-nums"
           aria-live="off"
         >
           <span className="whitespace-nowrap">
@@ -396,11 +423,11 @@ export function ControlPanel({
       </div>
 
       {/* Ritual controls */}
-      <div className="flex shrink-0 flex-col gap-2 border-t border-purple-900/30 bg-[#0D111D] pt-2.5">
+      <div className="flex shrink-0 flex-col gap-2 border-t border-gold/10 pt-2.5">
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between font-mono text-[12px] font-medium uppercase leading-5 tracking-[0.12em] text-zinc-200 tabular-nums">
+          <div className="flex items-center justify-between font-display text-[12px] font-semibold uppercase leading-5 tracking-[0.16em] text-bone tabular-nums">
             <span>{PHASE_LABEL[phase]}</span>
-            <span className={running ? "text-crimson" : "text-zinc-200"}>
+            <span className={`font-mono ${running ? "text-crimson" : "text-bone"}`}>
               {progress}%
             </span>
           </div>
@@ -420,16 +447,16 @@ export function ControlPanel({
           disabled={running}
           whileHover={running ? undefined : { scale: 1.012 }}
           whileTap={running ? undefined : { scale: 0.985 }}
-          className="flex h-12 min-h-[48px] w-full shrink-0 items-center justify-center rounded-xl border border-crimson bg-gradient-to-r from-crimson/30 via-crimson/20 to-haunt/25 px-4 font-display text-[15px] font-bold uppercase tracking-[0.22em] text-white shadow-[0_0_36px_rgba(255,0,60,0.38),inset_0_0_18px_rgba(255,0,60,0.25)] transition hover:from-crimson/40 hover:shadow-[0_0_52px_rgba(255,0,60,0.5),inset_0_0_22px_rgba(255,0,60,0.3)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="ritual-trigger flex h-12 min-h-[48px] w-full shrink-0 items-center justify-center rounded-xl px-4 font-display text-[16px] font-bold uppercase tracking-[0.2em] text-gold shadow-[0_0_36px_rgba(255,0,60,0.4),0_0_60px_rgba(157,78,221,0.18)] transition-shadow [text-shadow:0_0_12px_rgba(255,0,60,0.8)] hover:shadow-[0_0_52px_rgba(255,0,60,0.55),0_0_80px_rgba(157,78,221,0.25)] disabled:cursor-not-allowed disabled:opacity-80"
         >
           <span className="flex items-center justify-center gap-2.5">
             {running ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             ) : (
-              <Skull className="h-4 w-4" aria-hidden />
+              <Skull className="h-4 w-4 text-crimson" aria-hidden />
             )}
             {running ? "Exorcising…" : "Exorcise Code"}
-            <span className="font-mono text-[12px] tracking-[0.14em] text-white/70">
+            <span className="font-mono text-[12px] tracking-[0.12em] text-bone/70 [text-shadow:none]">
               {running ? `${progress}%` : "SSE"}
             </span>
           </span>
@@ -439,7 +466,7 @@ export function ControlPanel({
           type="button"
           onClick={onReset}
           disabled={running}
-          className="flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-white/5 bg-black/25 px-3 font-mono text-[13px] uppercase tracking-[0.22em] text-zinc-300 transition hover:border-haunt/35 hover:text-haunt disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gold/10 bg-black/25 px-3 font-sans text-[12px] font-semibold uppercase tracking-[0.18em] text-bone/75 transition hover:border-amethyst/45 hover:text-bone disabled:cursor-not-allowed disabled:opacity-40"
         >
           <RotateCcw className="h-3 w-3" aria-hidden />
           Banish ritual

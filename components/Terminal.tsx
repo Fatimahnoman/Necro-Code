@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import {
+  type CSSProperties,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -94,6 +95,51 @@ const HEALTH_COLOR: Record<HealthTier, string> = {
   pure: "text-neon",
 };
 
+const HEALTH_HEX: Record<HealthTier, string> = {
+  cursed: "#FF003C",
+  haunted: "#FCD34D",
+  pure: "#00FF66",
+};
+
+/**
+ * Soul-purity gauge: a ring filled to the purified score, with a faint tick
+ * where the original score sat. Decorative; the numbers beside it carry the
+ * meaning (and the parent has an aria-label).
+ */
+function SoulGauge({ before, after }: { before: number; after: number }) {
+  const radius = 9;
+  const length = 2 * Math.PI * radius;
+  const color = HEALTH_HEX[healthTier(after)];
+  const beforeAngle = (Math.min(100, Math.max(0, before)) / 100) * 2 * Math.PI - Math.PI / 2;
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden focusable="false" className="h-6 w-6 shrink-0">
+      <circle cx="12" cy="12" r={radius} fill="none" stroke="rgba(226,217,200,0.14)" strokeWidth="2.5" />
+      <circle
+        cx="12"
+        cy="12"
+        r={radius}
+        fill="none"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeDasharray={`${(Math.min(100, Math.max(0, after)) / 100) * length} ${length}`}
+        transform="rotate(-90 12 12)"
+        style={{ filter: `drop-shadow(0 0 3px ${color})` }}
+      />
+      <line
+        x1={12 + Math.cos(beforeAngle) * 6.5}
+        y1={12 + Math.sin(beforeAngle) * 6.5}
+        x2={12 + Math.cos(beforeAngle) * 11.5}
+        y2={12 + Math.sin(beforeAngle) * 11.5}
+        stroke="#E2D9C8"
+        strokeOpacity="0.8"
+        strokeWidth="1.2"
+      />
+      <circle cx="12" cy="12" r="2" fill={color} />
+    </svg>
+  );
+}
+
 const HEALTH_BORDER: Record<HealthTier, string> = {
   cursed: "border-crimson/40 shadow-[0_0_12px_rgba(255,0,60,0.18)]",
   haunted: "border-amber-300/40 shadow-[0_0_12px_rgba(252,211,77,0.14)]",
@@ -114,7 +160,7 @@ function downloadText(content: string, filename: string, type: string) {
 
 /** Uniform pinned-toolbar button: single line, never shrinks or truncates. */
 const ACTION_BUTTON =
-  "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border font-mono text-[12px] font-medium uppercase leading-none tracking-[0.08em] transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-zinc-500 disabled:shadow-none";
+  "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border font-sans text-[12px] font-semibold uppercase leading-none tracking-[0.08em] text-bone transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-zinc-500 disabled:shadow-none";
 
 type GrimoireTab = "logs" | "diff" | "sandbox";
 
@@ -128,10 +174,11 @@ const GRIMOIRE_TABS: Array<{ id: GrimoireTab; label: string }> = [
   { id: "sandbox", label: "Sandbox" },
 ];
 
-const TAB_SELECTED: Record<GrimoireTab, string> = {
-  logs: "border-spectral/50 bg-spectral/15 text-spectral shadow-[0_0_12px_rgba(6,182,212,0.14)]",
-  diff: "border-haunt/50 bg-haunt/15 text-haunt-glow shadow-[0_0_12px_rgba(147,51,234,0.14)]",
-  sandbox: "border-neon/45 bg-neon/10 text-neon shadow-[0_0_12px_rgba(0,255,102,0.12)]",
+/** RGB for each tab's etched plate (`.arcane-plate` reads `--plate`). */
+const TAB_PLATE: Record<GrimoireTab, string> = {
+  logs: "226, 217, 200",
+  diff: "157, 78, 221",
+  sandbox: "0, 255, 102",
 };
 
 const SANDBOX_DOT: Record<"running" | "complete" | "error" | "timeout", string> = {
@@ -516,25 +563,20 @@ export function Terminal({
       }`}
     >
       {/* Header + pinned action toolbar + tabs: never scroll. */}
-      <div className="relative z-30 shrink-0 border-b border-white/10 bg-[#0a0b14]/95 backdrop-blur-md">
+      <div className="relative z-30 shrink-0 border-b border-gold/15 bg-[#0a0b14]/95 backdrop-blur-md">
         <div className="flex items-center gap-2 px-3 pb-1.5 pt-2.5">
-          <div className="flex gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-crimson shadow-[0_0_8px_rgba(255,0,60,0.8)]" />
-            <span className="h-2 w-2 rounded-full bg-haunt/80" />
-            <span className="h-2 w-2 rounded-full bg-neon/70" />
-          </div>
-          <div className="ml-1 flex min-w-0 items-center gap-1.5">
+          <div className="flex min-w-0 items-center gap-2">
             <SquareTerminal
-              className="h-3.5 w-3.5 shrink-0 text-spectral"
+              className="h-4 w-4 shrink-0 text-crimson [filter:drop-shadow(0_0_6px_rgba(255,0,60,0.6))]"
               aria-hidden
             />
-            <span className="truncate font-mono text-xs font-bold uppercase tracking-[0.15em] text-white">
-              Grimoire Terminal
+            <span className="truncate font-display text-[15px] font-bold uppercase tracking-[0.18em] text-gold">
+              Grimoire
             </span>
           </div>
 
           {running && (
-            <span className="ml-1 inline-flex items-center gap-1 font-mono text-[12px] uppercase tracking-[0.2em] text-crimson">
+            <span className="ml-1 inline-flex items-center gap-1 font-sans text-[12px] font-semibold uppercase tracking-[0.16em] text-crimson">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-crimson" />
               live
             </span>
@@ -547,16 +589,18 @@ export function Terminal({
                 data-health-after={healthAfter}
                 title={`Code Health & Security Score before → after exorcism. 100 minus ${HEALTH_WEIGHTS.critical} per critical, ${HEALTH_WEIGHTS.warning} per warning, ${HEALTH_WEIGHTS.info} per info finding.`}
                 aria-label={`Health score ${healthBefore} out of 100 before, ${healthAfter} out of 100 after`}
-                className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md border bg-black/50 px-1.5 py-0.5 font-mono text-[12px] uppercase tracking-[0.08em] ${HEALTH_BORDER[healthTier(healthAfter)]}`}
+                className={`inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border bg-black/55 pl-1 pr-2.5 font-mono text-[12px] uppercase tracking-[0.06em] ${HEALTH_BORDER[healthTier(healthAfter)]}`}
               >
+                <SoulGauge before={healthBefore} after={healthAfter} />
+                <span className="sr-only">Soul purity</span>
                 <span className={HEALTH_COLOR[healthTier(healthBefore)]}>
                   {healthBefore}
                 </span>
-                <span className="text-zinc-400">→</span>
+                <span className="text-bone/60">→</span>
                 <span className={`font-bold ${HEALTH_COLOR[healthTier(healthAfter)]}`}>
                   {healthAfter}
                 </span>
-                <span className="text-zinc-400">/100</span>
+                <span className="text-bone/60">/100</span>
               </span>
             )}
           </div>
@@ -593,12 +637,12 @@ export function Terminal({
                     : `Run the purified ${runnerLanguage.label} on the remote 25-second sandbox`
                   : "The sandbox is sealed until the purified artifact arrives"
               }
-              className={`${ACTION_BUTTON} ${density === "tight" ? "px-2" : "px-2.5"} border-haunt/50 bg-haunt/15 text-haunt-glow hover:bg-haunt/20 hover:shadow-[0_0_20px_rgba(147,51,234,0.24)]`}
+              className={`${ACTION_BUTTON} ${density === "tight" ? "px-2" : "px-2.5"} border-amethyst/55 bg-amethyst/15 hover:bg-amethyst/20 hover:shadow-[0_0_20px_rgba(147,51,234,0.24)]`}
             >
               {sandboxStatus === "running" ? (
                 <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
               ) : (
-                <Play className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <Play className="h-3.5 w-3.5 shrink-0 text-amethyst-glow" aria-hidden />
               )}
               {density === "full" ? "Test sandbox" : "Sandbox"}
             </button>
@@ -619,12 +663,12 @@ export function Terminal({
                 }
                 className={`${ACTION_BUTTON} ${density === "tight" ? "px-2" : "px-2.5"} ${
                   testResult ? "rounded-r-none border-r-0" : ""
-                } border-spectral/50 bg-spectral/10 text-spectral hover:bg-spectral/15 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)]`}
+                } border-gold/35 bg-gold/[0.06] hover:bg-gold/10 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)]`}
               >
                 {testStatus === "running" ? (
                   <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
                 ) : (
-                  <FlaskConical className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <FlaskConical className="h-3.5 w-3.5 shrink-0 text-gold" aria-hidden />
                 )}
                 {density === "tight" ? "Test" : "Gen test"}
               </button>
@@ -659,12 +703,12 @@ export function Terminal({
               disabled={!hasCode}
               aria-label={copied ? "Copied" : "Copy purified code"}
               title={hasCode ? "Copy the purified artifact" : "No artifact yet"}
-              className={`${ACTION_BUTTON} ${density === "full" ? "px-2.5" : "px-2"} border-neon/45 bg-neon/10 text-neon hover:bg-neon/15 hover:shadow-[0_0_20px_rgba(0,255,102,0.2)]`}
+              className={`${ACTION_BUTTON} ${density === "full" ? "px-2.5" : "px-2"} border-neon/40 bg-neon/[0.07] hover:bg-neon/15 hover:shadow-[0_0_20px_rgba(0,255,102,0.2)]`}
             >
               {copied ? (
-                <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <Check className="h-3.5 w-3.5 shrink-0 text-neon" aria-hidden />
               ) : (
-                <Copy className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <Copy className="h-3.5 w-3.5 shrink-0 text-neon" aria-hidden />
               )}
               {density === "full" && (copied ? "Copied" : "Copy")}
             </button>
@@ -673,7 +717,7 @@ export function Terminal({
           <ExportMenu
             compact={density !== "full"}
             items={exportItems}
-            className={`${ACTION_BUTTON} ${density === "full" ? "px-2.5" : "px-2"} border-white/20 bg-black/40 text-zinc-100 hover:border-white/35 hover:bg-white/[0.06] aria-expanded:border-haunt/60 aria-expanded:bg-haunt/10`}
+            className={`${ACTION_BUTTON} ${density === "full" ? "px-2.5" : "px-2"} border-gold/20 bg-black/40 hover:border-gold/40 hover:bg-white/[0.06] aria-expanded:border-haunt/60 aria-expanded:bg-haunt/10`}
           />
         </div>
 
@@ -708,11 +752,10 @@ export function Terminal({
                 aria-selected={selected}
                 aria-controls="grimoire-panel"
                 onClick={() => setView(tab.id)}
+                style={{ "--plate": TAB_PLATE[tab.id] } as CSSProperties}
                 className={[
-                  "inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 font-mono text-[12px] font-medium uppercase leading-none tracking-[0.1em] transition",
-                  selected
-                    ? TAB_SELECTED[tab.id]
-                    : "border-white/10 bg-black/40 text-zinc-300 hover:border-white/25 hover:text-white",
+                  "arcane-plate inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap px-2 font-display text-[12px] font-bold uppercase leading-none tracking-[0.12em] transition",
+                  selected ? "text-bone" : "text-bone/70 hover:text-bone",
                 ].join(" ")}
               >
                 {tab.label}

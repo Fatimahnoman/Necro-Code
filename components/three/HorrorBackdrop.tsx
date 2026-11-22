@@ -193,9 +193,9 @@ export function HorrorBackdrop({ aura }: { aura: AuraState }) {
       camera={{ position: [0, 0, 9.5], fov: 50 }}
       dpr={[1, 1.6]}
       gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
-      onCreated={({ gl }) => gl.setClearColor(0x06060c, 0)}
+      onCreated={({ gl }) => gl.setClearColor(0x040408, 0)}
     >
-      <fog attach="fog" args={["#06060c", 10, 32]} />
+      <fog attach="fog" args={["#040408", 10, 32]} />
       <Atmosphere aura={aura} />
     </Canvas>
   );
