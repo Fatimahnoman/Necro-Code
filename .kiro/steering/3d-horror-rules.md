@@ -83,28 +83,27 @@ Two dedicated, dynamically imported client-only canvases:
   decorative.
 - Dispose/cleanup DOM cursor changes in `useEffect` returns.
 
-## Summoning altar
+## Cathedral ritual altar
 
-- **Seals** (`StageNode3D`): a faceted obsidian octahedron (`flatShading`,
-  metalness 0.92, roughness 0.16, stretched 1.25× vertically) with glowing
-  status-colored edges (`EdgesGeometry`), a pulsing icosahedron core shard
-  (faster heartbeat on `error`), and two rotating energy halos (r 0.70 / 0.80).
-  The crystal mesh is the click target. Pending seals use tarnished gold
-  `#6B5E45`.
-- **Altar floor** (`AltarRings`): concentric additive rune rings and radial
-  rune ticks beneath the relic, tilted toward the floor (`rotation.x = -1.12`)
-  and counter-rotating (outer +0.12 rad/s, inner −0.2 rad/s), with an
-  inscribed triangle sigil. Colors lerp to the aura.
-- **Conduits** (`ConduitStream`): each lit edge carries a particle stream
-  (`points` + Drei `PointMaterial`, one preallocated buffer). Flowing edges:
-  14 particles, fast; sealed edges: 6, slow and dim.
-- **Ritual FX** (`RitualFx`): when a run starts, a 1.2s camera zoom pulse
-  (`camera.zoom` up to 1.08, so OrbitControls is untouched) and a shockwave
-  ring from the relic. Every later aura change (crimson ↔ amethyst → emerald)
-  emits another shockwave in the new color. Pool of 3 rings, 1.3s each.
-  Skipped under `prefers-reduced-motion`.
-- Stage labels use `font-display` (Cinzel) 12px bold; `LABEL_OFFSET` is
-  `-1.02` and `SEAL_REACH` `0.99` so labels clear the outer halo.
+- **Seals** (`StageNode3D`): a faceted obsidian octahedron (the click target)
+  with glowing status-colored edges, a pulsing core shard, one rotating
+  energy halo, and behind it a **stained-glass rose disc**: 12 panes
+  (r 0.56–0.86) alternating the status color and a darker shade, gold lead
+  came (radial bars + rims). Pane opacity pulses with the status (faster
+  when active/error). Pending seals use tarnished gold `#6B5E45`.
+- **Altar floor** (`AltarRings`): counter-rotating rune circles beneath the
+  relic, tilted toward the floor. Outer sigils burn ruby `#E0115F`, inner
+  sigils violet `#7B2CBF`, both tinted 25% toward the aura and breathing.
+- **Relic**: the wireframe skull/polyhedron is scaled `RELIC_SCALE = 1.18`
+  and wrapped in dark flames (`RelicEmbers`): two ember clouds (ruby
+  `#FF2A4D`, ember orange `#FF7A1A`) spiral upward and taper like a flame,
+  over a flickering hellfire point light.
+- **Conduits** (`ConduitStream`) and **Ritual FX** (`RitualFx`: run-start
+  zoom pulse + aura shockwaves, skipped under reduced motion) are unchanged.
+- `SEAL_REACH = 1.07` and `LABEL_OFFSET.y = -1.12` so labels clear the glass
+  disc; `fitGraph()` uses both.
+- Footer helper: `1. Paste or Fetch Cursed Code → 2. Ignite EXORCISE CODE →
+  3. Click any 3D Seal to Inspect` (2D: "Click any Stage to Inspect").
 
 ## Screen-space labels over WebGL
 

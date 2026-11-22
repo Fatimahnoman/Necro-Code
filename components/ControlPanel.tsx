@@ -50,6 +50,27 @@ interface ControlPanelProps {
   progress: number;
 }
 
+/** Pressed wax seal stamped with a skull: the trigger's emblem. */
+function WaxSigil() {
+  return (
+    <svg viewBox="0 0 28 28" aria-hidden focusable="false" className="h-7 w-7 shrink-0 [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.7))]">
+      <path
+        d="M14 1.5c2 0 2.6 1.6 4.3 2.1 1.8.5 3.4-.6 4.6.6 1.2 1.2.1 2.8.6 4.6.5 1.7 2.1 2.3 2.1 4.3s-1.6 2.6-2.1 4.3c-.5 1.8.6 3.4-.6 4.6-1.2 1.2-2.8.1-4.6.6-1.7.5-2.3 2.1-4.3 2.1s-2.6-1.6-4.3-2.1c-1.8-.5-3.4.6-4.6-.6-1.2-1.2-.1-2.8-.6-4.6C3.4 15.6 1.8 15 1.8 13s1.6-2.6 2.1-4.3c.5-1.8-.6-3.4.6-4.6 1.2-1.2 2.8-.1 4.6-.6C11.4 3.1 12 1.5 14 1.5Z"
+        fill="#b0122e"
+        stroke="#5a0614"
+        strokeWidth="0.8"
+      />
+      <circle cx="14" cy="13.5" r="8" fill="none" stroke="#ff8a96" strokeOpacity="0.35" strokeWidth="0.8" />
+      <path
+        d="M14 8.2c-2.9 0-4.8 2-4.8 4.5 0 1.5.7 2.6 1.7 3.2v1.6h1.5v-1h1.2v1h1.5v-1.6c1-.6 1.7-1.7 1.7-3.2 0-2.5-1.9-4.5-4.8-4.5Zm-1.9 4.2a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2Zm3.8 0a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2Z"
+        fill="#3d030c"
+        fillOpacity="0.85"
+      />
+      <ellipse cx="10" cy="7" rx="3" ry="1.4" fill="#ffd0d5" fillOpacity="0.35" transform="rotate(-30 10 7)" />
+    </svg>
+  );
+}
+
 const PHASE_LABEL: Record<AgentPhase, string> = {
   idle: "Dormant",
   thinking: "Channelling",
@@ -162,7 +183,7 @@ export function ControlPanel({
           <Skull className="h-4.5 w-4.5 -rotate-45 text-gold" aria-hidden />
         </div>
         <div className="min-w-0">
-          <h2 className="font-display text-[15px] font-bold uppercase tracking-[0.18em] text-gold">
+          <h2 className="font-brand text-[15px] font-bold uppercase tracking-[0.14em] text-gold">
             Cursed Spellbook
           </h2>
           <p className="font-sans text-[12px] font-medium uppercase tracking-[0.18em] text-bone/70">
@@ -177,7 +198,7 @@ export function ControlPanel({
           <span className="whitespace-nowrap font-display text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim">
             Presets
           </span>
-          <span className="flex shrink-0 items-center gap-1.5">
+          <span className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => setGithubOpen((open) => !open)}
@@ -185,20 +206,21 @@ export function ControlPanel({
               aria-controls="github-summon"
               title="Summon a file from a public GitHub repository"
               className={[
-                "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 font-sans text-[12px] font-semibold uppercase leading-none tracking-[0.1em] transition",
+                "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border-b px-1 font-display text-[12px] font-bold uppercase leading-none tracking-[0.1em] transition",
                 githubOpen
-                  ? "border-amethyst/70 bg-amethyst/15 text-bone shadow-[0_0_14px_rgba(157,78,221,0.3)]"
-                  : "border-amethyst/35 bg-amethyst/5 text-bone/90 hover:border-amethyst/60 hover:bg-amethyst/10 hover:text-bone",
+                  ? "border-amethyst text-bone [text-shadow:0_0_10px_rgba(157,78,221,0.8)]"
+                  : "border-transparent text-bone/85 hover:border-amethyst/60 hover:text-bone",
               ].join(" ")}
             >
               <GitBranch className="h-4 w-4 shrink-0 text-amethyst-glow" aria-hidden />
               GitHub
             </button>
+            <span aria-hidden className="h-4 w-px bg-gold/20" />
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               title="Upload a cursed artifact in any supported language"
-              className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-gold/25 bg-gold/5 px-2.5 font-sans text-[12px] font-semibold uppercase leading-none tracking-[0.1em] text-bone/90 transition hover:border-gold/50 hover:bg-gold/10 hover:text-bone"
+              className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border-b px-1 font-display text-[12px] font-bold uppercase leading-none tracking-[0.1em] transition border-transparent text-bone/85 hover:border-gold/60 hover:text-bone"
             >
               <Upload className="h-4 w-4 shrink-0 text-gold" aria-hidden />
               Upload
@@ -264,7 +286,7 @@ export function ControlPanel({
         )}
 
         <div className="relative flex items-center gap-2">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-amethyst/40 bg-amethyst/10 shadow-[inset_0_0_10px_rgba(157,78,221,0.2)]">
+          <span className="grid h-8 w-6 shrink-0 place-items-center">
             <SelectedIcon
               className="h-4 w-4 text-amethyst-glow"
               aria-hidden
@@ -279,7 +301,7 @@ export function ControlPanel({
                 }
               }}
               aria-label="Cursed preset"
-              className="h-8 w-full appearance-none rounded-lg border border-gold/15 bg-black/60 pl-2.5 pr-8 font-sans text-[13px] font-medium uppercase tracking-[0.08em] text-bone outline-none transition [color-scheme:dark] hover:border-gold/30 focus:border-amethyst/60"
+              className="h-8 w-full appearance-none border-0 border-b border-gold/25 bg-transparent pl-1 pr-7 font-display text-[13px] font-bold uppercase tracking-[0.08em] text-bone outline-none transition [color-scheme:dark] hover:border-gold/50 focus:border-amethyst"
             >
               <option value="custom" disabled className="bg-crypt text-bone">
                 Custom relic
@@ -379,7 +401,7 @@ export function ControlPanel({
           <div
             ref={gutterRef}
             aria-hidden
-            className="w-11 shrink-0 select-none overflow-hidden border-r border-dashed border-gold/20 bg-black/30 pb-8 pr-2 pt-3 text-right font-mono text-[12px] leading-[20px] text-gold-dim/70 tabular-nums"
+            className="w-12 shrink-0 select-none overflow-hidden border-r-[3px] border-double border-gold/30 bg-black/25 pb-8 pr-2 pt-3 text-right font-display text-[12px] font-semibold leading-[20px] text-gold-dim/80 tabular-nums"
           >
             {lines.map((_, index) => (
               <div
@@ -447,13 +469,13 @@ export function ControlPanel({
           disabled={running}
           whileHover={running ? undefined : { scale: 1.012 }}
           whileTap={running ? undefined : { scale: 0.985 }}
-          className="ritual-trigger flex h-12 min-h-[48px] w-full shrink-0 items-center justify-center rounded-xl px-4 font-display text-[16px] font-bold uppercase tracking-[0.2em] text-gold shadow-[0_0_36px_rgba(255,0,60,0.4),0_0_60px_rgba(157,78,221,0.18)] transition-shadow [text-shadow:0_0_12px_rgba(255,0,60,0.8)] hover:shadow-[0_0_52px_rgba(255,0,60,0.55),0_0_80px_rgba(157,78,221,0.25)] disabled:cursor-not-allowed disabled:opacity-80"
+          className="ritual-trigger flex h-12 min-h-[48px] w-full shrink-0 items-center justify-center rounded-xl px-4 font-brand text-[16px] font-bold uppercase tracking-[0.14em] text-bone shadow-[0_0_36px_rgba(255,0,60,0.4),0_0_60px_rgba(157,78,221,0.18)] transition-shadow [text-shadow:0_0_12px_rgba(255,0,60,0.8)] hover:shadow-[0_0_52px_rgba(255,0,60,0.55),0_0_80px_rgba(157,78,221,0.25)] disabled:cursor-not-allowed disabled:opacity-80"
         >
           <span className="flex items-center justify-center gap-2.5">
             {running ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <Loader2 className="h-5 w-5 animate-spin text-bone" aria-hidden />
             ) : (
-              <Skull className="h-4 w-4 text-crimson" aria-hidden />
+              <WaxSigil />
             )}
             {running ? "Exorcising…" : "Exorcise Code"}
             <span className="font-mono text-[12px] tracking-[0.12em] text-bone/70 [text-shadow:none]">

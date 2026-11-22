@@ -20,7 +20,10 @@ Spec: `#[[file:../specs/necrocode-exorcist/design.md]]`
 | Token | Hex | Role |
 | --- | --- | --- |
 | `void` | `#040408` | Abyssal obsidian base (page, WebGL clear color) |
-| `crimson` | `#FF003C` | Blood crimson: bugs, corruption aura, CTAs, rune dots |
+| `crimson` | `#FF003C` | Blood crimson: bugs, corruption aura, CTAs |
+| `ruby` (inline) | `#E0115F` | Stained-glass ruby: arch rims, rose windows, outer altar sigils |
+| `violet` (inline) | `#7B2CBF` | Stained-glass violet: arch rims, ribbons, inner altar sigils |
+| stone | `#030305` → `#0A070B` | Charcoal nave and panel stone |
 | `amethyst` | `#9D4EDD` | Eldritch amethyst: channeling aura (`AURA_HEX.purple`), active seals |
 | `neon` | `#00FF66` | Necrotic emerald: purified aura, sealed stages |
 | `gold` / `bone` | `#E2D9C8` | Tarnished gold/bone: headings, primary text, sigil filigree |
@@ -38,33 +41,45 @@ no runtime request to Google), exposed as CSS variables:
 
 | Tailwind | Font | Use |
 | --- | --- | --- |
-| `font-brand` | Cinzel Decorative 700/900 | Brand wordmark only |
-| `font-display` | Cinzel 500–700 | Panel titles, stage titles, tabs, ritual trigger, small headings |
-| `font-sans` | Space Grotesk 400–700 | UI controls: buttons, pills, menus, hints |
+| `font-brand` | Cinzel Decorative 700/900 | Brand wordmark, panel titles, ritual trigger, Corruption Report title |
+| `font-display` | Cinzel 500–700 | Navigation (header pills, mobile tabs, Grimoire tabs), stage titles, labels |
+| `font-sans` | Space Grotesk 400–700 | Fine print only: toolbar buttons, menu hints, sandbox text (readability at 12px) |
 | `font-mono` | JetBrains Mono 400–700 | Code, logs, diffs, numbers |
 
 Minimum text size 12px. Primary text `text-bone`; secondary `text-bone/70–85`
 or `text-gold-dim`.
 
-## Sigil frames and surfaces
+## Blood-Cathedral architecture & stained glass
 
-- Every dashboard panel is wrapped in `SigilFrame` (`components/SigilFrame.tsx`):
-  four mirrored SVG corner brackets with filigree curls, a diamond rivet, and a
-  blood rune dot, drawn as a non-scrolling overlay (`.sigil-corner`).
-- `.horror-panel` adds a gold top rim and blood + amethyst inner aura shadows.
-- Grimoire tabs are etched plates (`.arcane-plate`): chamfered `clip-path`,
-  engraved inset rim, color from `--plate` (gold logs, amethyst diff,
-  emerald sandbox).
-- Editor surface `.grimoire-editor`: obsidian-parchment vignette with a dashed
-  gold rune gutter (line numbers; every 10th line marked `ᛟ` in crimson).
-  Lines do not wrap so the gutter stays aligned.
-- `EXORCISE CODE` uses `.ritual-trigger`: a rotating conic energy border
-  (`::before`) over a blood-etched fill (`::after`). It stays the only filled
-  CTA in the Spellbook; `AUTO DEMO` is the header's blood-forged CTA.
-- Health badge is a soul-purity gauge (`SoulGauge` in `Terminal.tsx`): a ring
-  filled to the purified score with a gold tick at the original score.
-- CRT layers are faded by `--crt-opacity: 0.10`. Decorative loops (ritual
-  border, CRT sweeps, emblem ring) stop under `prefers-reduced-motion`.
+- **Nave:** a fixed `.cathedral-stone` layer behind everything: charcoal stone
+  `#030305 → #0A070B` with fine grain (`--stone-grain`, an inline SVG
+  `feTurbulence` noise) and the glow of a ruby (`#E0115F`) and a violet
+  (`#7B2CBF`) stained-glass window at the top corners.
+- **Panels as cathedral windows** (`components/SigilFrame.tsx`): each panel
+  has a pointed-arch stone crown above it (two curves meeting at an apex,
+  ruby → violet → gold stained-glass rim, finials, and an eight-petal rose
+  window at the apex) and filigree corners at the base. The crown is in
+  normal flow above the panel, so it never covers content; the panel's top
+  corners are squared to meet it.
+- `.horror-panel` is carved stone (grain + dark gradient) with ruby light
+  leaking in at the top and violet at the base. `.rune-border` is a leaded
+  stained-glass rim (ruby → gold → violet → gold → emerald).
+- **Spellbook tome:** the editor (`.grimoire-editor`) is an aged dark-vellum
+  page with a spine shadow and weathered double inner edge; the line-number
+  gutter uses Cinzel numerals behind a gold double rule, every 10th line
+  marked `ᛟ` in crimson. GitHub / Upload / Preset are flat inline controls
+  (underline on hover, no boxes).
+- **`EXORCISE CODE SSE`** (`.ritual-trigger`): glossy crimson sealing wax with
+  a rotating conic energy border and a stamped skull wax seal (`WaxSigil`).
+- **Grimoire:** tabs are etched dark-stone plates (`.arcane-plate`, engraved
+  lettering; the selected plate glows with its `--plate` color). The health
+  badge is a wax seal on a violet ribbon (`WaxSeal`, tinted crimson / amber /
+  emerald by tier) labeled `Soul-purity <before> → <after> /100`. The
+  Corruption Report is a carved stone plaque (`.cathedral-plaque`) with
+  arched stained-glass panes (`.glass-pane`, `--pane` color) for cursed /
+  silenced / residual; it is the only copy of those counts.
+- CRT layers are faded by `--crt-opacity: 0.10`. Decorative loops stop under
+  `prefers-reduced-motion`.
 
 ## Theme primitives
 
@@ -116,8 +131,8 @@ Three-pane HUD, responsive, zero horizontal scroll:
      is set or WebGL is unavailable; a thrown canvas (`WebGLBoundary`) or a
      `webglcontextlost` event switches to 2D and disables the 3D option.
    - Before the first run (`idle`, no logs), the footer shows the helper
-     `1. Paste or fetch code → 2. Click EXORCISE CODE → 3. Click any 3D seal to
-     inspect`; it is replaced by the SSE sync line once a run starts.
+     `1. Paste or Fetch Cursed Code → 2. Ignite EXORCISE CODE → 3. Click any
+     3D Seal to Inspect`; it is replaced by the SSE sync line once a run starts.
 3. **Right · Grimoire Terminal** (`Terminal`)
    - Fixed top block that never scrolls: title row (health badge), one
      toolbar row, then three tabs: `Logs`, `Spectral Diff`, `Sandbox`.

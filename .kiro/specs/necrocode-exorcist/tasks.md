@@ -143,3 +143,14 @@ when the code exists in this repository.
 - [ ] 26. Visual and build verification for task 25
   - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` (sandbox: stub typecheck only; `next/font` was not downloaded and the scene was not rendered).
   - Check: fonts load, sigil corners at all three panels, gutter alignment at the bottom of a long file, the shockwave + zoom pulse on `EXORCISE CODE`, and 2D mode under reduced motion.
+
+- [x] 27. Eldritch Blood-Cathedral & stained-glass overhaul
+  - [x] 27.1 Charcoal-stone nave (`.cathedral-stone`, `--stone-grain`); stone panels with stained-glass rims; pointed-arch crowns with rose windows (`SigilFrame`).
+  - [x] 27.2 Panel titles in Cinzel Decorative; navigation in Cinzel.
+  - [x] 27.3 Spellbook tome page, vintage gutter divider, flat inline controls, crimson-wax `EXORCISE CODE SSE` with `WaxSigil`.
+  - [x] 27.4 Grimoire: dark-stone tabs, wax-seal + ribbon soul-purity badge, Corruption Report stone plaque with stained-glass panes.
+  - [x] 27.5 Altar: ruby/violet floor sigils, relic ×1.18 with ember flames, stained-glass rose discs on seals; new helper legend. _R8.9_
+
+- [ ] 28. Visual and build verification for task 27
+  - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` (sandbox: stub typecheck only; nothing rendered).
+  - Check: arch crowns align with each panel top at 1024–1920px and on mobile; rose window not clipped; seal glass discs do not crowd the relic flames; text contrast on stone.

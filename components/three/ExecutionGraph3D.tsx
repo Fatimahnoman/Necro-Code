@@ -22,7 +22,7 @@ type NodeStatusMap = Record<StageId, NodeStatus>;
 type NodeRefMap = Record<StageId, MutableRefObject<THREE.Group | null>>;
 type LabelRefMap = Partial<Record<StageId, HTMLDivElement | null>>;
 
-const LABEL_OFFSET = new THREE.Vector3(0, -1.02, 0);
+const LABEL_OFFSET = new THREE.Vector3(0, -1.12, 0);
 const BADGE_OFFSET = new THREE.Vector3(0.52, 0.5, 0);
 
 /** Seal orbit: half-width / half-height of the ritual square (local units). */
@@ -40,8 +40,13 @@ const CAMERA_Z = 6.0;
 const CAMERA_FOV = 45;
 const MAX_GRAPH_SCALE = 1.15;
 const MIN_GRAPH_SCALE = 0.4;
-/** Outer halo radius (0.8) × hover scale (1.16) + float amplitude. */
-const SEAL_REACH = 0.99;
+/** Stained-glass disc radius (0.86) × hover scale (1.16) + float amplitude. */
+const SEAL_REACH = 1.07;
+
+/** Stained-glass rose disc behind each seal. */
+const GLASS_PANES = 12;
+const GLASS_INNER = 0.56;
+const GLASS_OUTER = 0.86;
 /** Half the height of a projected stage label (up to two 12px lines), in px. */
 const LABEL_HALF_HEIGHT_PX = 20;
 /** Gap kept between labels and the canvas edge, in px. */
@@ -150,7 +155,26 @@ function StageNode3D({
   const spinGroup = useRef<THREE.Group>(null);
   const core = useRef<THREE.Mesh>(null);
   const haloA = useRef<THREE.Mesh>(null);
-  const haloB = useRef<THREE.Mesh>(null);
+  const glass = useRef<THREE.Group>(null);
+  const deepColor = useMemo(
+    () => `#${new THREE.Color(STATUS_HEX[status]).multiplyScalar(0.45).getHexString()}`,
+    [status],
+  );
+  const leading = useMemo(() => {
+    // Gold "lead came" between panes: 12 radial bars + inner/outer rims.
+    const positions: number[] = [];
+    for (let i = 0; i < GLASS_PANES; i++) {
+      const angle = (i / GLASS_PANES) * Math.PI * 2;
+      positions.push(
+        Math.cos(angle) * GLASS_INNER, Math.sin(angle) * GLASS_INNER, 0,
+        Math.cos(angle) * GLASS_OUTER, Math.sin(angle) * GLASS_OUTER, 0,
+      );
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    return geometry;
+  }, []);
+  useEffect(() => () => leading.dispose(), [leading]);
   const [hovered, setHovered] = useState(false);
   const targetScale = useMemo(() => new THREE.Vector3(1, 1, 1), []);
   const color = STATUS_HEX[status];
@@ -192,9 +216,12 @@ function StageNode3D({
       haloA.current.rotation.x += delta * (lit ? 1.1 : 0.35);
       haloA.current.rotation.y += delta * 0.4;
     }
-    if (haloB.current) {
-      haloB.current.rotation.y -= delta * (lit ? 0.9 : 0.28);
-      haloB.current.rotation.z += delta * 0.3;
+    if (glass.current) {
+      const pulse = pending ? 0.14 : 0.42 + Math.sin(t * (lit ? 4.2 : 1.6)) * 0.16;
+      glass.current.children.forEach((child) => {
+        const material = (child as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined;
+        if (material && material.userData.pane) material.opacity = pulse;
+      });
     }
   });
 
@@ -268,16 +295,42 @@ function StageNode3D({
           depthWrite={false}
         />
       </mesh>
-      <mesh ref={haloB} rotation={[Math.PI / 2.6, 0, 0]}>
-        <torusGeometry args={[0.8, 0.005, 6, 72]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={pending ? 0.08 : selected ? 0.8 : 0.4}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </mesh>
+      {/* Stained-glass rose disc behind the crystal (faces the camera). */}
+      <group ref={glass} position={[0, 0, -0.16]}>
+        {Array.from({ length: GLASS_PANES }, (_, index) => (
+          <mesh key={index}>
+            <ringGeometry
+              args={[
+                GLASS_INNER,
+                GLASS_OUTER,
+                4,
+                1,
+                (index / GLASS_PANES) * Math.PI * 2,
+                (Math.PI * 2) / GLASS_PANES,
+              ]}
+            />
+            <meshBasicMaterial
+              color={index % 2 === 0 ? color : deepColor}
+              transparent
+              opacity={pending ? 0.14 : 0.42}
+              depthWrite={false}
+              side={THREE.DoubleSide}
+              userData={{ pane: true }}
+            />
+          </mesh>
+        ))}
+        <lineSegments geometry={leading}>
+          <lineBasicMaterial color="#A89C82" transparent opacity={0.75} depthWrite={false} />
+        </lineSegments>
+        <mesh>
+          <torusGeometry args={[GLASS_OUTER, 0.018, 6, 64]} />
+          <meshBasicMaterial color="#A89C82" transparent opacity={0.85} depthWrite={false} />
+        </mesh>
+        <mesh>
+          <torusGeometry args={[GLASS_INNER, 0.012, 6, 48]} />
+          <meshBasicMaterial color="#A89C82" transparent opacity={0.7} depthWrite={false} />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -698,8 +751,14 @@ function AltarRings({ aura }: { aura: AuraState }) {
   const outer = useRef<THREE.Group>(null);
   const inner = useRef<THREE.Group>(null);
   const materials = useRef<Array<THREE.MeshBasicMaterial | THREE.LineBasicMaterial | null>>([]);
-  const target = useMemo(() => new THREE.Color(AURA_HEX[aura]), [aura]);
-  const current = useRef(new THREE.Color(AURA_HEX[aura]));
+  // Outer sigils burn ruby, inner sigils violet; both lean 25% toward the aura.
+  const crimson = useMemo(() => new THREE.Color("#E0115F"), []);
+  const violet = useMemo(() => new THREE.Color("#7B2CBF"), []);
+  const auraColor = useMemo(() => new THREE.Color(AURA_HEX[aura]), [aura]);
+  const outerTarget = useMemo(() => crimson.clone().lerp(auraColor, 0.25), [auraColor, crimson]);
+  const innerTarget = useMemo(() => violet.clone().lerp(auraColor, 0.25), [auraColor, violet]);
+  const outerColor = useRef(new THREE.Color("#E0115F"));
+  const innerColor = useRef(new THREE.Color("#7B2CBF"));
 
   const outerTicks = useMemo(() => runeTicks(72, 1.62, 1.86), []);
   const innerTicks = useMemo(() => runeTicks(36, 1.06, 1.24), []);
@@ -711,9 +770,14 @@ function AltarRings({ aura }: { aura: AuraState }) {
     [innerTicks, outerTicks],
   );
 
-  useFrame((_, delta) => {
-    current.current.lerp(target, 0.05);
-    for (const material of materials.current) material?.color.copy(current.current);
+  useFrame((state, delta) => {
+    outerColor.current.lerp(outerTarget, 0.05);
+    innerColor.current.lerp(innerTarget, 0.05);
+    const breathe = 0.85 + Math.sin(state.clock.elapsedTime * 1.6) * 0.15;
+    materials.current.forEach((material, index) => {
+      if (!material) return;
+      material.color.copy(index < 3 ? outerColor.current : innerColor.current).multiplyScalar(breathe);
+    });
     if (outer.current) outer.current.rotation.z += delta * 0.12;
     if (inner.current) inner.current.rotation.z -= delta * 0.2;
   });
@@ -859,6 +923,79 @@ function RitualFx({ running, aura }: { running: boolean; aura: AuraState }) {
   );
 }
 
+/** Central skull scale on the altar (the relic's own pulse runs inside). */
+const RELIC_SCALE = 1.18;
+const EMBER_COUNT = 64;
+
+/**
+ * Dark flames around the skull: ember particles spiral upward, tapering in
+ * like a flame, with a flickering hellfire light beneath. Two clouds (ruby
+ * and ember orange); positions reuse one buffer per cloud.
+ */
+function EmberCloud({ color, seed, size }: { color: string; seed: number; size: number }) {
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(EMBER_COUNT * 3), 3));
+    return geo;
+  }, []);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  // Deterministic per-particle phase, angle, and speed.
+  const params = useMemo(
+    () =>
+      Array.from({ length: EMBER_COUNT }, (_, i) => {
+        const h = Math.sin((i + 1) * 12.9898 + seed * 78.233) * 43758.5453;
+        const r = h - Math.floor(h);
+        return { phase: r, angle: r * Math.PI * 2 + i, speed: 0.22 + r * 0.25 };
+      }),
+    [seed],
+  );
+
+  useFrame((state) => {
+    const attribute = geometry.getAttribute("position") as THREE.BufferAttribute;
+    const array = attribute.array as Float32Array;
+    const t = state.clock.elapsedTime;
+    params.forEach((particle, i) => {
+      const life = (t * particle.speed + particle.phase) % 1;
+      const radius = 1.05 * (1 - life * 0.75) + Math.sin(t * 3 + i) * 0.04;
+      const angle = particle.angle + t * 0.6 + life * 2.2;
+      array[i * 3] = Math.cos(angle) * radius;
+      array[i * 3 + 1] = -0.95 + life * 2.6;
+      array[i * 3 + 2] = Math.sin(angle) * radius * 0.6;
+    });
+    attribute.needsUpdate = true;
+  });
+
+  return (
+    <points geometry={geometry} frustumCulled={false}>
+      <PointMaterial
+        transparent
+        color={color}
+        size={size}
+        sizeAttenuation
+        opacity={0.85}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
+  );
+}
+
+function RelicEmbers() {
+  const light = useRef<THREE.PointLight>(null);
+  useFrame((state) => {
+    if (!light.current) return;
+    const t = state.clock.elapsedTime;
+    light.current.intensity = 5 + Math.sin(t * 11) * 1.2 + Math.sin(t * 17.3) * 0.8;
+  });
+  return (
+    <>
+      <EmberCloud color="#FF2A4D" seed={1} size={0.08} />
+      <EmberCloud color="#FF7A1A" seed={2} size={0.06} />
+      <pointLight ref={light} position={[0, -0.9, 0.4]} color="#FF4A1A" intensity={5} distance={4} />
+    </>
+  );
+}
+
 function Graph({
   nodes,
   activeStage,
@@ -917,7 +1054,10 @@ function Graph({
       />
 
       <AltarRings aura={aura} />
-      <CentralRelic aura={aura} />
+      <group scale={RELIC_SCALE}>
+        <CentralRelic aura={aura} />
+        <RelicEmbers />
+      </group>
       <RitualFx running={running} aura={aura} />
 
       {EDGES.map(([from, to]) => (

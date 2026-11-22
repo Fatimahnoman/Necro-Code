@@ -47,15 +47,15 @@ const STATUS_HEX: Record<NodeStatus, string> = {
 };
 
 const HELPER_STEPS = [
-  "Paste or fetch code",
-  "Click EXORCISE CODE",
-  "Click any 3D seal to inspect",
+  "Paste or Fetch Cursed Code",
+  "Ignite EXORCISE CODE",
+  "Click any 3D Seal to Inspect",
 ] as const;
 
 const HELPER_STEPS_2D = [
-  "Paste or fetch code",
-  "Click EXORCISE CODE",
-  "Click any stage to inspect",
+  "Paste or Fetch Cursed Code",
+  "Ignite EXORCISE CODE",
+  "Click any Stage to Inspect",
 ] as const;
 
 /** Bottom strip reserved for the first-run helper (up to two wrapped lines). */
@@ -400,7 +400,7 @@ export function AgentCanvas({
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 p-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="font-display text-[15px] font-bold uppercase tracking-[0.18em] text-gold [text-shadow:0_0_12px_rgba(255,0,60,0.45)]">
+            <h2 className="font-brand text-[15px] font-bold uppercase tracking-[0.14em] text-gold [text-shadow:0_0_12px_rgba(255,0,60,0.45)]">
               Ritual Graph
             </h2>
             <div

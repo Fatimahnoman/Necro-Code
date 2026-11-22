@@ -95,56 +95,52 @@ const HEALTH_COLOR: Record<HealthTier, string> = {
   pure: "text-neon",
 };
 
-const HEALTH_HEX: Record<HealthTier, string> = {
-  cursed: "#FF003C",
-  haunted: "#FCD34D",
-  pure: "#00FF66",
+/** Wax tint per purity tier: [wax, dark rim, highlight]. */
+const WAX: Record<HealthTier, [string, string, string]> = {
+  cursed: ["#b0122e", "#5a0614", "#ff9aa6"],
+  haunted: ["#a8741a", "#5a3a06", "#ffe1a0"],
+  pure: ["#0f8a4c", "#04401f", "#9dffcb"],
 };
 
 /**
- * Soul-purity gauge: a ring filled to the purified score, with a faint tick
- * where the original score sat. Decorative; the numbers beside it carry the
- * meaning (and the parent has an aria-label).
+ * Wax seal on a violet ribbon, tinted by the purified score's tier and
+ * stamped with the score. Decorative; the parent carries the aria-label.
  */
-function SoulGauge({ before, after }: { before: number; after: number }) {
-  const radius = 9;
-  const length = 2 * Math.PI * radius;
-  const color = HEALTH_HEX[healthTier(after)];
-  const beforeAngle = (Math.min(100, Math.max(0, before)) / 100) * 2 * Math.PI - Math.PI / 2;
+function WaxSeal({ score }: { score: number }) {
+  const [wax, rim, shine] = WAX[healthTier(score)];
   return (
-    <svg viewBox="0 0 24 24" aria-hidden focusable="false" className="h-6 w-6 shrink-0">
-      <circle cx="12" cy="12" r={radius} fill="none" stroke="rgba(226,217,200,0.14)" strokeWidth="2.5" />
-      <circle
-        cx="12"
-        cy="12"
-        r={radius}
-        fill="none"
-        stroke={color}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeDasharray={`${(Math.min(100, Math.max(0, after)) / 100) * length} ${length}`}
-        transform="rotate(-90 12 12)"
-        style={{ filter: `drop-shadow(0 0 3px ${color})` }}
+    <svg
+      viewBox="0 0 34 36"
+      aria-hidden
+      focusable="false"
+      className="h-9 w-[34px] shrink-0 [filter:drop-shadow(0_2px_3px_rgba(0,0,0,0.7))]"
+    >
+      {/* Ribbon tails. */}
+      <path d="M10 22 6 35 11 32 14 35 16 24Z" fill="#5b1f8f" stroke="#2c0c47" strokeWidth="0.6" />
+      <path d="M24 22 28 35 23 32 20 35 18 24Z" fill="#7B2CBF" stroke="#2c0c47" strokeWidth="0.6" />
+      {/* Irregular wax blob. */}
+      <path
+        d="M17 1.5c2.3 0 3 1.8 5 2.4 2 .6 3.9-.7 5.3.7s.1 3.3.7 5.3c.6 2 2.4 2.7 2.4 5s-1.8 3-2.4 5c-.6 2 .7 3.9-.7 5.3s-3.3.1-5.3.7c-2 .6-2.7 2.4-5 2.4s-3-1.8-5-2.4c-2-.6-3.9.7-5.3-.7s-.1-3.3-.7-5.3c-.6-2-2.4-2.7-2.4-5s1.8-3 2.4-5c.6-2-.7-3.9.7-5.3s3.3-.1 5.3-.7c2-.6 2.7-2.4 5-2.4Z"
+        fill={wax}
+        stroke={rim}
+        strokeWidth="0.9"
       />
-      <line
-        x1={12 + Math.cos(beforeAngle) * 6.5}
-        y1={12 + Math.sin(beforeAngle) * 6.5}
-        x2={12 + Math.cos(beforeAngle) * 11.5}
-        y2={12 + Math.sin(beforeAngle) * 11.5}
-        stroke="#E2D9C8"
-        strokeOpacity="0.8"
-        strokeWidth="1.2"
-      />
-      <circle cx="12" cy="12" r="2" fill={color} />
+      <circle cx="17" cy="14.9" r="9.2" fill="none" stroke={shine} strokeOpacity="0.4" strokeWidth="0.8" />
+      <text
+        x="17"
+        y="18.6"
+        textAnchor="middle"
+        fontSize="10"
+        fontWeight="700"
+        fill={rim}
+        style={{ fontFamily: "var(--font-ritual), serif" }}
+      >
+        {score}
+      </text>
+      <ellipse cx="12" cy="7.5" rx="3.4" ry="1.5" fill={shine} fillOpacity="0.4" transform="rotate(-30 12 7.5)" />
     </svg>
   );
 }
-
-const HEALTH_BORDER: Record<HealthTier, string> = {
-  cursed: "border-crimson/40 shadow-[0_0_12px_rgba(255,0,60,0.18)]",
-  haunted: "border-amber-300/40 shadow-[0_0_12px_rgba(252,211,77,0.14)]",
-  pure: "border-neon/40 shadow-[0_0_12px_rgba(0,255,102,0.16)]",
-};
 
 function downloadText(content: string, filename: string, type: string) {
   const blob = new Blob([content], { type });
@@ -570,7 +566,7 @@ export function Terminal({
               className="h-4 w-4 shrink-0 text-crimson [filter:drop-shadow(0_0_6px_rgba(255,0,60,0.6))]"
               aria-hidden
             />
-            <span className="truncate font-display text-[15px] font-bold uppercase tracking-[0.18em] text-gold">
+            <span className="truncate font-brand text-[15px] font-bold uppercase tracking-[0.14em] text-gold">
               Grimoire
             </span>
           </div>
@@ -589,18 +585,22 @@ export function Terminal({
                 data-health-after={healthAfter}
                 title={`Code Health & Security Score before → after exorcism. 100 minus ${HEALTH_WEIGHTS.critical} per critical, ${HEALTH_WEIGHTS.warning} per warning, ${HEALTH_WEIGHTS.info} per info finding.`}
                 aria-label={`Health score ${healthBefore} out of 100 before, ${healthAfter} out of 100 after`}
-                className={`inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border bg-black/55 pl-1 pr-2.5 font-mono text-[12px] uppercase tracking-[0.06em] ${HEALTH_BORDER[healthTier(healthAfter)]}`}
+                className="relative inline-flex h-9 items-center gap-1.5 whitespace-nowrap pl-0.5 pr-1"
               >
-                <SoulGauge before={healthBefore} after={healthAfter} />
-                <span className="sr-only">Soul purity</span>
-                <span className={HEALTH_COLOR[healthTier(healthBefore)]}>
-                  {healthBefore}
+                <WaxSeal score={healthAfter} />
+                <span className="flex flex-col leading-none">
+                  <span className="font-display text-[12px] font-bold uppercase tracking-[0.12em] text-gold-dim">
+                    Soul-purity
+                  </span>
+                  <span className="mt-0.5 font-mono text-[12px] tabular-nums">
+                    <span className={HEALTH_COLOR[healthTier(healthBefore)]}>{healthBefore}</span>
+                    <span className="text-bone/60"> → </span>
+                    <span className={`font-bold ${HEALTH_COLOR[healthTier(healthAfter)]}`}>
+                      {healthAfter}
+                    </span>
+                    <span className="text-bone/60"> /100</span>
+                  </span>
                 </span>
-                <span className="text-bone/60">→</span>
-                <span className={`font-bold ${HEALTH_COLOR[healthTier(healthAfter)]}`}>
-                  {healthAfter}
-                </span>
-                <span className="text-bone/60">/100</span>
               </span>
             )}
           </div>
@@ -998,32 +998,40 @@ export function Terminal({
       )}
 
       {summary && (
-        <div className="relative z-10 border-t border-white/5 bg-black/40 px-3 py-2">
-          <div className="flex items-center justify-between font-mono text-[12px] uppercase tracking-[0.24em] text-zinc-300">
-            <span>Corruption report</span>
-            <span className={summary.unresolved > 0 ? "text-crimson" : "text-neon"}>
-              {summary.unresolved > 0 ? "residual" : "purified"}
+        <div className="cathedral-plaque relative z-10 border-t border-gold/20 px-3 pb-2.5 pt-2">
+          <div className="flex items-center justify-between">
+            <span className="font-brand text-[13px] font-bold uppercase tracking-[0.12em] text-gold">
+              Corruption Report
+            </span>
+            <span
+              className={`font-display text-[12px] font-bold uppercase tracking-[0.14em] ${
+                summary.unresolved > 0 ? "text-crimson" : "text-neon"
+              }`}
+            >
+              {summary.unresolved > 0 ? "Residual" : "Purified"}
             </span>
           </div>
-          <div className="mt-1.5 grid grid-cols-3 gap-1.5 text-center font-mono uppercase tracking-[0.14em]">
-            <div className="rounded-md border border-crimson/20 bg-crimson/5 py-1 text-crimson">
-              <div className="text-[14px] font-semibold leading-none">
-                {summary.detected}
+          <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+            {(
+              [
+                ["Cursed", summary.detected, "224, 17, 95"],
+                ["Silenced", summary.fixed, "0, 200, 110"],
+                ["Residual", summary.unresolved, "123, 44, 191"],
+              ] as const
+            ).map(([label, value, pane]) => (
+              <div
+                key={label}
+                className="glass-pane rounded-t-[14px] px-1 pb-1.5 pt-2"
+                style={{ "--pane": pane } as CSSProperties}
+              >
+                <div className="font-display text-[17px] font-bold leading-none text-bone [text-shadow:0_0_10px_rgba(0,0,0,0.9)]">
+                  {value}
+                </div>
+                <div className="mt-1 font-display text-[12px] font-bold uppercase tracking-[0.1em] text-bone/85">
+                  {label}
+                </div>
               </div>
-              <div className="mt-0.5 text-[12px] text-zinc-300">cursed</div>
-            </div>
-            <div className="rounded-md border border-neon/20 bg-neon/5 py-1 text-neon">
-              <div className="text-[14px] font-semibold leading-none">
-                {summary.fixed}
-              </div>
-              <div className="mt-0.5 text-[12px] text-zinc-300">silenced</div>
-            </div>
-            <div className="rounded-md border border-haunt/20 bg-haunt/5 py-1 text-haunt">
-              <div className="text-[14px] font-semibold leading-none">
-                {summary.unresolved}
-              </div>
-              <div className="mt-0.5 text-[12px] text-zinc-300">residual</div>
-            </div>
+            ))}
           </div>
         </div>
       )}

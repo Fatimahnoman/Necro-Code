@@ -52,7 +52,7 @@ const DEFAULT_CODE = initialArtifact?.code ?? DEFAULT_CURSED_CODE;
 const DEFAULT_FILENAME = "cursed-ouroboros-loop.js";
 /** Shared header pill: 11px, single line, never shrinks, so pills never clip. */
 const HEADER_PILL =
-  "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-sans text-[12px] font-semibold uppercase leading-none tracking-[0.12em] transition";
+  "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-display text-[12px] font-bold uppercase leading-none tracking-[0.12em] transition";
 
 /** Quiet utility button: no fill, faint border, brightens on hover/focus. */
 const GHOST_PILL =
@@ -313,7 +313,9 @@ export default function Home() {
     ].join(" ");
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-void">
+    <main className="relative min-h-screen overflow-x-hidden">
+      {/* Cathedral nave: charcoal stone + stained-glass window glow. */}
+      <div aria-hidden className="cathedral-stone pointer-events-none fixed inset-0 z-0" />
       <audio
         ref={bgmRef}
         src="/audio/horror-bgm.mp3"
@@ -469,7 +471,7 @@ export default function Home() {
               aria-controls={`panel-${tab.id}`}
               onClick={() => setMobileTab(tab.id)}
               className={[
-                "inline-flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border font-mono text-[13px] font-medium uppercase tracking-[0.08em] transition",
+                "inline-flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border font-display text-[13px] font-bold uppercase tracking-[0.08em] transition",
                 mobileTab === tab.id
                   ? "border-crimson/60 bg-crimson/10 text-white shadow-[0_0_16px_rgba(255,0,60,0.18)]"
                   : "border-white/15 bg-black/40 text-zinc-300 hover:text-white",

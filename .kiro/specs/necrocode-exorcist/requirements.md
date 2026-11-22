@@ -136,7 +136,7 @@ so that I can evaluate it quickly.
 1. WHEN the header renders, THE dashboard SHALL display `NECROCODE`, `// OCCULT CODE EXORCIST`, and the active engine badge on the left, and `Auto demo`, `API Sigils`, `History`, and an `FX & Audio` popover (Horror BGM, 3D Audio FX, CRT, Fog switches) on the right.
 2. WHEN the viewport is `lg` or wider, THE dashboard SHALL lay out Spellbook, Ritual Graph, and Grimoire Terminal as three proportional columns (`1fr / 1.35fr / 1.1fr`, with 330 / 440 / 360px minimums from `xl`).
 8. WHILE the viewport is narrower than `lg`, THE dashboard SHALL show a `Spellbook | 3D Ritual | Grimoire` tab switcher and only the selected panel, keeping all three mounted.
-9. WHILE no ritual has produced events, THE Ritual Graph footer SHALL show `1. Paste or fetch code → 2. Click EXORCISE CODE → 3. Click any 3D seal to inspect`.
+9. WHILE no ritual has produced events, THE Ritual Graph footer SHALL show `1. Paste or Fetch Cursed Code → 2. Ignite EXORCISE CODE → 3. Click any 3D Seal to Inspect`.
 10. WHEN the user clicks `Test sandbox` or `GEN TEST`, THE Terminal SHALL switch to its `Sandbox` tab; THE `Sandbox` tab SHALL show a status badge whenever sandbox output exists.
 3. WHEN the user clicks `AUTO DEMO`, THE dashboard SHALL load the `async-memory-leak` artifact, set the demo directive, and start a run.
 4. WHEN an `AUTO DEMO` run completes with a purified artifact, THE Terminal SHALL switch to the Spectral Diff tab and SHALL start the sandbox run.
