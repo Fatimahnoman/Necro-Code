@@ -47,8 +47,8 @@ const SEAL_REACH = 1.07;
 const GLASS_PANES = 12;
 const GLASS_INNER = 0.56;
 const GLASS_OUTER = 0.86;
-/** Half the height of a projected stage label (up to two 12px lines), in px. */
-const LABEL_HALF_HEIGHT_PX = 20;
+/** Half the height of a projected stage banner (title, up to 2 lines, + meta), in px. */
+const LABEL_HALF_HEIGHT_PX = 28;
 /** Gap kept between labels and the canvas edge, in px. */
 const EDGE_GAP_PX = 8;
 
@@ -105,36 +105,55 @@ const STATUS_HEX: Record<NodeStatus, string> = {
   error: "#FF003C",
 };
 
+/**
+ * Gothic banner under a seal: a swallowtail pennant of carved stone with
+ * brass edging. Line 1 is the stage title (Cinzel Decorative, status color);
+ * line 2 is the live metadata from AgentCanvas (status · stage time).
+ */
 function StageLabel({
   stage,
   status,
   selected,
+  meta,
 }: {
   stage: StageDef;
   status: NodeStatus;
   selected: boolean;
+  meta?: string;
 }) {
   const color = STATUS_HEX[status];
+  const glow =
+    status === "pending"
+      ? "drop-shadow(0 2px 4px rgba(0,0,0,0.8))"
+      : `drop-shadow(0 0 ${selected ? 10 : 6}px ${color}88) drop-shadow(0 2px 4px rgba(0,0,0,0.8))`;
 
   return (
-    <div
-      className="flex w-max max-w-[var(--label-max,176px)] items-center justify-center gap-1.5 rounded-md border border-white/15 bg-[#0a0b14]/90 px-2 py-1 text-center font-display text-[12px] font-bold uppercase leading-tight tracking-[0.08em] text-bone backdrop-blur-md"
-      style={{
-        borderColor: `${color}66`,
-        color: status === "pending" ? "#E2D9C8" : color,
-        boxShadow:
-          status === "pending"
-            ? "none"
-            : selected
-              ? `0 0 24px ${color}55, inset 0 0 18px ${color}18`
-              : `0 0 18px ${color}33, inset 0 0 18px ${color}14`,
-      }}
-    >
-      <span
-        className="h-1.5 w-1.5 shrink-0 rounded-full"
-        style={{ backgroundColor: color }}
-      />
-      <span>{stage.label}</span>
+    // The filter lives on an unclipped wrapper so the glow survives clip-path.
+    <div style={{ filter: glow }}>
+      <div
+        className="flex w-max max-w-[var(--label-max,176px)] flex-col items-center px-4 py-1 text-center [clip-path:polygon(0_0,100%_0,calc(100%-9px)_50%,100%_100%,0_100%,9px_50%)]"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(26,18,24,0.96), rgba(10,7,11,0.96))",
+          boxShadow: `inset 0 1.5px 0 #B08D57, inset 0 -1.5px 0 #5E4524, inset 0 0 14px ${color}33`,
+        }}
+      >
+        <span
+          className="flex items-center gap-1.5 font-brand text-[12px] font-bold uppercase leading-tight tracking-[0.06em]"
+          style={{ color: status === "pending" ? "#E2D9C8" : color }}
+        >
+          <span
+            className="h-1.5 w-1.5 shrink-0 rotate-45"
+            style={{ backgroundColor: color }}
+          />
+          {stage.label}
+        </span>
+        {meta && (
+          <span className="mt-0.5 whitespace-nowrap font-mono text-[12px] leading-tight text-bone/80 tabular-nums">
+            {meta}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -320,16 +339,29 @@ function StageNode3D({
           </mesh>
         ))}
         <lineSegments geometry={leading}>
-          <lineBasicMaterial color="#A89C82" transparent opacity={0.75} depthWrite={false} />
+          <lineBasicMaterial color="#B08D57" transparent opacity={0.75} depthWrite={false} />
         </lineSegments>
         <mesh>
           <torusGeometry args={[GLASS_OUTER, 0.018, 6, 64]} />
-          <meshBasicMaterial color="#A89C82" transparent opacity={0.85} depthWrite={false} />
+          <meshBasicMaterial color="#B08D57" transparent opacity={0.85} depthWrite={false} />
         </mesh>
         <mesh>
           <torusGeometry args={[GLASS_INNER, 0.012, 6, 48]} />
-          <meshBasicMaterial color="#A89C82" transparent opacity={0.7} depthWrite={false} />
+          <meshBasicMaterial color="#B08D57" transparent opacity={0.7} depthWrite={false} />
         </mesh>
+        {/* Brass rivets where the lead came meets the outer rim. */}
+        {Array.from({ length: GLASS_PANES }, (_, index) => {
+          const angle = (index / GLASS_PANES) * Math.PI * 2;
+          return (
+            <mesh
+              key={`rivet-${index}`}
+              position={[Math.cos(angle) * GLASS_OUTER, Math.sin(angle) * GLASS_OUTER, 0.01]}
+            >
+              <circleGeometry args={[0.032, 10]} />
+              <meshBasicMaterial color="#D9B77E" />
+            </mesh>
+          );
+        })}
       </group>
     </group>
   );
@@ -924,8 +956,9 @@ function RitualFx({ running, aura }: { running: boolean; aura: AuraState }) {
 }
 
 /** Central skull scale on the altar (the relic's own pulse runs inside). */
-const RELIC_SCALE = 1.18;
-const EMBER_COUNT = 64;
+const RELIC_SCALE = 1.3;
+const EMBER_COUNT = 140;
+const SPARK_COUNT = 120;
 
 /**
  * Dark flames around the skull: ember particles spiral upward, tapering in
@@ -980,6 +1013,64 @@ function EmberCloud({ color, seed, size }: { color: string; seed: number; size: 
   );
 }
 
+/**
+ * Red cosmic sparks: a twinkling shell of points orbiting the skull on
+ * tilted great circles. Size/opacity flicker per spark via a phase offset
+ * baked into the radius (no per-point attributes needed).
+ */
+function CosmicSparks() {
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(SPARK_COUNT * 3), 3));
+    return geo;
+  }, []);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  const params = useMemo(
+    () =>
+      Array.from({ length: SPARK_COUNT }, (_, i) => {
+        const h = Math.sin((i + 3) * 91.345) * 47453.5453;
+        const r = h - Math.floor(h);
+        return {
+          tilt: (r - 0.5) * Math.PI,
+          offset: r * Math.PI * 2 + i * 0.37,
+          speed: (i % 2 === 0 ? 1 : -1) * (0.25 + r * 0.45),
+          radius: 1.15 + r * 0.55,
+        };
+      }),
+    [],
+  );
+
+  useFrame((state) => {
+    const attribute = geometry.getAttribute("position") as THREE.BufferAttribute;
+    const array = attribute.array as Float32Array;
+    const t = state.clock.elapsedTime;
+    params.forEach((spark, i) => {
+      const a = spark.offset + t * spark.speed;
+      const twinkle = 1 + Math.sin(t * 6 + i) * 0.04;
+      const x = Math.cos(a) * spark.radius * twinkle;
+      const y = Math.sin(a) * spark.radius * twinkle;
+      array[i * 3] = x;
+      array[i * 3 + 1] = y * Math.cos(spark.tilt);
+      array[i * 3 + 2] = y * Math.sin(spark.tilt);
+    });
+    attribute.needsUpdate = true;
+  });
+
+  return (
+    <points geometry={geometry} frustumCulled={false}>
+      <PointMaterial
+        transparent
+        color="#FF003C"
+        size={0.05}
+        sizeAttenuation
+        opacity={0.9}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
+  );
+}
+
 function RelicEmbers() {
   const light = useRef<THREE.PointLight>(null);
   useFrame((state) => {
@@ -989,8 +1080,10 @@ function RelicEmbers() {
   });
   return (
     <>
-      <EmberCloud color="#FF2A4D" seed={1} size={0.08} />
+      <EmberCloud color="#FF003C" seed={1} size={0.08} />
       <EmberCloud color="#FF7A1A" seed={2} size={0.06} />
+      <EmberCloud color="#8B0000" seed={3} size={0.1} />
+      <CosmicSparks />
       <pointLight ref={light} position={[0, -0.9, 0.4]} color="#FF4A1A" intensity={5} distance={4} />
     </>
   );
@@ -1103,6 +1196,7 @@ export function ExecutionGraph3D({
   reserveBottomPx = 44,
   onContextLost,
   running = false,
+  stageMeta,
 }: {
   nodes: NodeStatusMap;
   activeStage: StageId | null;
@@ -1119,6 +1213,8 @@ export function ExecutionGraph3D({
   onContextLost?: () => void;
   /** A ritual is streaming; its rising edge triggers the summoning pulse. */
   running?: boolean;
+  /** Second banner line per stage, e.g. "SEALED · 312 ms". */
+  stageMeta?: Partial<Record<StageId, string>>;
 }) {
   const nodeRefs = useRef<NodeRefMap>({
     input_code: { current: null },
@@ -1192,6 +1288,7 @@ export function ExecutionGraph3D({
               stage={stage}
               status={nodes[stage.id]}
               selected={selected === stage.id}
+              meta={stageMeta?.[stage.id]}
             />
           </div>
         ))}

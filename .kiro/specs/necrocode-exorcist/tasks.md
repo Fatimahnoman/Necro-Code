@@ -154,3 +154,14 @@ when the code exists in this repository.
 - [ ] 28. Visual and build verification for task 27
   - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` (sandbox: stub typecheck only; nothing rendered).
   - Check: arch crowns align with each panel top at 1024–1920px and on mobile; rose window not clipped; seal glass discs do not crowd the relic flames; text contrast on stone.
+
+- [x] 29. Blood-Cathedral refinement
+  - [x] 29.1 Fonts: Cinzel Decorative (all titles) + Space Grotesk (UI) + JetBrains Mono; Cinzel removed.
+  - [x] 29.2 Palette: obsidian `#050307`, dried blood `#8B0000`, umbra `#4A154B`, brass; CRT 0.08.
+  - [x] 29.3 Weathered arches (`feTurbulence` + `feDisplacementMap`) with stained-glass windows.
+  - [x] 29.4 Tome Spellbook, brass slots, burning trigger; medieval toolbar buttons; stained-glass selected tab; `➔ / 100` badge.
+  - [x] 29.5 Relic ×1.3 with dense embers + cosmic sparks; brass-riveted seal glass; gothic banners with status + stage time; new legend. _R8.9_
+
+- [ ] 30. Visual and build verification for task 29
+  - Run `npm run lint`, `npx tsc --noEmit`, and `npm run build` (sandbox: stub typecheck only).
+  - Check: banners clear the footer (two-line labels), arch windows render on Safari (SVG filters), ember density holds 60fps on a laptop.

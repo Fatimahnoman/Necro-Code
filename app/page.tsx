@@ -52,7 +52,7 @@ const DEFAULT_CODE = initialArtifact?.code ?? DEFAULT_CURSED_CODE;
 const DEFAULT_FILENAME = "cursed-ouroboros-loop.js";
 /** Shared header pill: 11px, single line, never shrinks, so pills never clip. */
 const HEADER_PILL =
-  "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-display text-[12px] font-bold uppercase leading-none tracking-[0.12em] transition";
+  "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 font-sans text-[12px] font-bold uppercase leading-none tracking-[0.12em] transition";
 
 /** Quiet utility button: no fill, faint border, brightens on hover/focus. */
 const GHOST_PILL =
@@ -354,7 +354,7 @@ export default function Home() {
                 <h1 className="font-brand text-[22px] font-black uppercase leading-none tracking-[0.12em] text-gold [text-shadow:0_0_18px_rgba(255,0,60,0.45),0_0_2px_rgba(226,217,200,0.6)]">
                   NecroCode
                 </h1>
-                <span className="font-display text-[12px] font-semibold uppercase tracking-[0.22em] text-crimson [text-shadow:0_0_10px_rgba(255,0,60,0.5)]">
+                <span className="font-brand text-[12px] font-semibold uppercase tracking-[0.22em] text-crimson [text-shadow:0_0_10px_rgba(255,0,60,0.5)]">
                   {"// Occult Code Exorcist"}
                 </span>
               </div>
@@ -384,7 +384,7 @@ export default function Home() {
                   />
                   {liveEngineActive ? "Live AI engine" : "Builtin safety net"}
                 </span>
-                <span className="hidden font-display text-[12px] font-semibold uppercase tracking-[0.2em] text-gold-dim md:inline">
+                <span className="hidden font-sans text-[12px] font-semibold uppercase tracking-[0.2em] text-gold-dim md:inline">
                   Kiroween 2026
                 </span>
               </div>
@@ -399,7 +399,7 @@ export default function Home() {
               disabled={state.running}
               aria-label="Run the one-click judge auto demo"
               title="Load the cursed async memory leak and run the full exorcism"
-              className={`${HEADER_PILL} border-crimson bg-[linear-gradient(180deg,#5a0718_0%,#2a030c_55%,#3b0a2e_100%)] font-bold text-gold shadow-[0_0_22px_rgba(255,0,60,0.45),0_0_40px_rgba(157,78,221,0.25),inset_0_1px_0_rgba(226,217,200,0.35),inset_0_0_14px_rgba(255,0,60,0.35)] hover:text-white hover:shadow-[0_0_30px_rgba(255,0,60,0.6),0_0_52px_rgba(157,78,221,0.32),inset_0_1px_0_rgba(226,217,200,0.45),inset_0_0_18px_rgba(255,0,60,0.45)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none`}
+              className={`${HEADER_PILL} border-crimson bg-[linear-gradient(180deg,#8B0000_0%,#3a0004_55%,#4A154B_100%)] font-bold text-gold shadow-[0_0_22px_rgba(255,0,60,0.45),0_0_40px_rgba(157,78,221,0.25),inset_0_1px_0_rgba(226,217,200,0.35),inset_0_0_14px_rgba(255,0,60,0.35)] hover:text-white hover:shadow-[0_0_30px_rgba(255,0,60,0.6),0_0_52px_rgba(157,78,221,0.32),inset_0_1px_0_rgba(226,217,200,0.45),inset_0_0_18px_rgba(255,0,60,0.45)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none`}
             >
               <Sparkles className="h-4 w-4 shrink-0 text-crimson" aria-hidden />
               Auto demo
@@ -471,7 +471,7 @@ export default function Home() {
               aria-controls={`panel-${tab.id}`}
               onClick={() => setMobileTab(tab.id)}
               className={[
-                "inline-flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border font-display text-[13px] font-bold uppercase tracking-[0.08em] transition",
+                "inline-flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border font-sans text-[13px] font-bold uppercase tracking-[0.08em] transition",
                 mobileTab === tab.id
                   ? "border-crimson/60 bg-crimson/10 text-white shadow-[0_0_16px_rgba(255,0,60,0.18)]"
                   : "border-white/15 bg-black/40 text-zinc-300 hover:text-white",

@@ -84,7 +84,7 @@ export function HistoryDrawer({
                 <div className="flex items-center gap-2">
                   <h2
                     id="grimoire-history-title"
-                    className="font-display text-sm font-semibold uppercase tracking-[0.26em] text-bone"
+                    className="font-brand text-sm font-semibold uppercase tracking-[0.26em] text-bone"
                   >
                     Grimoire History
                   </h2>

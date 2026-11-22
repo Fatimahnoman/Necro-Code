@@ -19,11 +19,12 @@ Spec: `#[[file:../specs/necrocode-exorcist/design.md]]`
 
 | Token | Hex | Role |
 | --- | --- | --- |
-| `void` | `#040408` | Abyssal obsidian base (page, WebGL clear color) |
+| `void` | `#050307` | Abyssal obsidian base (page, WebGL clear color) |
 | `crimson` | `#FF003C` | Blood crimson: bugs, corruption aura, CTAs |
-| `ruby` (inline) | `#E0115F` | Stained-glass ruby: arch rims, rose windows, outer altar sigils |
-| `violet` (inline) | `#7B2CBF` | Stained-glass violet: arch rims, ribbons, inner altar sigils |
-| stone | `#030305` → `#0A070B` | Charcoal nave and panel stone |
+| `dried` | `#8B0000` | Dried blood: CTA fills, rose/arch panes, wax, ribbons, nave glow |
+| `umbra` | `#4A154B` | Shadowy amethyst: stained-glass panes, ribbons, nave glow |
+| `brass` | `#B08D57` (light `#D9B77E`, dark `#5E4524`) | Brass slots, banner edging, lead came, rivets, button rims |
+| stone | `#050307` → `#0A060B` | Charcoal nave and panel stone |
 | `amethyst` | `#9D4EDD` | Eldritch amethyst: channeling aura (`AURA_HEX.purple`), active seals |
 | `neon` | `#00FF66` | Necrotic emerald: purified aura, sealed stages |
 | `gold` / `bone` | `#E2D9C8` | Tarnished gold/bone: headings, primary text, sigil filigree |
@@ -41,10 +42,9 @@ no runtime request to Google), exposed as CSS variables:
 
 | Tailwind | Font | Use |
 | --- | --- | --- |
-| `font-brand` | Cinzel Decorative 700/900 | Brand wordmark, panel titles, ritual trigger, Corruption Report title |
-| `font-display` | Cinzel 500–700 | Navigation (header pills, mobile tabs, Grimoire tabs), stage titles, labels |
-| `font-sans` | Space Grotesk 400–700 | Fine print only: toolbar buttons, menu hints, sandbox text (readability at 12px) |
-| `font-mono` | JetBrains Mono 400–700 | Code, logs, diffs, numbers |
+| `font-brand` | Cinzel Decorative 700/900 | All headers, titles, panel headers, stage titles, ritual trigger (`font-display` is an alias of it) |
+| `font-sans` | Space Grotesk 400–700 | Regular UI: buttons, pills, tabs, labels, menus, hints |
+| `font-mono` | JetBrains Mono 400–700 | Code, logs, diffs, line numbers, scores, stage times |
 
 Minimum text size 12px. Primary text `text-bone`; secondary `text-bone/70–85`
 or `text-gold-dim`.
@@ -78,7 +78,22 @@ or `text-gold-dim`.
   Corruption Report is a carved stone plaque (`.cathedral-plaque`) with
   arched stained-glass panes (`.glass-pane`, `--pane` color) for cursed /
   silenced / residual; it is the only copy of those counts.
-- CRT layers are faded by `--crt-opacity: 0.10`. Decorative loops stop under
+- **Weathered arches:** each arch crown's stone gable is roughened by an SVG
+  `feTurbulence` + `feDisplacementMap` filter and frames a pointed
+  stained-glass window (7 translucent dried-blood / umbra / crimson /
+  emerald panes with lead mullions) under a glowing multi-color rim.
+- **Spellbook** is an open tome (`.tome-panel`): aged vellum, a red
+  manuscript margin rule, weathered layered margins. Upload/GitHub, the URL
+  input + Fetch, the preset select, and the directive sit in
+  `.brass-slot`s. The gutter has a brass double rule and faint aged ruling.
+  `EXORCISE CODE SSE` burns: dried-blood → crimson fill, a rotating flame
+  border, and a pulsing `ember-burn` glow.
+- **Grimoire:** the selected tab gets a leaded multi-color stained-glass
+  border (crimson → dried blood → amethyst → umbra → emerald) with inset
+  neon light. Toolbar buttons use `.medieval-btn` (chamfered plate, brass
+  rim). The badge reads `SOUL-PURITY <before> ➔ <after> / 100` beside a
+  glowing wax seal on an umbra / dried-blood ribbon.
+- CRT layers are faded by `--crt-opacity: 0.08`. Decorative loops stop under
   `prefers-reduced-motion`.
 
 ## Theme primitives
@@ -131,8 +146,8 @@ Three-pane HUD, responsive, zero horizontal scroll:
      is set or WebGL is unavailable; a thrown canvas (`WebGLBoundary`) or a
      `webglcontextlost` event switches to 2D and disables the 3D option.
    - Before the first run (`idle`, no logs), the footer shows the helper
-     `1. Paste or Fetch Cursed Code → 2. Ignite EXORCISE CODE → 3. Click any
-     3D Seal to Inspect`; it is replaced by the SSE sync line once a run starts.
+     `1. Feed the Crypt → 2. Ignite EXORCISE CODE → 3. Inspect the Altar
+     Seals`; it is replaced by the SSE sync line once a run starts.
 3. **Right · Grimoire Terminal** (`Terminal`)
    - Fixed top block that never scrolls: title row (health badge), one
      toolbar row, then three tabs: `Logs`, `Spectral Diff`, `Sandbox`.

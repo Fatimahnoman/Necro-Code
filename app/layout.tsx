@@ -1,10 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import {
-  Cinzel,
-  Cinzel_Decorative,
-  JetBrains_Mono,
-  Space_Grotesk,
-} from "next/font/google";
+import { Cinzel_Decorative, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
 
@@ -16,12 +11,6 @@ const brandFont = Cinzel_Decorative({
   weight: ["700", "900"],
   display: "swap",
   variable: "--font-brand",
-});
-const ritualFont = Cinzel({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  display: "swap",
-  variable: "--font-ritual",
 });
 const monoFont = JetBrains_Mono({
   subsets: ["latin"],
@@ -62,7 +51,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#040408",
+  themeColor: "#050307",
   width: "device-width",
   initialScale: 1,
   // Lets `env(safe-area-inset-*)` (used by `.pb-safe`) report the notch/home bar.
@@ -75,7 +64,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${brandFont.variable} ${ritualFont.variable} ${monoFont.variable} ${uiFont.variable}`}
+      className={`${brandFont.variable} ${monoFont.variable} ${uiFont.variable}`}
     >
       <body className="min-h-screen bg-void font-sans text-bone antialiased">
         {children}

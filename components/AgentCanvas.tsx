@@ -47,16 +47,13 @@ const STATUS_HEX: Record<NodeStatus, string> = {
 };
 
 const HELPER_STEPS = [
-  "Paste or Fetch Cursed Code",
+  "Feed the Crypt",
   "Ignite EXORCISE CODE",
-  "Click any 3D Seal to Inspect",
+  "Inspect the Altar Seals",
 ] as const;
 
-const HELPER_STEPS_2D = [
-  "Paste or Fetch Cursed Code",
-  "Ignite EXORCISE CODE",
-  "Click any Stage to Inspect",
-] as const;
+/** Same wording in 2D: the stage cards are the altar seals there. */
+const HELPER_STEPS_2D = HELPER_STEPS;
 
 /** Bottom strip reserved for the first-run helper (up to two wrapped lines). */
 const FOOTER_HELPER_PX = 64;
@@ -72,6 +69,7 @@ type GraphMode = "2d" | "3d";
  * unavailable or lost.
  */
 function RitualGraph2D({
+  stageMeta,
   nodes,
   activeStage,
   bugCount,
@@ -81,6 +79,7 @@ function RitualGraph2D({
   reserveTopPx,
   reserveBottomPx,
 }: {
+  stageMeta: Partial<Record<StageId, string>>;
   nodes: NodeStatusMap;
   activeStage: StageId | null;
   bugCount: number;
@@ -157,14 +156,14 @@ function RitualGraph2D({
                   {stage.glyph}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-display text-[13px] font-bold uppercase leading-tight tracking-[0.06em] text-bone">
+                  <span className="block font-brand text-[13px] font-bold uppercase leading-tight tracking-[0.06em] text-bone">
                     {stage.label}
                   </span>
                   <span
                     className="mt-0.5 block font-mono text-[12px] uppercase tracking-[0.1em]"
                     style={{ color: lit ? color : "#A1A1AA" }}
                   >
-                    {STATUS_LABEL[status]}
+                    {stageMeta[stage.id] ?? STATUS_LABEL[status]}
                   </span>
                 </span>
                 {stage.id === "glitch_scanner" && bugCount > 0 && (
@@ -325,10 +324,11 @@ export function AgentCanvas({
 
   useEffect(() => {
     setNow(Date.now());
-    if (!running || !selected) return;
+    // Tick while a ritual runs so the active stage's banner time advances.
+    if (!running) return;
     const timer = window.setInterval(() => setNow(Date.now()), 250);
     return () => window.clearInterval(timer);
-  }, [running, selected]);
+  }, [running]);
 
   const selectedStage = WORKFLOW_STAGES.find((stage) => stage.id === selected);
   const selectedStatus = selectedStage ? nodes[selectedStage.id] : null;
@@ -360,6 +360,17 @@ export function AgentCanvas({
     }
     return counts;
   }, [logs, summary]);
+
+  /** Banner line 2 for every stage: "<STATUS> · <stage time>". */
+  const stageMeta = useMemo(() => {
+    const meta: Partial<Record<StageId, string>> = {};
+    for (const stage of WORKFLOW_STAGES) {
+      const status = nodes[stage.id];
+      const ms = stageDurationMs(logs, stage.id, status, now);
+      meta[stage.id] = ms === null ? STATUS_LABEL[status] : `${STATUS_LABEL[status]} · ${formatMs(ms)}`;
+    }
+    return meta;
+  }, [logs, nodes, now]);
 
   const stageMs =
     selectedStage && selectedStatus
@@ -486,10 +497,12 @@ export function AgentCanvas({
               reserveBottomPx={reserveBottomPx}
               onContextLost={disableWebGL}
               running={running}
+              stageMeta={stageMeta}
             />
           </WebGLBoundary>
         ) : (
           <RitualGraph2D
+            stageMeta={stageMeta}
             nodes={nodes}
             activeStage={activeStage}
             bugCount={bugCount}
@@ -526,7 +539,7 @@ export function AgentCanvas({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p
-                  className="font-display text-[14px] uppercase tracking-[0.22em]"
+                  className="font-brand text-[14px] uppercase tracking-[0.22em]"
                   style={{ color: STATUS_HEX[selectedStatus] }}
                 >
                   {selectedStage.glyph} {selectedStage.label}
@@ -612,7 +625,7 @@ export function AgentCanvas({
                 onClick={() => setSelected(step.stageId)}
                 aria-pressed={selected === step.stageId}
                 className={[
-                  "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1.5 font-display text-[12px] font-bold uppercase leading-tight tracking-[0.06em] transition",
+                  "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1.5 font-sans text-[12px] font-bold uppercase leading-tight tracking-[0.06em] transition",
                   selected === step.stageId
                     ? "border-crimson/60 bg-crimson/10 text-crimson"
                     : "border-white/15 bg-black/50 text-zinc-200 hover:border-haunt/50 hover:text-haunt-glow",

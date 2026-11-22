@@ -97,7 +97,7 @@ const HEALTH_COLOR: Record<HealthTier, string> = {
 
 /** Wax tint per purity tier: [wax, dark rim, highlight]. */
 const WAX: Record<HealthTier, [string, string, string]> = {
-  cursed: ["#b0122e", "#5a0614", "#ff9aa6"],
+  cursed: ["#8B0000", "#3a0004", "#ff6a80"],
   haunted: ["#a8741a", "#5a3a06", "#ffe1a0"],
   pure: ["#0f8a4c", "#04401f", "#9dffcb"],
 };
@@ -113,11 +113,12 @@ function WaxSeal({ score }: { score: number }) {
       viewBox="0 0 34 36"
       aria-hidden
       focusable="false"
-      className="h-9 w-[34px] shrink-0 [filter:drop-shadow(0_2px_3px_rgba(0,0,0,0.7))]"
+      className="h-9 w-[34px] shrink-0"
+      style={{ filter: `drop-shadow(0 2px 3px rgba(0,0,0,0.7)) drop-shadow(0 0 6px ${wax})` }}
     >
       {/* Ribbon tails. */}
-      <path d="M10 22 6 35 11 32 14 35 16 24Z" fill="#5b1f8f" stroke="#2c0c47" strokeWidth="0.6" />
-      <path d="M24 22 28 35 23 32 20 35 18 24Z" fill="#7B2CBF" stroke="#2c0c47" strokeWidth="0.6" />
+      <path d="M10 22 6 35 11 32 14 35 16 24Z" fill="#4A154B" stroke="#1f0820" strokeWidth="0.6" />
+      <path d="M24 22 28 35 23 32 20 35 18 24Z" fill="#8B0000" stroke="#3a0004" strokeWidth="0.6" />
       {/* Irregular wax blob. */}
       <path
         d="M17 1.5c2.3 0 3 1.8 5 2.4 2 .6 3.9-.7 5.3.7s.1 3.3.7 5.3c.6 2 2.4 2.7 2.4 5s-1.8 3-2.4 5c-.6 2 .7 3.9-.7 5.3s-3.3.1-5.3.7c-2 .6-2.7 2.4-5 2.4s-3-1.8-5-2.4c-2-.6-3.9.7-5.3-.7s-.1-3.3-.7-5.3c-.6-2-2.4-2.7-2.4-5s1.8-3 2.4-5c.6-2-.7-3.9.7-5.3s3.3-.1 5.3-.7c2-.6 2.7-2.4 5-2.4Z"
@@ -133,7 +134,7 @@ function WaxSeal({ score }: { score: number }) {
         fontSize="10"
         fontWeight="700"
         fill={rim}
-        style={{ fontFamily: "var(--font-ritual), serif" }}
+        style={{ fontFamily: "var(--font-brand), serif" }}
       >
         {score}
       </text>
@@ -156,7 +157,7 @@ function downloadText(content: string, filename: string, type: string) {
 
 /** Uniform pinned-toolbar button: single line, never shrinks or truncates. */
 const ACTION_BUTTON =
-  "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border font-sans text-[12px] font-semibold uppercase leading-none tracking-[0.08em] text-bone transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-zinc-500 disabled:shadow-none";
+  "medieval-btn inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border font-sans text-[12px] font-semibold uppercase leading-none tracking-[0.08em] text-bone transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-zinc-500 disabled:shadow-none";
 
 type GrimoireTab = "logs" | "diff" | "sandbox";
 
@@ -589,16 +590,16 @@ export function Terminal({
               >
                 <WaxSeal score={healthAfter} />
                 <span className="flex flex-col leading-none">
-                  <span className="font-display text-[12px] font-bold uppercase tracking-[0.12em] text-gold-dim">
+                  <span className="font-brand text-[12px] font-bold uppercase tracking-[0.12em] text-gold-dim">
                     Soul-purity
                   </span>
                   <span className="mt-0.5 font-mono text-[12px] tabular-nums">
                     <span className={HEALTH_COLOR[healthTier(healthBefore)]}>{healthBefore}</span>
-                    <span className="text-bone/60"> → </span>
+                    <span className="text-bone/60"> ➔ </span>
                     <span className={`font-bold ${HEALTH_COLOR[healthTier(healthAfter)]}`}>
                       {healthAfter}
                     </span>
-                    <span className="text-bone/60"> /100</span>
+                    <span className="text-bone/60"> / 100</span>
                   </span>
                 </span>
               </span>
@@ -754,7 +755,7 @@ export function Terminal({
                 onClick={() => setView(tab.id)}
                 style={{ "--plate": TAB_PLATE[tab.id] } as CSSProperties}
                 className={[
-                  "arcane-plate inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap px-2 font-display text-[12px] font-bold uppercase leading-none tracking-[0.12em] transition",
+                  "arcane-plate inline-flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap px-2 font-sans text-[12px] font-bold uppercase leading-none tracking-[0.12em] transition",
                   selected ? "text-bone" : "text-bone/70 hover:text-bone",
                 ].join(" ")}
               >
@@ -1004,7 +1005,7 @@ export function Terminal({
               Corruption Report
             </span>
             <span
-              className={`font-display text-[12px] font-bold uppercase tracking-[0.14em] ${
+              className={`font-sans text-[12px] font-bold uppercase tracking-[0.14em] ${
                 summary.unresolved > 0 ? "text-crimson" : "text-neon"
               }`}
             >
@@ -1014,9 +1015,9 @@ export function Terminal({
           <div className="mt-2 grid grid-cols-3 gap-2 text-center">
             {(
               [
-                ["Cursed", summary.detected, "224, 17, 95"],
-                ["Silenced", summary.fixed, "0, 200, 110"],
-                ["Residual", summary.unresolved, "123, 44, 191"],
+                ["Cursed", summary.detected, "139, 0, 0"],
+                ["Silenced", summary.fixed, "0, 255, 102"],
+                ["Residual", summary.unresolved, "74, 21, 75"],
               ] as const
             ).map(([label, value, pane]) => (
               <div
@@ -1024,10 +1025,10 @@ export function Terminal({
                 className="glass-pane rounded-t-[14px] px-1 pb-1.5 pt-2"
                 style={{ "--pane": pane } as CSSProperties}
               >
-                <div className="font-display text-[17px] font-bold leading-none text-bone [text-shadow:0_0_10px_rgba(0,0,0,0.9)]">
+                <div className="font-brand text-[17px] font-bold leading-none text-bone [text-shadow:0_0_10px_rgba(0,0,0,0.9)]">
                   {value}
                 </div>
-                <div className="mt-1 font-display text-[12px] font-bold uppercase tracking-[0.1em] text-bone/85">
+                <div className="mt-1 font-sans text-[12px] font-bold uppercase tracking-[0.1em] text-bone/85">
                   {label}
                 </div>
               </div>

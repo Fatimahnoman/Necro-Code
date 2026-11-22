@@ -177,9 +177,9 @@ export function ControlPanel({
   };
 
   return (
-    <aside className="rune-border horror-panel relative flex h-full min-h-0 flex-col gap-3 overflow-x-hidden overflow-y-auto rounded-2xl p-4">
+    <aside className="tome-panel relative flex h-full min-h-0 flex-col gap-3 overflow-x-hidden overflow-y-auto rounded-b-2xl py-4 pl-9 pr-4">
       <header className="flex shrink-0 items-center gap-3 border-b border-gold/10 pb-3">
-        <div className="grid h-10 w-10 shrink-0 rotate-45 place-items-center rounded-md border border-gold/40 bg-[linear-gradient(135deg,rgba(255,0,60,0.25),rgba(157,78,221,0.15))] shadow-[0_0_22px_rgba(255,0,60,0.25),inset_0_0_10px_rgba(0,0,0,0.6)]">
+        <div className="grid h-10 w-10 shrink-0 rotate-45 place-items-center rounded-md border border-gold/40 bg-[linear-gradient(135deg,rgba(139,0,0,0.55),rgba(74,21,75,0.5))] shadow-[0_0_22px_rgba(255,0,60,0.25),inset_0_0_10px_rgba(0,0,0,0.6)]">
           <Skull className="h-4.5 w-4.5 -rotate-45 text-gold" aria-hidden />
         </div>
         <div className="min-w-0">
@@ -195,10 +195,10 @@ export function ControlPanel({
       {/* Template selector */}
       <div className="shrink-0 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="whitespace-nowrap font-display text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim">
+          <span className="whitespace-nowrap font-sans text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim">
             Presets
           </span>
-          <span className="flex shrink-0 items-center gap-2">
+          <span className="brass-slot flex shrink-0 items-center gap-1 px-1.5">
             <button
               type="button"
               onClick={() => setGithubOpen((open) => !open)}
@@ -206,23 +206,23 @@ export function ControlPanel({
               aria-controls="github-summon"
               title="Summon a file from a public GitHub repository"
               className={[
-                "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border-b px-1 font-display text-[12px] font-bold uppercase leading-none tracking-[0.1em] transition",
+                "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border-b px-1 font-sans text-[12px] font-bold uppercase leading-none tracking-[0.1em] transition",
                 githubOpen
-                  ? "border-amethyst text-bone [text-shadow:0_0_10px_rgba(157,78,221,0.8)]"
-                  : "border-transparent text-bone/85 hover:border-amethyst/60 hover:text-bone",
+                  ? "border-crimson text-bone [text-shadow:0_0_10px_rgba(255,0,60,0.8)]"
+                  : "border-transparent text-bone/85 hover:border-brass-light/60 hover:text-bone",
               ].join(" ")}
             >
               <GitBranch className="h-4 w-4 shrink-0 text-amethyst-glow" aria-hidden />
               GitHub
             </button>
-            <span aria-hidden className="h-4 w-px bg-gold/20" />
+            <span aria-hidden className="h-4 w-px bg-brass/50" />
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               title="Upload a cursed artifact in any supported language"
-              className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border-b px-1 font-display text-[12px] font-bold uppercase leading-none tracking-[0.1em] transition border-transparent text-bone/85 hover:border-gold/60 hover:text-bone"
+              className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border-b px-1 font-sans text-[12px] font-bold uppercase leading-none tracking-[0.1em] transition border-transparent text-bone/85 hover:border-brass-light/60 hover:text-bone"
             >
-              <Upload className="h-4 w-4 shrink-0 text-gold" aria-hidden />
+              <Upload className="h-4 w-4 shrink-0 text-brass-light" aria-hidden />
               Upload
             </button>
           </span>
@@ -243,7 +243,7 @@ export function ControlPanel({
             onSubmit={handleGithubSummon}
             className="space-y-1"
           >
-            <div className="flex items-center gap-1.5">
+            <div className="brass-slot flex items-center gap-1 p-1">
               <input
                 ref={githubInputRef}
                 type="text"
@@ -254,12 +254,12 @@ export function ControlPanel({
                 aria-label="Public GitHub file URL"
                 spellCheck={false}
                 autoComplete="off"
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/60 px-2.5 py-1.5 font-mono text-[13px] text-bone outline-none transition placeholder:text-zinc-500 focus:border-haunt/50"
+                className="min-w-0 flex-1 bg-transparent px-2 py-1 font-mono text-[13px] text-bone outline-none placeholder:text-zinc-500"
               />
               <button
                 type="submit"
                 disabled={running || githubStatus.kind === "loading" || githubUrl.trim().length === 0}
-                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-haunt/40 bg-haunt/10 px-2.5 py-1.5 font-mono text-[13px] uppercase tracking-[0.16em] text-haunt-glow transition hover:bg-haunt/15 disabled:cursor-not-allowed disabled:opacity-50"
+                className="medieval-btn inline-flex h-7 shrink-0 items-center gap-1 bg-dried/40 px-2.5 font-sans text-[12px] font-bold uppercase tracking-[0.12em] text-bone transition hover:bg-dried/60 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {githubStatus.kind === "loading" && (
                   <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
@@ -285,7 +285,7 @@ export function ControlPanel({
           </form>
         )}
 
-        <div className="relative flex items-center gap-2">
+        <div className="brass-slot relative flex items-center gap-1.5 pl-2">
           <span className="grid h-8 w-6 shrink-0 place-items-center">
             <SelectedIcon
               className="h-4 w-4 text-amethyst-glow"
@@ -301,7 +301,7 @@ export function ControlPanel({
                 }
               }}
               aria-label="Cursed preset"
-              className="h-8 w-full appearance-none border-0 border-b border-gold/25 bg-transparent pl-1 pr-7 font-display text-[13px] font-bold uppercase tracking-[0.08em] text-bone outline-none transition [color-scheme:dark] hover:border-gold/50 focus:border-amethyst"
+              className="h-8 w-full appearance-none border-0 bg-transparent pl-1 pr-7 font-sans text-[13px] font-bold uppercase tracking-[0.08em] text-bone outline-none transition [color-scheme:dark] hover:border-gold/50 focus:border-amethyst"
             >
               <option value="custom" disabled className="bg-crypt text-bone">
                 Custom relic
@@ -333,7 +333,7 @@ export function ControlPanel({
       <div className="shrink-0 space-y-1">
         <label
           htmlFor="ritual-directive"
-          className="flex items-center gap-1.5 font-display text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim"
+          className="flex items-center gap-1.5 font-sans text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim"
         >
           <Wand2 className="h-3.5 w-3.5 text-amethyst-glow" aria-hidden />
           Ritual Directive
@@ -346,7 +346,7 @@ export function ControlPanel({
           onChange={(event) => onDirectiveChange(event.target.value)}
           maxLength={320}
           placeholder="e.g., Fix infinite loops, convert to strict TypeScript, optimize performance..."
-          className="w-full rounded-lg border border-white/10 bg-black/60 px-2.5 py-1.5 font-mono text-[13px] text-bone outline-none transition placeholder:text-zinc-500 focus:border-spectral/50 focus:shadow-[0_0_16px_rgba(6,182,212,0.07)]"
+          className="brass-slot w-full px-2.5 py-1.5 font-mono text-[13px] text-bone outline-none placeholder:text-zinc-500"
         />
       </div>
 
@@ -358,7 +358,7 @@ export function ControlPanel({
       */}
       <div className="flex flex-1 flex-col gap-2">
         <div className="flex shrink-0 items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5 font-display text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim">
+          <span className="flex items-center gap-1.5 font-sans text-[12px] font-semibold uppercase tracking-[0.18em] text-gold-dim">
             <Sparkles className="h-3.5 w-3.5 text-crimson" aria-hidden />
             Artifact
           </span>
@@ -401,7 +401,7 @@ export function ControlPanel({
           <div
             ref={gutterRef}
             aria-hidden
-            className="w-12 shrink-0 select-none overflow-hidden border-r-[3px] border-double border-gold/30 bg-black/25 pb-8 pr-2 pt-3 text-right font-display text-[12px] font-semibold leading-[20px] text-gold-dim/80 tabular-nums"
+            className="w-12 shrink-0 select-none overflow-hidden border-r-[3px] border-double border-brass/45 bg-black/30 pb-8 pr-2 pt-3 text-right font-mono text-[12px] font-medium leading-[20px] text-gold-dim/80 tabular-nums [background-image:repeating-linear-gradient(180deg,transparent_0_19px,rgba(176,141,87,0.12)_19px_20px)] [background-position:0_12px]"
           >
             {lines.map((_, index) => (
               <div
@@ -447,7 +447,7 @@ export function ControlPanel({
       {/* Ritual controls */}
       <div className="flex shrink-0 flex-col gap-2 border-t border-gold/10 pt-2.5">
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between font-display text-[12px] font-semibold uppercase leading-5 tracking-[0.16em] text-bone tabular-nums">
+          <div className="flex items-center justify-between font-sans text-[12px] font-semibold uppercase leading-5 tracking-[0.16em] text-bone tabular-nums">
             <span>{PHASE_LABEL[phase]}</span>
             <span className={`font-mono ${running ? "text-crimson" : "text-bone"}`}>
               {progress}%

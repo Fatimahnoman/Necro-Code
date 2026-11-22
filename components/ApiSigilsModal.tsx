@@ -105,7 +105,7 @@ export function ApiSigilsModal({
               <div className="min-w-0 flex-1">
                 <h2
                   id="api-sigils-title"
-                  className="font-display text-sm font-semibold uppercase tracking-[0.26em] text-bone"
+                  className="font-brand text-sm font-semibold uppercase tracking-[0.26em] text-bone"
                 >
                   API Sigils
                 </h2>

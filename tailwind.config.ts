@@ -9,7 +9,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        void: "#040408",
+        void: "#050307",
+        // Dried blood → fresh crimson.
+        dried: "#8B0000",
+        // Shadowy amethyst (stained-glass violet).
+        umbra: "#4A154B",
+        brass: {
+          DEFAULT: "#B08D57",
+          light: "#D9B77E",
+          dark: "#5E4524",
+        },
         crypt: "#070A10",
         charnel: "#0B0F17",
         blood: {
@@ -49,10 +58,10 @@ const config: Config = {
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
         // UI controls (buttons, pills, tabs, labels).
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
-        // Ritual headers + stage titles.
-        display: ["var(--font-ritual)", "Georgia", "Cambria", "serif"],
-        // Brand wordmark only.
-        brand: ["var(--font-brand)", "var(--font-ritual)", "Georgia", "serif"],
+        // All headers / titles / panel headers (Cinzel Decorative).
+        brand: ["var(--font-brand)", "Georgia", "Cambria", "serif"],
+        // Alias kept so any older `font-display` usage resolves to the same face.
+        display: ["var(--font-brand)", "Georgia", "Cambria", "serif"],
       },
       boxShadow: {
         "glow-blood":

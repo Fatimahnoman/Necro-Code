@@ -89,21 +89,27 @@ Two dedicated, dynamically imported client-only canvases:
   with glowing status-colored edges, a pulsing core shard, one rotating
   energy halo, and behind it a **stained-glass rose disc**: 12 panes
   (r 0.56–0.86) alternating the status color and a darker shade, gold lead
-  came (radial bars + rims). Pane opacity pulses with the status (faster
+  came (radial bars + rims) with brass rivets where came meets rim. Pane opacity pulses with the status (faster
   when active/error). Pending seals use tarnished gold `#6B5E45`.
 - **Altar floor** (`AltarRings`): counter-rotating rune circles beneath the
   relic, tilted toward the floor. Outer sigils burn ruby `#E0115F`, inner
   sigils violet `#7B2CBF`, both tinted 25% toward the aura and breathing.
-- **Relic**: the wireframe skull/polyhedron is scaled `RELIC_SCALE = 1.18`
-  and wrapped in dark flames (`RelicEmbers`): two ember clouds (ruby
-  `#FF2A4D`, ember orange `#FF7A1A`) spiral upward and taper like a flame,
-  over a flickering hellfire point light.
+- **Relic**: the wireframe skull/polyhedron is scaled `RELIC_SCALE = 1.3`
+  and wrapped in dense flames (`RelicEmbers`): three ember clouds of 140
+  points each (crimson `#FF003C`, ember `#FF7A1A`, dried blood `#8B0000`)
+  spiral upward and taper, plus `CosmicSparks` (120 red points orbiting on
+  tilted great circles), over a flickering hellfire point light.
 - **Conduits** (`ConduitStream`) and **Ritual FX** (`RitualFx`: run-start
   zoom pulse + aura shockwaves, skipped under reduced motion) are unchanged.
 - `SEAL_REACH = 1.07` and `LABEL_OFFSET.y = -1.12` so labels clear the glass
   disc; `fitGraph()` uses both.
-- Footer helper: `1. Paste or Fetch Cursed Code → 2. Ignite EXORCISE CODE →
-  3. Click any 3D Seal to Inspect` (2D: "Click any Stage to Inspect").
+- **Gothic banners:** each seal's label is a swallowtail stone pennant with
+  brass edging. Line 1: stage title (Cinzel Decorative, status color).
+  Line 2: `stageMeta` from `AgentCanvas` (`<STATUS> · <stage time>`, ticking
+  every 250ms while running). `LABEL_HALF_HEIGHT_PX = 28` reserves room for
+  it in `fitGraph()`. The 2D cards show the same line.
+- Footer helper (3D and 2D): `1. Feed the Crypt → 2. Ignite EXORCISE CODE →
+  3. Inspect the Altar Seals`.
 
 ## Screen-space labels over WebGL
 
