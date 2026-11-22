@@ -66,9 +66,9 @@ or `text-gold-dim`.
   stained-glass rim (ruby → gold → violet → gold → emerald).
 - **Spellbook tome:** the editor (`.grimoire-editor`) is an aged dark-vellum
   page with a spine shadow and weathered double inner edge; the line-number
-  gutter uses Cinzel numerals behind a gold double rule, every 10th line
-  marked `ᛟ` in crimson. GitHub / Upload / Preset are flat inline controls
-  (underline on hover, no boxes).
+  gutter uses JetBrains Mono numerals behind a brass double rule, every 10th
+  line marked `ᛟ` in crimson. GitHub / Upload / Preset sit in brass slots
+  (see "Spellbook" below).
 - **`EXORCISE CODE SSE`** (`.ritual-trigger`): glossy crimson sealing wax with
   a rotating conic energy border and a stamped skull wax seal (`WaxSigil`).
 - **Grimoire:** tabs are etched dark-stone plates (`.arcane-plate`, engraved
