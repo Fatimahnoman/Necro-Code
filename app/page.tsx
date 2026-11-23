@@ -199,7 +199,7 @@ export default function Home() {
             <ControlPanel code={code} onCodeChange={handleCodeChange} directive={directive} onDirectiveChange={setDirective} filename={filename} onFilenameChange={setFilename} language={language} onLanguageChange={setLanguage} onSelectPreset={handleSelectPreset} selectedPresetId={selectedPresetId} onRun={handleRun} onReset={handleReset} running={state.running} phase={state.phase} progress={state.progress} />
           </div>
           <div className="pointer-events-auto hidden min-h-0 lg:block">
-            <AgentCanvas nodes={state.nodes} activeStage={state.activeStage} bugCount={state.bugCount} aura={aura} progress={state.progress} running={state.running} phase={state.phase} summary={state.summary} logs={state.logs} engine={state.engine} scanlines={settings.scanlinesOn} graphMode={settings.graphMode} />
+            <AgentCanvas nodes={state.nodes} activeStage={state.activeStage} bugCount={state.bugCount} aura={aura} progress={state.progress} running={state.running} phase={state.phase} summary={state.summary} logs={state.logs} engine={state.engine} scanlines={settings.scanlinesOn} graphMode={settings.graphMode} fxEnabled={settings.soundOn} />
           </div>
           <div className="pointer-events-auto hidden min-h-0 lg:block">
             <Terminal logs={state.logs} running={state.running} scanlines={settings.scanlinesOn} summary={state.summary} finalCode={state.finalCode} originalCode={state.originalCode} findings={state.findings} appliedFixes={state.appliedFixes} engine={state.engine} language={language} filename={filename} onCopied={() => play("copy")} onExported={() => play("click")} onSandbox={() => play("click")} autoDemoNonce={autoDemoNonce} />
@@ -217,7 +217,7 @@ export default function Home() {
             </div>
             <div id="panel-ritual" className={mobilePanel("ritual")}>
               <div className="glass-obsidian dock-sigil relative h-full overflow-hidden rounded-2xl">
-                <AgentCanvas nodes={state.nodes} activeStage={state.activeStage} bugCount={state.bugCount} aura={aura} progress={state.progress} running={state.running} phase={state.phase} summary={state.summary} logs={state.logs} engine={state.engine} scanlines={settings.scanlinesOn} graphMode={settings.graphMode} />
+                <AgentCanvas nodes={state.nodes} activeStage={state.activeStage} bugCount={state.bugCount} aura={aura} progress={state.progress} running={state.running} phase={state.phase} summary={state.summary} logs={state.logs} engine={state.engine} scanlines={settings.scanlinesOn} graphMode={settings.graphMode} fxEnabled={settings.soundOn} />
               </div>
             </div>
             <div id="panel-grimoire" className={mobilePanel("grimoire")}>

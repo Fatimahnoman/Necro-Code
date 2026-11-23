@@ -219,6 +219,8 @@ interface AgentCanvasProps {
   engine: EngineInfo;
   scanlines?: boolean;
   graphMode?: GraphMode;
+  /** Mirrors the `3D AUDIO FX` toggle for in-scene sound cues. */
+  fxEnabled?: boolean;
 }
 
 export function AgentCanvas({
@@ -234,6 +236,7 @@ export function AgentCanvas({
   engine,
   scanlines = true,
   graphMode = "3d",
+  fxEnabled = false,
 }: AgentCanvasProps) {
   const [selected, setSelected] = useState<StageId | null>(null);
   const [now, setNow] = useState(0);
@@ -371,6 +374,8 @@ export function AgentCanvas({
               reserveTopPx={64}
               reserveBottomPx={84}
               onContextLost={handleWebGLFailure}
+              running={running}
+              fxEnabled={fxEnabled}
             />
           </WebGLBoundary>
         )}

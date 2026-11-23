@@ -4,6 +4,7 @@ import { Line, OrbitControls, PointMaterial, Sparkles } from "@react-three/drei"
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Suspense,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -12,6 +13,7 @@ import {
 } from "react";
 import * as THREE from "three";
 import { AURA_HEX, type AuraState } from "@/lib/aura";
+import { playBatSwarmFlutter } from "@/lib/sound";
 import { installThreeConsoleGuard } from "@/lib/three-runtime";
 import type { NodeStatus, StageId } from "@/lib/types";
 import { WORKFLOW_STAGES } from "@/lib/types";
@@ -1349,6 +1351,278 @@ function AshRise() {
   );
 }
 
+/** Procedural low-poly bat rig: a dark silhouette with crimson wing rims. */
+interface BatRefs {
+  group: THREE.Group | null;
+  left: THREE.Group | null;
+  right: THREE.Group | null;
+}
+interface BatMaterials {
+  body: THREE.MeshBasicMaterial;
+  wing: THREE.MeshBasicMaterial;
+  rim: THREE.LineBasicMaterial;
+}
+
+const AMBIENT_BATS = [
+  { x: -2.05, y: 1.85, z: -1.9, scale: 0.22, phase: 0.4, speed: 0.42 },
+  { x: 0.15, y: 2.25, z: -2.3, scale: 0.18, phase: 2.2, speed: 0.33 },
+  { x: 1.95, y: 1.7, z: -1.7, scale: 0.24, phase: 4.1, speed: 0.38 },
+] as const;
+
+const SWARM_TARGETS: Array<[number, number]> = [
+  [-2.5, 2.05],
+  [-1.55, 2.4],
+  [-0.6, 2.25],
+  [0.55, 2.35],
+  [1.5, 2.15],
+  [2.45, 1.95],
+];
+const BAT_SWARM_SECONDS = 1.8;
+const BAT_SWARM_COOLDOWN = 2.2;
+
+function batWingGeometry(): THREE.ShapeGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0.02);
+  shape.lineTo(0.16, 0.1);
+  shape.lineTo(0.34, 0.13);
+  shape.lineTo(0.46, 0.04);
+  shape.lineTo(0.38, -0.02);
+  shape.lineTo(0.44, -0.12);
+  shape.lineTo(0.28, -0.07);
+  shape.lineTo(0.18, -0.17);
+  shape.lineTo(0.1, -0.06);
+  shape.lineTo(0, -0.04);
+  shape.closePath();
+  return new THREE.ShapeGeometry(shape);
+}
+
+function batRimGeometry(): THREE.BufferGeometry {
+  return new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0.02, 0.002),
+    new THREE.Vector3(0.16, 0.1, 0.002),
+    new THREE.Vector3(0.34, 0.13, 0.002),
+    new THREE.Vector3(0.46, 0.04, 0.002),
+  ]);
+}
+
+function createBatMaterials(opacity: number): BatMaterials {
+  return {
+    body: new THREE.MeshBasicMaterial({
+      color: "#06040a", transparent: true, opacity, depthWrite: false,
+    }),
+    wing: new THREE.MeshBasicMaterial({
+      color: "#0a0710", transparent: true, opacity, depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+    rim: new THREE.LineBasicMaterial({
+      color: "#8b0024", transparent: true, opacity: opacity * 0.45, depthWrite: false,
+    }),
+  };
+}
+
+function disposeBatMaterials(materials: BatMaterials) {
+  materials.body.dispose();
+  materials.wing.dispose();
+  materials.rim.dispose();
+}
+
+function emptyBatRefs(): BatRefs {
+  return { group: null, left: null, right: null };
+}
+
+function BatSilhouette({
+  index,
+  register,
+  wingGeometry,
+  rimGeometry,
+  materials,
+  scale = 1,
+  visible = true,
+}: {
+  index: number;
+  register: (index: number, refs: BatRefs) => void;
+  wingGeometry: THREE.ShapeGeometry;
+  rimGeometry: THREE.BufferGeometry;
+  materials: BatMaterials;
+  scale?: number;
+  visible?: boolean;
+}) {
+  const group = useRef<THREE.Group>(null);
+  const left = useRef<THREE.Group>(null);
+  const right = useRef<THREE.Group>(null);
+  const leftRimLine = useMemo(
+    () => new THREE.Line(rimGeometry, materials.rim),
+    [rimGeometry, materials.rim],
+  );
+  const rightRimLine = useMemo(
+    () => new THREE.Line(rimGeometry, materials.rim),
+    [rimGeometry, materials.rim],
+  );
+
+  useEffect(() => {
+    register(index, {
+      group: group.current,
+      left: left.current,
+      right: right.current,
+    });
+    return () => register(index, emptyBatRefs());
+  }, [index, register]);
+
+  return (
+    <group ref={group} scale={scale} visible={visible}>
+      <mesh material={materials.body}>
+        <sphereGeometry args={[0.075, 8, 6]} />
+      </mesh>
+      <group ref={left} position={[-0.055, 0.01, 0]} scale={[-1, 1, 1]}>
+        <mesh geometry={wingGeometry} material={materials.wing} />
+        <primitive object={leftRimLine} />
+      </group>
+      <group ref={right} position={[0.055, 0.01, 0]}>
+        <mesh geometry={wingGeometry} material={materials.wing} />
+        <primitive object={rightRimLine} />
+      </group>
+    </group>
+  );
+}
+
+/**
+ * Three ambient bats drift behind the altar. On a ritual start or while the
+ * scanner/exorcist stages are active, six more erupt from behind the skull,
+ * swoop toward the camera and fade out within ~1.8s, all inside this canvas.
+ */
+function RitualBats({
+  running,
+  activeStage,
+  fxEnabled,
+}: {
+  running: boolean;
+  activeStage: StageId | null;
+  fxEnabled: boolean;
+}) {
+  const ambientRefs = useRef<BatRefs[]>(AMBIENT_BATS.map(() => emptyBatRefs()));
+  const swarmRefs = useRef<BatRefs[]>(SWARM_TARGETS.map(() => emptyBatRefs()));
+  const ambientMaterials = useMemo(() => createBatMaterials(0.85), []);
+  const swarmMaterials = useMemo(
+    () => SWARM_TARGETS.map(() => createBatMaterials(0.95)),
+    [],
+  );
+  const wingGeometry = useMemo(() => batWingGeometry(), []);
+  const rimGeometry = useMemo(() => batRimGeometry(), []);
+
+  const registerAmbient = useCallback((index: number, refs: BatRefs) => {
+    ambientRefs.current[index] = refs;
+  }, []);
+  const registerSwarm = useCallback((index: number, refs: BatRefs) => {
+    swarmRefs.current[index] = refs;
+  }, []);
+
+  const pendingBurst = useRef(false);
+  const burstStart = useRef(-Infinity);
+  const prevRunning = useRef(running);
+  const prevStage = useRef(activeStage);
+  const fxEnabledRef = useRef(fxEnabled);
+
+  useEffect(() => {
+    fxEnabledRef.current = fxEnabled;
+  }, [fxEnabled]);
+
+  useEffect(() => {
+    const swarmStage =
+      activeStage === "glitch_scanner" || activeStage === "exorcism_reasoning";
+    const enteringStage = swarmStage && prevStage.current !== activeStage;
+    const starting = running && !prevRunning.current;
+    prevRunning.current = running;
+    prevStage.current = activeStage;
+    if (starting || enteringStage) pendingBurst.current = true;
+  }, [running, activeStage]);
+
+  useEffect(() => () => {
+    wingGeometry.dispose();
+    rimGeometry.dispose();
+    disposeBatMaterials(ambientMaterials);
+    swarmMaterials.forEach(disposeBatMaterials);
+  }, [ambientMaterials, swarmMaterials, wingGeometry, rimGeometry]);
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+
+    if (pendingBurst.current) {
+      pendingBurst.current = false;
+      if (t - burstStart.current > BAT_SWARM_COOLDOWN) {
+        burstStart.current = t;
+        playBatSwarmFlutter(fxEnabledRef.current);
+      }
+    }
+
+    AMBIENT_BATS.forEach((bat, index) => {
+      const refs = ambientRefs.current[index];
+      if (!refs.group) return;
+      refs.group.position.set(
+        bat.x + Math.sin(t * bat.speed + bat.phase) * 0.35,
+        bat.y + Math.sin(t * 0.6 + bat.phase) * 0.12,
+        bat.z + Math.cos(t * 0.4 + bat.phase) * 0.15,
+      );
+      const flap = Math.sin(t * 6.5 + bat.phase) * 0.5;
+      if (refs.left) refs.left.rotation.z = -flap;
+      if (refs.right) refs.right.rotation.z = flap;
+    });
+
+    SWARM_TARGETS.forEach((target, index) => {
+      const refs = swarmRefs.current[index];
+      const materials = swarmMaterials[index];
+      if (!refs.group || !materials) return;
+      const p = (t - burstStart.current - index * 0.05) / BAT_SWARM_SECONDS;
+      if (p <= 0 || p >= 1) {
+        refs.group.visible = false;
+        return;
+      }
+      refs.group.visible = true;
+      const eased = 1 - (1 - p) * (1 - p);
+      refs.group.position.set(
+        target[0] * eased + Math.sin(p * Math.PI * 2 + index) * 0.12 * (1 - p),
+        0.15 + target[1] * eased - Math.sin(p * Math.PI) * 0.3,
+        -0.8 + 4.2 * p,
+      );
+      refs.group.scale.setScalar(0.16 * (0.75 + p * 0.7));
+      const flap = Math.sin(t * 13 + index * 0.7) * 0.75;
+      if (refs.left) refs.left.rotation.z = -flap;
+      if (refs.right) refs.right.rotation.z = flap;
+      const fade = p < 0.65 ? 0.95 : (Math.max(0, (1 - p) / 0.35) * 0.95);
+      materials.body.opacity = fade;
+      materials.wing.opacity = fade;
+      materials.rim.opacity = fade * 0.45;
+    });
+  });
+
+  return (
+    <group>
+      {AMBIENT_BATS.map((bat, index) => (
+        <BatSilhouette
+          key={`ambient-${index}`}
+          index={index}
+          register={registerAmbient}
+          wingGeometry={wingGeometry}
+          rimGeometry={rimGeometry}
+          materials={ambientMaterials}
+          scale={bat.scale}
+        />
+      ))}
+      {SWARM_TARGETS.map((_, index) => (
+        <BatSilhouette
+          key={`swarm-${index}`}
+          index={index}
+          register={registerSwarm}
+          wingGeometry={wingGeometry}
+          rimGeometry={rimGeometry}
+          materials={swarmMaterials[index]}
+          scale={0.16}
+          visible={false}
+        />
+      ))}
+    </group>
+  );
+}
+
 function Graph({
   nodes,
   activeStage,
@@ -1361,6 +1635,7 @@ function Graph({
   reserveTopPx,
   reserveBottomPx,
   running,
+  fxEnabled,
 }: {
   nodes: NodeStatusMap;
   activeStage: StageId | null;
@@ -1373,6 +1648,7 @@ function Graph({
   reserveTopPx: number;
   reserveBottomPx: number;
   running: boolean;
+  fxEnabled: boolean;
 }) {
   const { size } = useThree();
   const { scale, offsetY } = fitGraph(
@@ -1406,6 +1682,7 @@ function Graph({
 
       <AltarPedestal aura={aura} />
       <AshRise />
+      <RitualBats running={running} activeStage={activeStage} fxEnabled={fxEnabled} />
       <group position={[0, SKULL_Y, 0]} scale={RELIC_SCALE}>
         <SkeletonSkull aura={aura} running={running} />
         <SkullFire />
@@ -1456,6 +1733,7 @@ export function ExecutionGraph3D({
   reserveBottomPx = 44,
   onContextLost,
   running = false,
+  fxEnabled = false,
 }: {
   nodes: NodeStatusMap;
   activeStage: StageId | null;
@@ -1472,6 +1750,8 @@ export function ExecutionGraph3D({
   onContextLost?: () => void;
   /** A ritual is streaming; its rising edge triggers the summoning pulse. */
   running?: boolean;
+  /** Mirrors the `3D AUDIO FX` toggle for the bat-swarm flutter cue. */
+  fxEnabled?: boolean;
 }) {
   const nodeRefs = useRef<NodeRefMap>({
     input_code: { current: null },
@@ -1518,6 +1798,7 @@ export function ExecutionGraph3D({
             reserveTopPx={reserveTopPx}
             reserveBottomPx={reserveBottomPx}
             running={running}
+            fxEnabled={fxEnabled}
           />
         </Suspense>
         <OrbitControls
