@@ -1,7 +1,6 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supportsWebGL, WebGLBoundary } from "@/components/WebGLBoundary";
@@ -39,10 +38,10 @@ const STATUS_HEX: Record<NodeStatus, string> = {
 };
 
 const TIMELINE_STEPS: Array<{ id: StageId; label: string; index: string }> = [
-  { id: "input_code", label: "Corrupted Code", index: "1" },
-  { id: "glitch_scanner", label: "Spectral Scanner", index: "2" },
-  { id: "exorcism_reasoning", label: "Kiro Exorcism", index: "3" },
-  { id: "clean_code_output", label: "Purified Output", index: "4" },
+  { id: "input_code", label: "CORRUPTED", index: "1" },
+  { id: "glitch_scanner", label: "SCANNER", index: "2" },
+  { id: "exorcism_reasoning", label: "EXORCISM", index: "3" },
+  { id: "clean_code_output", label: "PURIFIED", index: "4" },
 ];
 
 function formatMs(value: number | null): string {
@@ -369,8 +368,8 @@ export function AgentCanvas({
               selected={selected}
               onSelect={setSelected}
               onClear={() => setSelected(null)}
-              reserveTopPx={118}
-              reserveBottomPx={150}
+              reserveTopPx={64}
+              reserveBottomPx={84}
               onContextLost={handleWebGLFailure}
             />
           </WebGLBoundary>
@@ -380,7 +379,7 @@ export function AgentCanvas({
       <div className="pointer-events-none absolute inset-0 z-20 bg-[radial-gradient(ellipse_at_center,transparent_38%,rgba(3,1,5,0.35)_72%,rgba(3,1,5,0.72)_100%)]" />
       {scanlines && <div className="crt-overlay animate-flicker" aria-hidden />}
 
-      <div className="pointer-events-none absolute left-1/2 top-20 z-30 -translate-x-1/2 text-center">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 px-4 pt-3 text-center">
         <p className="font-brand text-[12px] font-bold uppercase tracking-[0.28em] text-[#EDE6D6]/70">
           Ritual Altar
         </p>
@@ -418,8 +417,7 @@ export function AgentCanvas({
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 14 }}
-            className="absolute bottom-[168px] left-1/2 z-40 w-[min(560px,calc(100%-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-white/10 bg-[#0a0b14]/92 px-4 py-3 backdrop-blur-xl"
-            style={{ boxShadow: `0 0 34px ${STATUS_HEX[selectedStatus]}22` }}
+            className="pointer-events-auto absolute bottom-20 left-3 right-3 z-30 rounded-xl border border-white/20 bg-[#0b0812]/95 p-3.5 shadow-2xl backdrop-blur-xl"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -447,9 +445,9 @@ export function AgentCanvas({
                   type="button"
                   onClick={() => setSelected(null)}
                   aria-label="Close seal details"
-                  className="rounded-md border border-white/10 p-1 text-zinc-300 hover:text-crimson"
+                  className="grid h-7 w-7 place-items-center rounded-md border border-white/15 bg-white/5 font-sans text-[18px] leading-none text-zinc-300 transition hover:border-crimson/50 hover:text-crimson"
                 >
-                  <X className="h-3.5 w-3.5" aria-hidden />
+                  ×
                 </button>
               </div>
             </div>
@@ -458,14 +456,14 @@ export function AgentCanvas({
                 <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-zinc-400">
                   Active engine
                 </p>
-                <p className="mt-0.5 truncate font-mono text-[13px] font-semibold uppercase text-spectral">
+                <p className="mt-0.5 break-words font-mono text-[13px] font-semibold uppercase text-spectral">
                   {engine.name}
                 </p>
-                <p className="truncate font-mono text-[12px] text-zinc-400">{engine.model}</p>
+                <p className="break-words font-mono text-[12px] text-zinc-400">{engine.model}</p>
               </div>
               <div className="rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-2">
                 <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-zinc-400">
-                  Execution time
+                  Latency ms
                 </p>
                 <p className="mt-0.5 font-mono text-[13px] font-semibold text-[#EDE6D6]">
                   {formatMs(stageMs)}
@@ -474,7 +472,7 @@ export function AgentCanvas({
               </div>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.1em]">
-              <span className="text-zinc-400">Severity</span>
+              <span className="text-zinc-400">Severity breakdown</span>
               <span className="rounded border border-crimson/25 bg-crimson/5 px-1.5 py-0.5 text-crimson">
                 crit {severity.critical}
               </span>
@@ -492,9 +490,9 @@ export function AgentCanvas({
         )}
       </AnimatePresence>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-4">
-        <div className="pointer-events-auto mx-auto max-w-5xl rounded-2xl border border-white/10 bg-[#07050a]/72 px-3 py-3 backdrop-blur-xl">
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-1">
+        <div className="pointer-events-auto mx-auto max-w-[540px] rounded-2xl border border-white/10 bg-[#07050a]/72 px-3 py-2 backdrop-blur-xl">
+          <div className="mx-auto grid max-w-[540px] grid-cols-4 gap-2">
             {TIMELINE_STEPS.map((step) => {
               const status = nodes[step.id];
               const color = STATUS_HEX[status];
@@ -505,39 +503,32 @@ export function AgentCanvas({
                   type="button"
                   onClick={() => setSelected(step.id)}
                   aria-pressed={active}
-                  className={`flex items-center gap-3 rounded-xl border px-3 py-2 text-left transition ${
+                  className={`flex min-w-0 flex-col items-center gap-1 rounded-xl border px-2 py-1.5 text-center transition ${
                     active
                       ? "border-crimson/60 bg-crimson/10"
                       : "border-white/10 bg-black/25 hover:border-white/20"
                   }`}
                   style={{ boxShadow: status !== "pending" ? `0 0 20px ${color}18` : undefined }}
                 >
-                  <span
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full border font-brand text-[13px] font-bold"
-                    style={{
-                      borderColor: `${color}88`,
-                      color,
-                      boxShadow: `0 0 16px ${color}22`,
-                    }}
-                  >
-                    {step.index}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate font-sans text-[12px] font-semibold uppercase tracking-[0.08em] text-[#EDE6D6]">
-                      {step.label}
-                    </span>
+                  <span className="flex min-w-0 items-center justify-center gap-1 font-sans text-[12px] font-semibold uppercase leading-tight tracking-[0.04em] text-[#EDE6D6]">
                     <span
-                      className="block font-mono text-[12px] uppercase tracking-[0.12em]"
-                      style={{ color }}
-                    >
-                      {STATUS_LABEL[status]}
-                    </span>
+                      aria-hidden
+                      className="h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+                    />
+                    <span className="truncate">{step.index}. {step.label}</span>
+                  </span>
+                  <span
+                    className="block font-mono text-[12px] uppercase leading-none tracking-[0.1em]"
+                    style={{ color }}
+                  >
+                    {STATUS_LABEL[status]}
                   </span>
                 </button>
               );
             })}
           </div>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 font-mono text-[12px] uppercase tracking-[0.16em] text-zinc-400">
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-2 font-mono text-[12px] uppercase leading-none tracking-[0.16em] text-zinc-400">
             <span>
               {showHelper
                 ? "Paste or summon code → Ignite EXORCISE CODE → Click any glowing seal to inspect"

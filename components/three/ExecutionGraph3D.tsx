@@ -13,17 +13,15 @@ import {
 import * as THREE from "three";
 import { AURA_HEX, type AuraState } from "@/lib/aura";
 import { installThreeConsoleGuard } from "@/lib/three-runtime";
-import type { NodeStatus, StageDef, StageId } from "@/lib/types";
+import type { NodeStatus, StageId } from "@/lib/types";
 import { WORKFLOW_STAGES } from "@/lib/types";
 
 installThreeConsoleGuard();
 
 type NodeStatusMap = Record<StageId, NodeStatus>;
 type NodeRefMap = Record<StageId, MutableRefObject<THREE.Group | null>>;
-type LabelRefMap = Partial<Record<StageId, HTMLDivElement | null>>;
 
-/** Banner anchor: the stone plaque under each window's glass. */
-const LABEL_OFFSET = new THREE.Vector3(0, -0.64, 0.05);
+/** Bug-badge anchor above the scanner window. */
 const BADGE_OFFSET = new THREE.Vector3(0.52, 0.92, 0.05);
 
 /** Seal orbit: half-width / half-height of the ritual square (local units). */
@@ -45,8 +43,10 @@ const BACK_POSITIONS = Object.fromEntries(
   Object.entries(POSITIONS).map(([id, [x, y]]) => [id, [x, y, CONDUIT_Z]]),
 ) as Record<StageId, [number, number, number]>;
 
-const CAMERA_Z = 6.0;
+const CAMERA_Z = 5.4;
 const CAMERA_FOV = 45;
+/** Uniform boost applied to the fitted ritual group (bigger skull + seals). */
+const GRAPH_SCALE_BOOST = 1.25;
 const MAX_GRAPH_SCALE = 1.15;
 const MIN_GRAPH_SCALE = 0.4;
 /** Gothic lancet window seal (local units, centered on the seal). */
@@ -74,13 +74,9 @@ const ALTAR_R = 1.22;
 /** Gap kept between labels and the canvas edge, in px. */
 const EDGE_GAP_PX = 8;
 
-export function labelMaxPx(width: number): number {
-  return Math.min(148, Math.max(96, width * 0.26));
-}
-
 /**
- * Largest graph scale (capped at `MAX_GRAPH_SCALE`) that keeps the seals,
- * their HTML labels, and the reserved HUD strips inside the canvas, plus the
+ * Largest pre-boost graph scale (capped at `MAX_GRAPH_SCALE`) whose boosted
+ * size keeps the seals and the reserved HUD strips inside the canvas, plus the
  * vertical offset that centres the graph between those strips.
  */
 export function fitGraph(
@@ -98,18 +94,21 @@ export function fitGraph(
   const bottom = -halfH + (reserveBottomPx + LABEL_HALF_HEIGHT_PX) * unitsPerPx;
   const localTop = ORBIT_Y + SEAL_HALF_H;
   const localBottom = ORBIT_Y + SEAL_HALF_H;
-  const byHeight = (top - bottom) / (localTop + localBottom);
+  const byHeight =
+    (top - bottom) / ((localTop + localBottom) * GRAPH_SCALE_BOOST);
 
-  // Labels are clamped inside the canvas by LabelProjector, so only the
-  // seals bound the width.
+  // Only the seals bound the width; the HUD reserves bound the height.
   const edge = EDGE_GAP_PX * unitsPerPx;
-  const byWidth = (halfW - edge) / (ORBIT_X + SEAL_HALF_W);
+  const byWidth =
+    (halfW - edge) / ((ORBIT_X + SEAL_HALF_W) * GRAPH_SCALE_BOOST);
 
   const scale = Math.min(
     MAX_GRAPH_SCALE,
     Math.max(MIN_GRAPH_SCALE, Math.min(byHeight, byWidth)),
   );
-  const offsetY = (top + bottom) / 2 - (scale * (localTop - localBottom)) / 2;
+  const effectiveScale = scale * GRAPH_SCALE_BOOST;
+  const offsetY =
+    (top + bottom) / 2 - (effectiveScale * (localTop - localBottom)) / 2;
   return { scale, offsetY };
 }
 
@@ -126,59 +125,6 @@ const STATUS_HEX: Record<NodeStatus, string> = {
   done: "#00FF66",
   error: "#FF003C",
 };
-
-/**
- * Gothic banner under a seal: a swallowtail pennant of carved stone with
- * brass edging. Line 1 is the stage title (Cinzel Decorative, status color);
- * line 2 is the live metadata from AgentCanvas (status · stage time).
- */
-function StageLabel({
-  stage,
-  status,
-  selected,
-  meta,
-}: {
-  stage: StageDef;
-  status: NodeStatus;
-  selected: boolean;
-  meta?: string;
-}) {
-  const color = STATUS_HEX[status];
-  const glow =
-    status === "pending"
-      ? "drop-shadow(0 2px 4px rgba(0,0,0,0.8))"
-      : `drop-shadow(0 0 ${selected ? 10 : 6}px ${color}88) drop-shadow(0 2px 4px rgba(0,0,0,0.8))`;
-
-  return (
-    // The filter lives on an unclipped wrapper so the glow survives clip-path.
-    <div style={{ filter: glow }}>
-      <div
-        className="flex w-max max-w-[var(--label-max,148px)] flex-col items-center px-3 py-0.5 text-center [clip-path:polygon(0_0,100%_0,calc(100%-9px)_50%,100%_100%,0_100%,9px_50%)]"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(26,18,24,0.96), rgba(10,7,11,0.96))",
-          boxShadow: `inset 0 1.5px 0 #B08D57, inset 0 -1.5px 0 #5E4524, inset 0 0 14px ${color}33`,
-        }}
-      >
-        <span
-          className="flex items-center gap-1.5 font-brand text-[10px] font-bold uppercase leading-tight tracking-[0.06em]"
-          style={{ color: status === "pending" ? "#E2D9C8" : color }}
-        >
-          <span
-            className="h-1.5 w-1.5 shrink-0 rotate-45"
-            style={{ backgroundColor: color }}
-          />
-          {stage.label}
-        </span>
-        {meta && (
-          <span className="mt-0.5 whitespace-nowrap font-mono text-[10px] leading-tight text-bone/80 tabular-nums">
-            {meta}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
 
 /**
  * Pointed (lancet) arch outline: straight jambs from `bottom` up to `spring`,
@@ -396,14 +342,12 @@ function StageNode3D({
   );
 }
 
-function LabelProjector({
+function BadgeProjector({
   nodeRefs,
-  labelRefs,
   badgeRef,
   bugCount,
 }: {
   nodeRefs: NodeRefMap;
-  labelRefs: MutableRefObject<LabelRefMap>;
   badgeRef: MutableRefObject<HTMLDivElement | null>;
   bugCount: number;
 }) {
@@ -412,39 +356,6 @@ function LabelProjector({
   const projected = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(() => {
-    const inset = size.width < 600 ? 14 : 0;
-    const labelMax = labelMaxPx(size.width);
-    const labelMaxValue = `${labelMax}px`;
-
-    for (const stage of WORKFLOW_STAGES) {
-      const node = nodeRefs[stage.id].current;
-      const element = labelRefs.current[stage.id];
-      if (!node || !element) continue;
-
-      if (element.style.getPropertyValue("--label-max") !== labelMaxValue) {
-        element.style.setProperty("--label-max", labelMaxValue);
-      }
-
-      world.copy(LABEL_OFFSET);
-      node.localToWorld(world);
-      projected.copy(world).project(camera);
-
-      const inward =
-        stage.id === "glitch_scanner" || stage.id === "exorcism_reasoning"
-          ? -1
-          : 1;
-      const rawX = (projected.x * 0.5 + 0.5) * size.width + inward * inset;
-      // Keep the whole label inside the canvas, however the graph is orbited.
-      const halfLabel = element.offsetWidth / 2;
-      const x = Math.min(
-        size.width - EDGE_GAP_PX - halfLabel,
-        Math.max(EDGE_GAP_PX + halfLabel, rawX),
-      );
-      const y = (-projected.y * 0.5 + 0.5) * size.height;
-      element.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
-      element.style.opacity = projected.z > 1 ? "0" : "1";
-    }
-
     const scanner = nodeRefs.glitch_scanner.current;
     if (badgeRef.current && scanner) {
       world.copy(BADGE_OFFSET);
@@ -1231,7 +1142,7 @@ function RitualFx({ running, aura }: { running: boolean; aura: AuraState }) {
 }
 
 /** Skull scale on the altar and its height above the graph center. */
-const RELIC_SCALE = 1.65;
+const RELIC_SCALE = 1.9;
 const SKULL_Y = 0.28;
 const SPARK_COUNT = 60;
 
@@ -1446,7 +1357,6 @@ function Graph({
   selected,
   onSelect,
   nodeRefs,
-  labelRefs,
   badgeRef,
   reserveTopPx,
   reserveBottomPx,
@@ -1459,7 +1369,6 @@ function Graph({
   selected: StageId | null;
   onSelect: (stage: StageId) => void;
   nodeRefs: NodeRefMap;
-  labelRefs: MutableRefObject<LabelRefMap>;
   badgeRef: MutableRefObject<HTMLDivElement | null>;
   reserveTopPx: number;
   reserveBottomPx: number;
@@ -1474,7 +1383,7 @@ function Graph({
   );
 
   return (
-    <group scale={scale} position={[0, offsetY, 0]}>
+    <group scale={scale * GRAPH_SCALE_BOOST} position={[0, offsetY, 0]}>
       <mesh position={[0, 0, -1.4]}>
         <sphereGeometry args={[2.5, 32, 32]} />
         <meshBasicMaterial
@@ -1526,9 +1435,8 @@ function Graph({
         />
       ))}
 
-      <LabelProjector
+      <BadgeProjector
         nodeRefs={nodeRefs}
-        labelRefs={labelRefs}
         badgeRef={badgeRef}
         bugCount={bugCount}
       />
@@ -1548,7 +1456,6 @@ export function ExecutionGraph3D({
   reserveBottomPx = 44,
   onContextLost,
   running = false,
-  stageMeta,
 }: {
   nodes: NodeStatusMap;
   activeStage: StageId | null;
@@ -1565,8 +1472,6 @@ export function ExecutionGraph3D({
   onContextLost?: () => void;
   /** A ritual is streaming; its rising edge triggers the summoning pulse. */
   running?: boolean;
-  /** Second banner line per stage, e.g. "SEALED · 312 ms". */
-  stageMeta?: Partial<Record<StageId, string>>;
 }) {
   const nodeRefs = useRef<NodeRefMap>({
     input_code: { current: null },
@@ -1574,7 +1479,6 @@ export function ExecutionGraph3D({
     exorcism_reasoning: { current: null },
     clean_code_output: { current: null },
   });
-  const labelRefs = useRef<LabelRefMap>({});
   const badgeRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -1610,7 +1514,6 @@ export function ExecutionGraph3D({
             selected={selected}
             onSelect={onSelect}
             nodeRefs={nodeRefs.current}
-            labelRefs={labelRefs}
             badgeRef={badgeRef}
             reserveTopPx={reserveTopPx}
             reserveBottomPx={reserveBottomPx}
@@ -1627,23 +1530,6 @@ export function ExecutionGraph3D({
       </Canvas>
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {WORKFLOW_STAGES.map((stage) => (
-          <div
-            key={stage.id}
-            data-stage-label={stage.id}
-            ref={(element) => {
-              labelRefs.current[stage.id] = element;
-            }}
-            className="absolute left-0 top-0 opacity-0 transition-opacity duration-500 will-change-transform"
-          >
-            <StageLabel
-              stage={stage}
-              status={nodes[stage.id]}
-              selected={selected === stage.id}
-              meta={stageMeta?.[stage.id]}
-            />
-          </div>
-        ))}
         <div
           ref={badgeRef}
           data-bug-badge

@@ -182,9 +182,9 @@ export function ControlPanel({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <div className="shrink-0 space-y-2 border-b border-white/10 px-4 pb-3 pt-3">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[160px] flex-1">
+          <div className="relative min-w-[150px] flex-1">
             <SelectedIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-amethyst-glow" aria-hidden />
             <select
               value={selectedPresetId ?? "custom"}
@@ -192,22 +192,22 @@ export function ControlPanel({
                 if (event.target.value !== "custom") onSelectPreset(event.target.value);
               }}
               aria-label="Cursed preset"
-              className="h-9 w-full appearance-none rounded-lg border border-white/10 bg-black/35 pl-8 pr-8 font-sans text-[12px] font-semibold uppercase tracking-[0.06em] text-[#EDE6D6] outline-none [color-scheme:dark] focus:border-crimson/50"
+              className="h-9 w-full appearance-none rounded-lg border border-white/20 bg-[#14101d] pl-8 pr-8 font-sans text-[12px] font-semibold uppercase tracking-[0.06em] text-zinc-100 outline-none [color-scheme:dark] focus:border-crimson/50"
             >
               <option value="custom" disabled className="bg-crypt text-bone">Custom relic</option>
               {RITUAL_PRESETS.map((preset) => (
                 <option key={preset.id} value={preset.id} className="bg-crypt text-bone">{preset.label}</option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-300" aria-hidden />
           </div>
-          <button type="button" onClick={() => setGithubOpen((o) => !o)} aria-expanded={githubOpen} aria-controls="github-summon" className={`${toolButton} ${githubOpen ? "border-crimson/60 bg-crimson/10 text-[#EDE6D6]" : "border-white/10 bg-black/25 text-zinc-300 hover:text-[#EDE6D6]"}`}>
+          <button type="button" onClick={() => setGithubOpen((o) => !o)} aria-expanded={githubOpen} aria-controls="github-summon" className={`${toolButton} ${githubOpen ? "border-crimson/60 bg-crimson/10 text-[#EDE6D6]" : "border-white/20 bg-black/25 text-zinc-200 hover:text-[#EDE6D6]"}`}>
             <GitBranch className="h-3.5 w-3.5 text-amethyst-glow" aria-hidden />GitHub
           </button>
-          <button type="button" onClick={() => fileRef.current?.click()} className={`${toolButton} border-white/10 bg-black/25 text-zinc-300 hover:text-[#EDE6D6]`}>
+          <button type="button" onClick={() => fileRef.current?.click()} className={`${toolButton} border-white/20 bg-black/25 text-zinc-200 hover:text-[#EDE6D6]`}>
             <Upload className="h-3.5 w-3.5 text-brass-light" aria-hidden />Upload
           </button>
-          <button type="button" onClick={() => setDirectiveOpen((o) => !o)} aria-expanded={directiveOpen} aria-controls="ritual-directive-slot" className={`${toolButton} ${directiveOpen ? "border-crimson/60 bg-crimson/10 text-[#EDE6D6]" : "border-white/10 bg-black/25 text-zinc-300 hover:text-[#EDE6D6]"}`} title="Ritual directive">
+          <button type="button" onClick={() => setDirectiveOpen((o) => !o)} aria-expanded={directiveOpen} aria-controls="ritual-directive-slot" className={`${toolButton} ${directiveOpen ? "border-crimson/60 bg-crimson/10 text-[#EDE6D6]" : "border-white/20 bg-black/25 text-zinc-200 hover:text-[#EDE6D6]"}`} title="Ritual directive">
             <Wand2 className="h-3.5 w-3.5 text-crimson" aria-hidden />
           </button>
           <input ref={fileRef} type="file" accept={`${RUNNER_LANGUAGES.map((i) => `.${i.extension}`).join(",")},.jsx,.mjs,.cjs,.mts,.cts,.txt`} onChange={handleUpload} className="hidden" />
@@ -216,7 +216,7 @@ export function ControlPanel({
         {githubOpen && (
           <form id="github-summon" onSubmit={handleGithubSummon} className="space-y-1">
             <div className="flex gap-2">
-              <input ref={githubInputRef} type="text" inputMode="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="Paste public GitHub file URL..." aria-label="Public GitHub file URL" spellCheck={false} autoComplete="off" className="h-9 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/35 px-3 font-mono text-[13px] text-[#EDE6D6] outline-none placeholder:text-zinc-500 focus:border-crimson/40" />
+              <input ref={githubInputRef} type="text" inputMode="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="Paste public GitHub file URL..." aria-label="Public GitHub file URL" spellCheck={false} autoComplete="off" className="h-9 min-w-0 flex-1 rounded-lg border border-white/20 bg-[#14101d] px-3 font-mono text-[13px] text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-crimson/40" />
               <button type="submit" disabled={running || githubStatus.kind === "loading" || githubUrl.trim().length === 0} className="inline-flex h-9 items-center gap-1 rounded-lg border border-crimson/40 bg-crimson/10 px-3 font-sans text-[12px] font-semibold uppercase tracking-[0.08em] text-[#EDE6D6] disabled:opacity-50">
                 {githubStatus.kind === "loading" && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}Fetch
               </button>
@@ -230,38 +230,23 @@ export function ControlPanel({
         {directiveOpen && (
           <div id="ritual-directive-slot">
             <label htmlFor="ritual-directive" className="sr-only">Ritual directive (optional)</label>
-            <input id="ritual-directive" type="text" value={directive} onChange={(e) => onDirectiveChange(e.target.value)} maxLength={320} placeholder="Ritual directive (optional): convert to strict TypeScript…" className="h-9 w-full rounded-lg border border-white/10 bg-black/35 px-3 font-mono text-[13px] text-[#EDE6D6] outline-none placeholder:text-zinc-500 focus:border-crimson/40" />
+            <input id="ritual-directive" type="text" value={directive} onChange={(e) => onDirectiveChange(e.target.value)} maxLength={320} placeholder="Ritual directive (optional): convert to strict TypeScript…" className="h-9 w-full rounded-lg border border-white/20 bg-[#14101d] px-3 font-mono text-[13px] text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-crimson/40" />
           </div>
         )}
 
         <div className="flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate font-mono text-[13px] text-zinc-300" title={filename}>{filename}</span>
+          <span className="min-w-0 truncate font-mono text-[13px] text-zinc-200" title={filename}>{filename}</span>
           <span className="relative shrink-0">
-            <select value={language} onChange={(e) => onLanguageChange(e.target.value)} aria-label="Sandbox language" title={`Sandbox language: ${languageMeta.label}`} className="h-8 w-[88px] appearance-none rounded-md border border-amethyst/40 bg-black/45 pl-2 pr-7 font-mono text-[12px] font-semibold uppercase tracking-[0.05em] text-amethyst-glow outline-none [color-scheme:dark]">
+            <select value={language} onChange={(e) => onLanguageChange(e.target.value)} aria-label="Sandbox language" title={`Sandbox language: ${languageMeta.label}`} className="h-8 w-[92px] appearance-none rounded-md border border-white/20 bg-[#14101d] pl-2 pr-7 font-mono text-[12px] font-semibold uppercase tracking-[0.05em] text-zinc-100 outline-none [color-scheme:dark] focus:border-crimson/50">
               {RUNNER_LANGUAGES.map((item) => (<option key={item.id} value={item.id} className="bg-crypt text-bone">{item.short}</option>))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-amethyst-glow/80" aria-hidden />
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-300" aria-hidden />
           </span>
         </div>
+      </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          {[ [lines.length, lines.length === 1 ? "Line" : "Lines"], [code.length, "Chars"] as const ].map(([value, label]) => (
-            <div key={String(label)} className="rounded-lg border border-white/10 bg-black/30 px-3 py-2">
-              <div className="font-mono text-[15px] font-bold text-crimson tabular-nums">{Number(value).toLocaleString("en-US")}</div>
-              <div className="font-sans text-[12px] font-semibold uppercase tracking-[0.1em] text-zinc-400">{label}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between font-sans text-[12px] font-bold uppercase tracking-[0.12em] text-zinc-300 tabular-nums">
-          <span>{PHASE_LABEL[phase]}</span>
-          <span className={running ? "text-crimson" : "text-zinc-300"}>{progress}%</span>
-        </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
-          <motion.div className="h-full rounded-full bg-gradient-to-r from-[#8B0000] via-crimson to-[#9333ea]" initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ ease: "easeOut", duration: 0.35 }} />
-        </div>
-
-        <div className="grimoire-editor flex min-h-[240px] flex-1 overflow-hidden rounded-xl">
+      <div className="flex min-h-0 flex-1 flex-col px-4 pt-3">
+        <div className="grimoire-editor flex min-h-0 flex-1 overflow-hidden rounded-xl">
           <div ref={gutterRef} aria-hidden className="w-12 shrink-0 select-none overflow-hidden border-r border-brass/25 bg-black/25 pb-8 pr-2 pt-3 text-right font-mono text-[12px] leading-[20px] text-zinc-500 tabular-nums">
             {lines.map((_, index) => (
               <div key={index} className={(index + 1) % 10 === 0 ? "text-crimson/80" : undefined}>{index + 1}</div>
@@ -285,18 +270,32 @@ export function ControlPanel({
               spellCheck={false}
               aria-label="Cursed code artifact"
               placeholder="// Paste a cursed artifact in any supported language…"
-              className={`relative block h-full min-h-[240px] w-full resize-none overflow-auto whitespace-pre bg-transparent px-3 py-3 ${EDITOR_TEXT} text-transparent caret-crimson outline-none selection:bg-crimson/35 placeholder:text-zinc-500`}
+              className={`relative block h-full min-h-0 w-full resize-none overflow-auto whitespace-pre bg-transparent px-3 py-3 ${EDITOR_TEXT} text-transparent caret-crimson outline-none selection:bg-crimson/35 placeholder:text-zinc-500`}
             />
           </div>
         </div>
 
-        <div className="mt-auto flex shrink-0 flex-col gap-2 pt-1">
-          <motion.button type="button" onClick={onRun} disabled={running} whileHover={running ? undefined : { scale: 1.01 }} whileTap={running ? undefined : { scale: 0.985 }} className="blood-cta h-14 w-full rounded-xl text-[14px] tracking-[0.16em] shadow-[0_0_30px_rgba(255,0,60,0.35)] disabled:shadow-none">
-            {running ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Skull className="h-5 w-5" aria-hidden />}
+        <div className="mt-2 shrink-0 space-y-1.5">
+          <div className="flex items-center justify-between gap-2 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-zinc-300 tabular-nums">
+            <span>{lines.length} Lines · {code.length} Chars</span>
+            <span className={running ? "text-crimson" : phase === "complete" ? "text-neon" : "text-zinc-300"}>
+              {PHASE_LABEL[phase].toUpperCase()} {progress}%
+            </span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+            <motion.div className="h-full rounded-full bg-gradient-to-r from-[#8B0000] via-crimson to-[#9333ea]" initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ ease: "easeOut", duration: 0.35 }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="shrink-0 border-t border-white/10 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <motion.button type="button" onClick={onRun} disabled={running} whileHover={running ? undefined : { scale: 1.01 }} whileTap={running ? undefined : { scale: 0.985 }} className="blood-cta h-12 min-w-0 flex-1 rounded-xl text-[13px] tracking-[0.14em] shadow-[0_0_30px_rgba(255,0,60,0.35)] disabled:shadow-none">
+            {running ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Skull className="h-4 w-4" aria-hidden />}
             {running ? `Exorcising… ${progress}%` : "Exorcise Code"}
           </motion.button>
-          <button type="button" onClick={onReset} disabled={running} className="mx-auto inline-flex items-center gap-1.5 px-3 py-1 font-sans text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-[#EDE6D6] disabled:opacity-40">
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden />Banish
+          <button type="button" onClick={onReset} disabled={running} title="Banish (reset)" aria-label="Banish and reset" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-white/15 bg-black/30 text-zinc-300 transition hover:border-crimson/50 hover:text-crimson disabled:opacity-40">
+            <RotateCcw className="h-4 w-4" aria-hidden />
           </button>
         </div>
       </div>

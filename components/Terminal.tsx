@@ -34,7 +34,8 @@ function downloadText(content: string, filename: string, type: string) {
 }
 const ACTION_BUTTON = "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-3 font-sans text-[12px] font-semibold uppercase leading-none tracking-[0.08em] transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-zinc-500 disabled:shadow-none";
 type GrimoireTab = "logs" | "diff" | "sandbox";
-const GRIMOIRE_TABS: Array<{ id: GrimoireTab; label: string }> = [{ id: "logs", label: "Logs" }, { id: "diff", label: "Spectral Diff" }, { id: "sandbox", label: "Sandbox" }];
+const GRIMOIRE_TABS: Array<{ id: GrimoireTab; label: string }> = [{ id: "logs", label: "Logs" }, { id: "diff", label: "Diff" }, { id: "sandbox", label: "Sandbox" }];
+type LogBlock = { key: string; log?: AgentEvent; codeLines?: string[] };
 const TAB_SELECTED: Record<GrimoireTab, string> = {
   logs: "border-spectral/50 bg-spectral/15 text-spectral",
   diff: "border-haunt/50 bg-haunt/15 text-haunt-glow",
@@ -76,6 +77,22 @@ export function Terminal({ logs, running, scanlines = true, summary, finalCode, 
     setTestStatus(passed ? "passed" : "failed");
   }, [sandboxExitCode, sandboxLines, sandboxMode, sandboxStatus, testHarness, testStatus]);
 
+  const logBlocks = useMemo<LogBlock[]>(() => {
+    const blocks: LogBlock[] = [];
+    for (const log of logs) {
+      if (log.level === "code") {
+        const previous = blocks.at(-1);
+        if (previous?.codeLines) {
+          previous.codeLines.push(log.message);
+          continue;
+        }
+        blocks.push({ key: `code-${log.seq}`, codeLines: [log.message] });
+      } else {
+        blocks.push({ key: `${log.seq}-${log.ts}`, log });
+      }
+    }
+    return blocks;
+  }, [logs]);
   const streamedCode = logs.filter((log) => log.level === "code").map((log) => log.message);
   const codeText = finalCode ?? streamedCode.join("\n");
   const hasCode = codeText.trim().length > 0;
@@ -162,14 +179,14 @@ export function Terminal({ logs, running, scanlines = true, summary, finalCode, 
           </button>
           <ExportMenu items={exportItems} className={`${ACTION_BUTTON} border-white/15 bg-black/25 text-zinc-200 hover:text-[#EDE6D6]`} />
         </div>
-        <div role="tablist" aria-label="Grimoire view" className="mt-3 flex items-center gap-1.5">
+        <div role="tablist" aria-label="Grimoire view" className="mt-3 grid grid-cols-3 gap-1">
           {GRIMOIRE_TABS.map((tab) => {
             const selected = view === tab.id;
-            const badge = tab.id === "diff" && canDiff ? <span className="flex items-center gap-1 text-[12px]"><span className="text-crimson">-{stats.removed}</span><span className="text-neon">+{stats.added}</span></span>
-              : tab.id === "sandbox" && sandboxStatus !== "idle" ? <span data-sandbox-badge={sandboxStatus} className={`h-2 w-2 rounded-full ${SANDBOX_DOT[sandboxStatus]}`} />
-              : tab.id === "logs" && running ? <span className="h-2 w-2 animate-pulse rounded-full bg-crimson" /> : null;
+            const badge = tab.id === "diff" && canDiff ? <span className="inline-flex shrink-0 items-center rounded border border-white/15 bg-black/40 px-1 py-px font-mono text-[11px] leading-none"><span className="text-crimson">-{stats.removed}</span><span className="text-zinc-500">/</span><span className="text-neon">+{stats.added}</span></span>
+              : tab.id === "sandbox" && sandboxStatus !== "idle" ? <span data-sandbox-badge={sandboxStatus} className={`h-2 w-2 shrink-0 rounded-full ${SANDBOX_DOT[sandboxStatus]}`} />
+              : tab.id === "logs" && running ? <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-crimson" /> : null;
             return (
-              <button key={tab.id} type="button" role="tab" id={`grimoire-tab-${tab.id}`} aria-selected={selected} aria-controls="grimoire-panel" onClick={() => setView(tab.id)} className={`inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border font-sans text-[12px] font-semibold uppercase tracking-[0.08em] transition ${selected ? TAB_SELECTED[tab.id] : "border-white/10 bg-black/25 text-zinc-300 hover:text-[#EDE6D6]"}`}>
+              <button key={tab.id} type="button" role="tab" id={`grimoire-tab-${tab.id}`} aria-label={tab.id === "diff" ? "Spectral Diff" : undefined} aria-selected={selected} aria-controls="grimoire-panel" onClick={() => setView(tab.id)} className={`flex min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-md border px-2 py-1.5 font-sans text-[11px] font-semibold uppercase tracking-[0.08em] transition ${selected ? TAB_SELECTED[tab.id] : "border-white/10 bg-black/25 text-zinc-300 hover:text-[#EDE6D6]"}`}>
                 {tab.label}{badge}
               </button>
             );
@@ -187,12 +204,20 @@ export function Terminal({ logs, running, scanlines = true, summary, finalCode, 
             </div>
           ) : (
             <AnimatePresence initial={false}>
-              {logs.map((log) => (
-                <motion.div key={`${log.seq}-${log.ts}`} initial={{ opacity: 0, x: -7 }} animate={{ opacity: 1, x: 0 }} className={log.level === "code" ? "my-0.5 border-l border-haunt/20 pl-2 whitespace-pre-wrap break-words text-haunt/70" : "flex gap-2 py-0.5"}>
-                  {log.level !== "code" && <span className={`w-2 shrink-0 select-none ${LEVEL_COLOR[log.level]}`}>{LEVEL_GLYPH[log.level]}</span>}
-                  <span className={`min-w-0 whitespace-pre-wrap break-words ${log.level === "code" ? "" : LEVEL_COLOR[log.level]}`}>{log.message}</span>
+              {logBlocks.map((block) => block.codeLines ? (
+                <motion.div key={block.key} initial={{ opacity: 0, x: -7 }} animate={{ opacity: 1, x: 0 }} className="my-1.5 rounded-lg border border-haunt/15 bg-black/25 px-2.5 py-1.5">
+                  {block.codeLines.map((line, index) => (
+                    <div key={index} className="whitespace-pre-wrap break-words font-mono text-[13px] leading-relaxed text-haunt/70">
+                      {line || "\u00A0"}
+                    </div>
+                  ))}
                 </motion.div>
-              ))}
+              ) : block.log ? (
+                <motion.div key={block.key} initial={{ opacity: 0, x: -7 }} animate={{ opacity: 1, x: 0 }} className="flex gap-2 py-0.5">
+                  <span className={`w-2 shrink-0 select-none ${LEVEL_COLOR[block.log.level]}`}>{LEVEL_GLYPH[block.log.level]}</span>
+                  <span className={`min-w-0 whitespace-pre-wrap break-words ${LEVEL_COLOR[block.log.level]}`}>{block.log.message}</span>
+                </motion.div>
+              ) : null)}
             </AnimatePresence>
           )}
           {running && <div className="flex gap-2 py-1"><span className="text-crimson">›</span><motion.span className="inline-block h-3.5 w-1.5 bg-crimson" animate={{ opacity: [1, 0, 1] }} transition={{ duration: 0.85, repeat: Infinity }} /></div>}

@@ -120,7 +120,7 @@ export function FxMenu({
           id={menuId}
           role="group"
           aria-label="Audio and atmosphere effects"
-          className="absolute right-0 top-full z-[60] mt-2 w-64 rounded-xl border border-white/15 bg-[#0a0b14]/95 p-1.5 shadow-[0_18px_60px_rgba(0,0,0,0.7),0_0_30px_rgba(147,51,234,0.14)] backdrop-blur-xl"
+          className="z-[100] absolute right-0 top-full mt-2 w-64 rounded-xl border border-white/20 bg-[#0d0a14] p-1.5 shadow-2xl"
         >
           {FX_ITEMS.map((item) => {
             const active = settings[item.key];

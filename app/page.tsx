@@ -157,12 +157,8 @@ export default function Home() {
       <div aria-hidden className="breathing-vignette pointer-events-none absolute inset-0 z-[5]" />
       <div aria-hidden className="corner-vignette pointer-events-none absolute inset-0 z-[25]" />
 
-      <div className="absolute inset-0 z-10 hidden lg:block">
-        <AgentCanvas nodes={state.nodes} activeStage={state.activeStage} bugCount={state.bugCount} aura={aura} progress={state.progress} running={state.running} phase={state.phase} summary={state.summary} logs={state.logs} engine={state.engine} scanlines={settings.scanlinesOn} graphMode={settings.graphMode} />
-      </div>
-
-      <div className="pointer-events-none absolute inset-0 z-20 flex flex-col">
-        <header className="pointer-events-auto flex shrink-0 items-center justify-between gap-3 px-4 py-3 lg:px-6">
+      <div className="pointer-events-none absolute inset-0 z-30 flex flex-col">
+        <header className="pointer-events-auto relative z-50 flex shrink-0 items-center justify-between gap-3 overflow-visible px-4 py-3 lg:px-6">
           <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/10 bg-[#07050a]/55 px-3 py-2 backdrop-blur-xl">
             <div className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full border border-crimson/45 bg-black/60 shadow-[0_0_24px_rgba(255,0,60,0.22)]">
               <span className="pointer-events-none absolute -inset-1.5 animate-[spin_26s_linear_infinite] rounded-full border border-dashed border-haunt/25" />
@@ -180,7 +176,7 @@ export default function Home() {
             </div>
           </div>
 
-          <nav aria-label="Studio controls" className="pointer-events-auto flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-white/10 bg-[#07050a]/55 p-2 backdrop-blur-xl">
+          <nav aria-label="Studio controls" className="pointer-events-auto flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-white/10 bg-[#07050a]/55 p-2 pr-4 backdrop-blur-xl">
             <button type="button" onClick={handleAutoDemo} disabled={state.running} className="blood-cta h-10 px-4 text-[12px]">
               <Sparkles className="h-4 w-4" aria-hidden />Auto Demo
             </button>
@@ -198,34 +194,35 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        <div className="hidden min-h-0 flex-1 items-stretch justify-between gap-4 px-4 pb-4 pt-2 lg:flex lg:px-6">
-          <div className="pointer-events-auto w-[min(430px,32vw)] min-h-0">
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(285px,315px)_1fr_minmax(300px,335px)] gap-3 px-3 pb-3">
+          <div className="pointer-events-auto hidden min-h-0 lg:block">
             <ControlPanel code={code} onCodeChange={handleCodeChange} directive={directive} onDirectiveChange={setDirective} filename={filename} onFilenameChange={setFilename} language={language} onLanguageChange={setLanguage} onSelectPreset={handleSelectPreset} selectedPresetId={selectedPresetId} onRun={handleRun} onReset={handleReset} running={state.running} phase={state.phase} progress={state.progress} />
           </div>
-          <div className="pointer-events-none flex-1" />
-          <div className="pointer-events-auto w-[min(460px,34vw)] min-h-0">
+          <div className="pointer-events-auto hidden min-h-0 lg:block">
+            <AgentCanvas nodes={state.nodes} activeStage={state.activeStage} bugCount={state.bugCount} aura={aura} progress={state.progress} running={state.running} phase={state.phase} summary={state.summary} logs={state.logs} engine={state.engine} scanlines={settings.scanlinesOn} graphMode={settings.graphMode} />
+          </div>
+          <div className="pointer-events-auto hidden min-h-0 lg:block">
             <Terminal logs={state.logs} running={state.running} scanlines={settings.scanlinesOn} summary={state.summary} finalCode={state.finalCode} originalCode={state.originalCode} findings={state.findings} appliedFixes={state.appliedFixes} engine={state.engine} language={language} filename={filename} onCopied={() => play("copy")} onExported={() => play("click")} onSandbox={() => play("click")} autoDemoNonce={autoDemoNonce} />
           </div>
-        </div>
-
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col px-4 pb-4 pt-2 lg:hidden">
-          <div role="tablist" aria-label="Studio panel" className="mb-3 flex gap-1.5 rounded-xl border border-white/10 bg-[#07050a]/70 p-1.5 backdrop-blur-xl">
-            {MOBILE_TABS.map((tab) => (
-              <button key={tab.id} type="button" role="tab" aria-selected={mobileTab === tab.id} aria-controls={`panel-${tab.id}`} onClick={() => setMobileTab(tab.id)} className={`inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border font-sans text-[13px] font-semibold uppercase tracking-[0.08em] transition ${mobileTab === tab.id ? "border-crimson/60 bg-crimson/10 text-[#EDE6D6]" : "border-white/10 bg-black/25 text-zinc-300"}`}>
-                {tab.label}{tab.id === "ritual" && state.running && <span className="h-2 w-2 animate-pulse rounded-full bg-crimson" aria-hidden />}
-              </button>
-            ))}
-          </div>
-          <div id="panel-spellbook" className={mobilePanel("spellbook")}>
-            <ControlPanel code={code} onCodeChange={handleCodeChange} directive={directive} onDirectiveChange={setDirective} filename={filename} onFilenameChange={setFilename} language={language} onLanguageChange={setLanguage} onSelectPreset={handleSelectPreset} selectedPresetId={selectedPresetId} onRun={handleRun} onReset={handleReset} running={state.running} phase={state.phase} progress={state.progress} />
-          </div>
-          <div id="panel-ritual" className={mobilePanel("ritual")}>
-            <div className="glass-obsidian dock-sigil relative h-full overflow-hidden rounded-2xl">
-              <AgentCanvas nodes={state.nodes} activeStage={state.activeStage} bugCount={state.bugCount} aura={aura} progress={state.progress} running={state.running} phase={state.phase} summary={state.summary} logs={state.logs} engine={state.engine} scanlines={settings.scanlinesOn} graphMode={settings.graphMode} />
+          <div className="pointer-events-auto col-span-full flex min-h-0 flex-col lg:hidden">
+            <div role="tablist" aria-label="Studio panel" className="mb-3 flex gap-1.5 rounded-xl border border-white/10 bg-[#07050a]/70 p-1.5 backdrop-blur-xl">
+              {MOBILE_TABS.map((tab) => (
+                <button key={tab.id} type="button" role="tab" aria-selected={mobileTab === tab.id} aria-controls={`panel-${tab.id}`} onClick={() => setMobileTab(tab.id)} className={`inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border font-sans text-[13px] font-semibold uppercase tracking-[0.08em] transition ${mobileTab === tab.id ? "border-crimson/60 bg-crimson/10 text-[#EDE6D6]" : "border-white/10 bg-black/25 text-zinc-300"}`}>
+                  {tab.label}{tab.id === "ritual" && state.running && <span className="h-2 w-2 animate-pulse rounded-full bg-crimson" aria-hidden />}
+                </button>
+              ))}
             </div>
-          </div>
-          <div id="panel-grimoire" className={mobilePanel("grimoire")}>
-            <Terminal logs={state.logs} running={state.running} scanlines={settings.scanlinesOn} summary={state.summary} finalCode={state.finalCode} originalCode={state.originalCode} findings={state.findings} appliedFixes={state.appliedFixes} engine={state.engine} language={language} filename={filename} onCopied={() => play("copy")} onExported={() => play("click")} onSandbox={() => play("click")} autoDemoNonce={autoDemoNonce} />
+            <div id="panel-spellbook" className={mobilePanel("spellbook")}>
+              <ControlPanel code={code} onCodeChange={handleCodeChange} directive={directive} onDirectiveChange={setDirective} filename={filename} onFilenameChange={setFilename} language={language} onLanguageChange={setLanguage} onSelectPreset={handleSelectPreset} selectedPresetId={selectedPresetId} onRun={handleRun} onReset={handleReset} running={state.running} phase={state.phase} progress={state.progress} />
+            </div>
+            <div id="panel-ritual" className={mobilePanel("ritual")}>
+              <div className="glass-obsidian dock-sigil relative h-full overflow-hidden rounded-2xl">
+                <AgentCanvas nodes={state.nodes} activeStage={state.activeStage} bugCount={state.bugCount} aura={aura} progress={state.progress} running={state.running} phase={state.phase} summary={state.summary} logs={state.logs} engine={state.engine} scanlines={settings.scanlinesOn} graphMode={settings.graphMode} />
+              </div>
+            </div>
+            <div id="panel-grimoire" className={mobilePanel("grimoire")}>
+              <Terminal logs={state.logs} running={state.running} scanlines={settings.scanlinesOn} summary={state.summary} finalCode={state.finalCode} originalCode={state.originalCode} findings={state.findings} appliedFixes={state.appliedFixes} engine={state.engine} language={language} filename={filename} onCopied={() => play("copy")} onExported={() => play("click")} onSandbox={() => play("click")} autoDemoNonce={autoDemoNonce} />
+            </div>
           </div>
         </div>
       </div>
