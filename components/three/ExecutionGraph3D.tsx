@@ -1351,7 +1351,7 @@ function AshRise() {
   );
 }
 
-/** Procedural low-poly bat rig: a dark silhouette with crimson wing rims. */
+/** Procedural low-poly bat rig: a dark silhouette with a bright crimson outline. */
 interface BatRefs {
   group: THREE.Group | null;
   left: THREE.Group | null;
@@ -1360,13 +1360,13 @@ interface BatRefs {
 interface BatMaterials {
   body: THREE.MeshBasicMaterial;
   wing: THREE.MeshBasicMaterial;
-  rim: THREE.LineBasicMaterial;
+  rim: THREE.MeshBasicMaterial;
 }
 
 const AMBIENT_BATS = [
-  { x: -2.05, y: 1.85, z: -1.9, scale: 0.22, phase: 0.4, speed: 0.42 },
-  { x: 0.15, y: 2.25, z: -2.3, scale: 0.18, phase: 2.2, speed: 0.33 },
-  { x: 1.95, y: 1.7, z: -1.7, scale: 0.24, phase: 4.1, speed: 0.38 },
+  { x: -2.0, y: 1.95, z: -1.85, scale: 0.62, phase: 0.4, speed: 0.42 },
+  { x: 0.2, y: 2.3, z: -2.25, scale: 0.5, phase: 2.2, speed: 0.33 },
+  { x: 1.95, y: 1.75, z: -1.7, scale: 0.68, phase: 4.1, speed: 0.38 },
 ] as const;
 
 const SWARM_TARGETS: Array<[number, number]> = [
@@ -1382,40 +1382,36 @@ const BAT_SWARM_COOLDOWN = 2.2;
 
 function batWingGeometry(): THREE.ShapeGeometry {
   const shape = new THREE.Shape();
-  shape.moveTo(0, 0.02);
-  shape.lineTo(0.16, 0.1);
-  shape.lineTo(0.34, 0.13);
-  shape.lineTo(0.46, 0.04);
-  shape.lineTo(0.38, -0.02);
-  shape.lineTo(0.44, -0.12);
-  shape.lineTo(0.28, -0.07);
-  shape.lineTo(0.18, -0.17);
-  shape.lineTo(0.1, -0.06);
-  shape.lineTo(0, -0.04);
+  shape.moveTo(0, 0.03);
+  shape.lineTo(0.14, 0.12);
+  shape.lineTo(0.32, 0.16);
+  shape.lineTo(0.5, 0.08);
+  shape.lineTo(0.42, 0);
+  shape.lineTo(0.52, -0.08);
+  shape.lineTo(0.36, -0.06);
+  shape.lineTo(0.28, -0.16);
+  shape.lineTo(0.16, -0.07);
+  shape.lineTo(0.08, -0.14);
+  shape.lineTo(0, -0.05);
   shape.closePath();
   return new THREE.ShapeGeometry(shape);
 }
 
-function batRimGeometry(): THREE.BufferGeometry {
-  return new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0.02, 0.002),
-    new THREE.Vector3(0.16, 0.1, 0.002),
-    new THREE.Vector3(0.34, 0.13, 0.002),
-    new THREE.Vector3(0.46, 0.04, 0.002),
-  ]);
-}
-
 function createBatMaterials(opacity: number): BatMaterials {
+  const common = {
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  } as const;
   return {
-    body: new THREE.MeshBasicMaterial({
-      color: "#06040a", transparent: true, opacity, depthWrite: false,
-    }),
-    wing: new THREE.MeshBasicMaterial({
-      color: "#0a0710", transparent: true, opacity, depthWrite: false,
-      side: THREE.DoubleSide,
-    }),
-    rim: new THREE.LineBasicMaterial({
-      color: "#8b0024", transparent: true, opacity: opacity * 0.45, depthWrite: false,
+    body: new THREE.MeshBasicMaterial({ ...common, color: "#241329", opacity }),
+    wing: new THREE.MeshBasicMaterial({ ...common, color: "#1a0d22", opacity }),
+    // A slightly larger flat wing behind the dark one reads as a glowing rim
+    // even at small sizes, where WebGL 1px lines would disappear.
+    rim: new THREE.MeshBasicMaterial({
+      ...common,
+      color: "#ff2b55",
+      opacity: opacity * 0.85,
     }),
   };
 }
@@ -1434,7 +1430,6 @@ function BatSilhouette({
   index,
   register,
   wingGeometry,
-  rimGeometry,
   materials,
   scale = 1,
   visible = true,
@@ -1442,7 +1437,6 @@ function BatSilhouette({
   index: number;
   register: (index: number, refs: BatRefs) => void;
   wingGeometry: THREE.ShapeGeometry;
-  rimGeometry: THREE.BufferGeometry;
   materials: BatMaterials;
   scale?: number;
   visible?: boolean;
@@ -1450,14 +1444,6 @@ function BatSilhouette({
   const group = useRef<THREE.Group>(null);
   const left = useRef<THREE.Group>(null);
   const right = useRef<THREE.Group>(null);
-  const leftRimLine = useMemo(
-    () => new THREE.Line(rimGeometry, materials.rim),
-    [rimGeometry, materials.rim],
-  );
-  const rightRimLine = useMemo(
-    () => new THREE.Line(rimGeometry, materials.rim),
-    [rimGeometry, materials.rim],
-  );
 
   useEffect(() => {
     register(index, {
@@ -1473,13 +1459,19 @@ function BatSilhouette({
       <mesh material={materials.body}>
         <sphereGeometry args={[0.075, 8, 6]} />
       </mesh>
+      <mesh material={materials.body} position={[-0.045, 0.075, 0]} rotation={[0, 0, 0.28]}>
+        <coneGeometry args={[0.032, 0.09, 4]} />
+      </mesh>
+      <mesh material={materials.body} position={[0.045, 0.075, 0]} rotation={[0, 0, -0.28]}>
+        <coneGeometry args={[0.032, 0.09, 4]} />
+      </mesh>
       <group ref={left} position={[-0.055, 0.01, 0]} scale={[-1, 1, 1]}>
+        <mesh geometry={wingGeometry} material={materials.rim} scale={1.13} position={[0, 0, -0.004]} />
         <mesh geometry={wingGeometry} material={materials.wing} />
-        <primitive object={leftRimLine} />
       </group>
       <group ref={right} position={[0.055, 0.01, 0]}>
+        <mesh geometry={wingGeometry} material={materials.rim} scale={1.13} position={[0, 0, -0.004]} />
         <mesh geometry={wingGeometry} material={materials.wing} />
-        <primitive object={rightRimLine} />
       </group>
     </group>
   );
@@ -1507,7 +1499,6 @@ function RitualBats({
     [],
   );
   const wingGeometry = useMemo(() => batWingGeometry(), []);
-  const rimGeometry = useMemo(() => batRimGeometry(), []);
 
   const registerAmbient = useCallback((index: number, refs: BatRefs) => {
     ambientRefs.current[index] = refs;
@@ -1538,10 +1529,9 @@ function RitualBats({
 
   useEffect(() => () => {
     wingGeometry.dispose();
-    rimGeometry.dispose();
     disposeBatMaterials(ambientMaterials);
     swarmMaterials.forEach(disposeBatMaterials);
-  }, [ambientMaterials, swarmMaterials, wingGeometry, rimGeometry]);
+  }, [ambientMaterials, swarmMaterials, wingGeometry]);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -1583,14 +1573,14 @@ function RitualBats({
         0.15 + target[1] * eased - Math.sin(p * Math.PI) * 0.3,
         -0.8 + 4.2 * p,
       );
-      refs.group.scale.setScalar(0.16 * (0.75 + p * 0.7));
+      refs.group.scale.setScalar(0.46 * (0.8 + p * 0.7));
       const flap = Math.sin(t * 13 + index * 0.7) * 0.75;
       if (refs.left) refs.left.rotation.z = -flap;
       if (refs.right) refs.right.rotation.z = flap;
       const fade = p < 0.65 ? 0.95 : (Math.max(0, (1 - p) / 0.35) * 0.95);
       materials.body.opacity = fade;
       materials.wing.opacity = fade;
-      materials.rim.opacity = fade * 0.45;
+      materials.rim.opacity = fade * 0.85;
     });
   });
 
@@ -1602,7 +1592,6 @@ function RitualBats({
           index={index}
           register={registerAmbient}
           wingGeometry={wingGeometry}
-          rimGeometry={rimGeometry}
           materials={ambientMaterials}
           scale={bat.scale}
         />
@@ -1613,9 +1602,8 @@ function RitualBats({
           index={index}
           register={registerSwarm}
           wingGeometry={wingGeometry}
-          rimGeometry={rimGeometry}
           materials={swarmMaterials[index]}
-          scale={0.16}
+          scale={0.46}
           visible={false}
         />
       ))}
