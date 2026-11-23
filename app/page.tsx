@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { AgentCanvas } from "@/components/AgentCanvas";
 import { ApiSigilsModal } from "@/components/ApiSigilsModal";
+import { BatSwarmOverlay } from "@/components/BatSwarmOverlay";
 import { ControlPanel } from "@/components/ControlPanel";
 import { FxMenu } from "@/components/FxMenu";
 import { HistoryDrawer } from "@/components/HistoryDrawer";
@@ -228,6 +229,8 @@ export default function Home() {
       </div>
 
       <AnimatePresence>{fxFlash && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="blood-flash pointer-events-none absolute inset-0 z-40 bg-[radial-gradient(circle_at_center,rgba(255,0,60,0.28),rgba(255,0,60,0.08)_35%,transparent_70%)]" />}</AnimatePresence>
+
+      <BatSwarmOverlay running={state.running} activeStage={state.activeStage} />
 
       <ApiSigilsModal open={apiOpen} sigils={sigils} onClose={() => setApiOpen(false)} onSave={saveSigils} onClear={clearSigils} />
       <HistoryDrawer open={historyOpen} entries={entries} onClose={() => setHistoryOpen(false)} onRestore={handleRestore} onClear={clearHistory} />

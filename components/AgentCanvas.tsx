@@ -337,7 +337,7 @@ export function AgentCanvas({
   };
 
   return (
-    <section className="relative h-full min-h-[420px] w-full overflow-hidden">
+    <section data-ritual-canvas className="relative h-full min-h-[420px] w-full overflow-hidden">
       <div
         ref={climaxRef}
         aria-hidden

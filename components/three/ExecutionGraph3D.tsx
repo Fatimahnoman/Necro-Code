@@ -1369,13 +1369,16 @@ const AMBIENT_BATS = [
   { x: 1.95, y: 1.75, z: -1.7, scale: 0.68, phase: 4.1, speed: 0.38 },
 ] as const;
 
-const SWARM_TARGETS: Array<[number, number]> = [
-  [-2.5, 2.05],
-  [-1.55, 2.4],
-  [-0.6, 2.25],
-  [0.55, 2.35],
-  [1.5, 2.15],
-  [2.45, 1.95],
+/** Local-space mouth of the skull (jaw sits below the cranium). */
+const SWARM_MOUTH: [number, number, number] = [0, -0.42, 0.5];
+/** Six different curving exits so the swarm doesn't stream in one direction. */
+const SWARM_PATHS: Array<{ target: [number, number]; bend: number; lift: number }> = [
+  { target: [-3.2, 2.4], bend: -0.9, lift: 0.5 },
+  { target: [3.1, 2.2], bend: 0.85, lift: 0.8 },
+  { target: [-3.4, -1.9], bend: 0.75, lift: 0.6 },
+  { target: [3.3, -2.1], bend: -0.8, lift: 0.9 },
+  { target: [0.4, -3.0], bend: 1.1, lift: 0.4 },
+  { target: [-0.7, 3.1], bend: -1.0, lift: 1.0 },
 ];
 const BAT_SWARM_SECONDS = 1.8;
 const BAT_SWARM_COOLDOWN = 2.2;
@@ -1479,8 +1482,8 @@ function BatSilhouette({
 
 /**
  * Three ambient bats drift behind the altar. On a ritual start or while the
- * scanner/exorcist stages are active, six more erupt from behind the skull,
- * swoop toward the camera and fade out within ~1.8s, all inside this canvas.
+ * scanner/exorcist stages are active, six more pour out of the skull's mouth
+ * along different curved paths, then fade out within ~1.8s inside this canvas.
  */
 function RitualBats({
   running,
@@ -1492,10 +1495,10 @@ function RitualBats({
   fxEnabled: boolean;
 }) {
   const ambientRefs = useRef<BatRefs[]>(AMBIENT_BATS.map(() => emptyBatRefs()));
-  const swarmRefs = useRef<BatRefs[]>(SWARM_TARGETS.map(() => emptyBatRefs()));
+  const swarmRefs = useRef<BatRefs[]>(SWARM_PATHS.map(() => emptyBatRefs()));
   const ambientMaterials = useMemo(() => createBatMaterials(0.85), []);
   const swarmMaterials = useMemo(
-    () => SWARM_TARGETS.map(() => createBatMaterials(0.95)),
+    () => SWARM_PATHS.map(() => createBatMaterials(0.95)),
     [],
   );
   const wingGeometry = useMemo(() => batWingGeometry(), []);
@@ -1557,7 +1560,7 @@ function RitualBats({
       if (refs.right) refs.right.rotation.z = flap;
     });
 
-    SWARM_TARGETS.forEach((target, index) => {
+    SWARM_PATHS.forEach((path, index) => {
       const refs = swarmRefs.current[index];
       const materials = swarmMaterials[index];
       if (!refs.group || !materials) return;
@@ -1567,12 +1570,15 @@ function RitualBats({
         return;
       }
       refs.group.visible = true;
-      const eased = 1 - (1 - p) * (1 - p);
-      refs.group.position.set(
-        target[0] * eased + Math.sin(p * Math.PI * 2 + index) * 0.12 * (1 - p),
-        0.15 + target[1] * eased - Math.sin(p * Math.PI) * 0.3,
-        -0.8 + 4.2 * p,
-      );
+      // Curved exit from the jaw: quadratic arc toward a different corner.
+      const dx = path.target[0] - SWARM_MOUTH[0];
+      const dy = path.target[1] - SWARM_MOUTH[1];
+      const controlX = (SWARM_MOUTH[0] + path.target[0]) / 2 - dy * 0.18 * path.bend;
+      const controlY = (SWARM_MOUTH[1] + path.target[1]) / 2 + dx * 0.18 * path.bend;
+      const q = 1 - p;
+      const x = q * q * SWARM_MOUTH[0] + 2 * q * p * controlX + p * p * path.target[0];
+      const y = q * q * SWARM_MOUTH[1] + 2 * q * p * controlY + p * p * path.target[1];
+      refs.group.position.set(x, y, SWARM_MOUTH[2] + p * (2.6 + path.lift));
       refs.group.scale.setScalar(0.46 * (0.8 + p * 0.7));
       const flap = Math.sin(t * 13 + index * 0.7) * 0.75;
       if (refs.left) refs.left.rotation.z = -flap;
@@ -1596,7 +1602,7 @@ function RitualBats({
           scale={bat.scale}
         />
       ))}
-      {SWARM_TARGETS.map((_, index) => (
+      {SWARM_PATHS.map((_, index) => (
         <BatSilhouette
           key={`swarm-${index}`}
           index={index}
