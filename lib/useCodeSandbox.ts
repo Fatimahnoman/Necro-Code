@@ -119,7 +119,7 @@ self.onmessage = async (event) => {
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
     const body = [
       '"use strict";',
-      "const process = { env: { NODE_ENV: \"production\" } };",
+      "const process = { argv: [\"node\", \"artifact.js\", \"1\"], env: {} };",
       "const module = { exports: {} };",
       "const exports = {};",
       code,

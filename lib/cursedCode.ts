@@ -37,7 +37,7 @@ function summon(level) {
   return power;
 }
 
-summon(1);
+console.log("summon returned", summon(1));
 `,
   },
   {
