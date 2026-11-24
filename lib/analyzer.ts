@@ -524,44 +524,15 @@ function syntaxFindings(code: string): BugFinding[] {
   return findings;
 }
 
-function consoleFindings(code: string): BugFinding[] {
-  const { masked } = maskCode(code);
-  const lines = code.split("\n");
-  const maskedLines = masked.split("\n");
-  const findings: BugFinding[] = [];
-
-  lines.forEach((line, i) => {
-    const maskedLine = maskedLines[i] ?? "";
-    const match = /console\.(?:log|debug|info)\s*\(/.exec(maskedLine);
-    if (!match) return;
-
-    const standalone =
-      /^\s*console\.(?:log|debug|info)\s*\(.*\)\s*;?\s*$/.test(maskedLine);
-
-    findings.push({
-      id: "console-residue",
-      title: "Debug residue",
-      severity: "info",
-      line: i + 1,
-      column: (match.index ?? 0) + 1,
-      message:
-        "console.log/debug/info left in the artifact leaks internals to the living.",
-      hint: standalone
-        ? "Comment out the standalone console line."
-        : "Route debug output through a logger.",
-      fixable: standalone,
-      snippet: line.trim(),
-    });
-  });
-
-  return findings;
-}
-
+/**
+ * NOTE: `console.log` / `print` are intentional program output here, not debug
+ * residue. Removing them made TEST SANDBOX / GEN TEST look empty, so the
+ * analyzer deliberately leaves stdout calls untouched.
+ */
 export function analyzeCode(code: string): BugFinding[] {
   const findings: BugFinding[] = [
     ...syntaxFindings(code),
     ...RULES.flatMap((rule) => collect(rule, code)),
-    ...consoleFindings(code),
   ];
 
   const seen = new Set<string>();
@@ -595,25 +566,6 @@ function applyRuleFix(code: string, rule: RegexRule): string {
   }
 
   return out;
-}
-
-function fixConsoleResidue(code: string): string {
-  const { masked } = maskCode(code);
-  const lines = code.split("\n");
-  const maskedLines = masked.split("\n");
-
-  return lines
-    .map((line, i) => {
-      const maskedLine = maskedLines[i] ?? "";
-      if (
-        /^\s*console\.(?:log|debug|info)\s*\(.*\)\s*;?\s*$/.test(maskedLine)
-      ) {
-        const indent = line.match(/^\s*/)?.[0] ?? "";
-        return `${indent}// [EXORCISED] console noise removed`;
-      }
-      return line;
-    })
-    .join("\n");
 }
 
 /**
@@ -655,7 +607,6 @@ export function exorciseCode(input: string): ExorcismReport {
   for (const rule of RULES) {
     fixed = applyRuleFix(fixed, rule);
   }
-  fixed = fixConsoleResidue(fixed);
   fixed = closeUnclosedBraces(fixed);
 
   const remaining = analyzeCode(fixed);
