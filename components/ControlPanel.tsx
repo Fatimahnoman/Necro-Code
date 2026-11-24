@@ -24,6 +24,8 @@ import {
   parseGitHubFileUrl,
 } from "@/lib/github";
 import {
+  detectCodeLanguage,
+  DETECTION_MIN_SCORE,
   findLanguage,
   languageIdFromFilename,
   RUNNER_LANGUAGES,
@@ -67,6 +69,34 @@ const PHASE_LABEL: Record<AgentPhase, string> = {
   executing: "Exorcising",
   complete: "Purified",
 };
+
+/**
+ * Unmistakable one-line fingerprints. The general `detectCodeLanguage`
+ * heuristic needs a few signals; these let a single obvious paste (e.g.
+ * `print("hi")`) switch the sandbox compiler immediately.
+ */
+const CLEAR_LANGUAGE_HINTS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\bpublic\s+static\s+void\s+main\s*\(\s*String\b/, "java"],
+  [/^\s*#include\s*<\s*(iostream|vector|string|map|set|algorithm|memory|bits\/stdc\+\+\.h)\s*>/m, "cpp"],
+  [/^\s*#include\s*<\s*(stdio|stdlib|math|ctype|stdbool|stdint)\.h\s*>/m, "c"],
+  [/^\s*(?:async\s+)?def\s+[A-Za-z_]\w*\s*\(/m, "python"],
+  [/^\s*print\s*\(/m, "python"],
+  [/^\s*package\s+main\s*$/m, "go"],
+  [/\bfn\s+main\s*\(\s*\)/, "rust"],
+  [/^\s*(?:use\s+std::|let\s+mut\b)/m, "rust"],
+];
+
+/** Return a language id only when the artifact is unambiguously one runtime. */
+function detectEditorLanguage(value: string): string | null {
+  for (const [pattern, id] of CLEAR_LANGUAGE_HINTS) {
+    if (pattern.test(value)) return id;
+  }
+  const detected = detectCodeLanguage(value);
+  if (!detected || detected.score < DETECTION_MIN_SCORE) return null;
+  // Avoid flip-flopping between two closely scored languages while typing.
+  if (detected.runnerUp > 0 && detected.score - detected.runnerUp < 2) return null;
+  return detected.id;
+}
 
 export function ControlPanel({
   code,
@@ -143,6 +173,13 @@ export function ControlPanel({
       if (controller.signal.aborted) return;
       setGithubStatus({ kind: "error", message: "Could not reach the GitHub summoner." });
     }
+  };
+
+  const handleEditorChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    const value = event.target.value;
+    onCodeChange(value);
+    const detected = detectEditorLanguage(value);
+    if (detected && detected !== language) onLanguageChange(detected);
   };
 
   const lines = useMemo(() => code.split("\n"), [code]);
@@ -259,7 +296,7 @@ export function ControlPanel({
             </pre>
             <textarea
               value={code}
-              onChange={(event) => onCodeChange(event.target.value)}
+              onChange={handleEditorChange}
               onScroll={(event) => {
                 const { scrollTop, scrollLeft } = event.currentTarget;
                 if (gutterRef.current) gutterRef.current.scrollTop = scrollTop;
