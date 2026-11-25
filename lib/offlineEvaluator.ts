@@ -346,7 +346,12 @@ function executePrint(text: string, scope: Scope, context: Context): boolean {
     { pattern: /^print\s*\((.*)\)$/ },
     { pattern: /^echo\s*\((.*)\)$/ },
     { pattern: /^echo\s+(.+)$/ },
+    { pattern: /^main\s*=\s*putStrLn\s+(.+)$/ },
     { pattern: /^putStrLn\s+(.+)$/ },
+    { pattern: /^printfn\s+(.+)$/ },
+    { pattern: /^writeln\s*\((.*)\)$/ },
+    { pattern: /^writeln\s+(.+)$/ },
+    { pattern: /^IO\.puts\s*\((.*)\)$/ },
     { pattern: /^print\s+(.+)$/ },
   ];
 
