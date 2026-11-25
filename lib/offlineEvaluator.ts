@@ -322,6 +322,8 @@ function renderArguments(args: Value[], scope: Scope): string {
   let text = display(first, scope);
   if (typeof first === "string") {
     let index = 0;
+    text = text.replace(/~%/g, () => "\n");
+    text = text.replace(/~[as]/g, () => index < rest.length ? display(rest[index++], scope) : "");
     text = text.replace(/%[-+ #0\d.]*[dfisxu%]/g, () => index < rest.length ? display(rest[index++], scope) : "");
     text = text.replace(/\{\}/g, () => index < rest.length ? display(rest[index++], scope) : "");
     if (index === 0 && rest.length > 0) text += " " + rest.map((value) => display(value, scope)).join(" ");
@@ -332,7 +334,7 @@ function renderArguments(args: Value[], scope: Scope): string {
 }
 
 function executePrint(text: string, scope: Scope, context: Context): boolean {
-  const patterns: Array<{ pattern: RegExp; cout?: boolean }> = [
+  const patterns: Array<{ pattern: RegExp; cout?: boolean; lisp?: boolean }> = [
     { pattern: /^std::cout\s*<<(.+)$/, cout: true },
     { pattern: /^printf\s*\((.*)\)$/ },
     { pattern: /^System\.out\.print(?:ln)?\s*\((.*)\)$/ },
@@ -352,10 +354,13 @@ function executePrint(text: string, scope: Scope, context: Context): boolean {
     { pattern: /^writeln\s*\((.*)\)$/ },
     { pattern: /^writeln\s+(.+)$/ },
     { pattern: /^IO\.puts\s*\((.*)\)$/ },
+    { pattern: /^\(\s*format\s+t\s+"((?:\\.|[^"\\])*)"\s+(.+)\s*\)$/, lisp: true },
+    { pattern: /^\(\s*(?:display|write|print)\s+(.+)\s*\)$/ },
+    { pattern: /^display\s+(.+)$/i },
     { pattern: /^print\s+(.+)$/ },
   ];
 
-  for (const { pattern, cout } of patterns) {
+  for (const { pattern, cout, lisp } of patterns) {
     const match = pattern.exec(text);
     if (!match) continue;
     if (cout) {
@@ -364,6 +369,9 @@ function executePrint(text: string, scope: Scope, context: Context): boolean {
         .map((piece) => piece.trim())
         .filter((piece) => piece.length > 0 && piece !== "std::endl" && piece !== "endl");
       emit(pieces.map((piece) => display(evalExpression(piece, scope), scope)).join(""), context);
+    } else if (lisp) {
+      const args = [decodeString(`"${match[1]}"`), ...splitArguments(match[2]).map((argument) => evalExpression(argument, scope))];
+      emit(renderArguments(args, scope), context);
     } else {
       const args = splitArguments(match[1]).map((argument) => evalExpression(argument, scope));
       emit(renderArguments(args, scope), context);
