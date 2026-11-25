@@ -33,7 +33,9 @@ export type LanguageId =
   | "vb"
   | "objectivec"
   | "coffeescript"
-  | "cobol";
+  | "cobol"
+  | "powershell"
+  | "lua";
 
 export interface RunnerLanguage {
   id: LanguageId;
@@ -42,7 +44,7 @@ export interface RunnerLanguage {
   extension: string;
   /** The language identifier accepted by the remote execution engine. */
   paiza: string;
-  /** JavaScript can run inside the local 2-second Web Worker. */
+  /** JS/TS/TSX, Python and SQL can execute locally in the browser sandbox. */
   local: boolean;
   /** Extra context shown in the terminal before a remote run. */
   note?: string;
@@ -63,8 +65,8 @@ export const RUNNER_LANGUAGES: RunnerLanguage[] = [
     short: "TS",
     extension: "ts",
     paiza: "typescript",
-    local: false,
-    note: "TypeScript is compiled by the remote runner; type declarations are not executed as JavaScript.",
+    local: true,
+    note: "TypeScript types are stripped locally with Sucrase before the artifact enters the Web Worker.",
   },
   {
     id: "tsx",
@@ -72,8 +74,8 @@ export const RUNNER_LANGUAGES: RunnerLanguage[] = [
     short: "TSX",
     extension: "tsx",
     paiza: "typescript",
-    local: false,
-    note: "TSX is sent to the TypeScript compiler. JSX components may need a bundler or a plain TS reproduction.",
+    local: true,
+    note: "TSX is transpiled locally with the classic JSX runtime; external React imports are sealed inside the worker.",
   },
   {
     id: "python",
@@ -81,7 +83,8 @@ export const RUNNER_LANGUAGES: RunnerLanguage[] = [
     short: "PY",
     extension: "py",
     paiza: "python3",
-    local: false,
+    local: true,
+    note: "Pyodide runs locally when available; otherwise the server runner provides real Python stdout/stderr.",
   },
   {
     id: "java",
@@ -230,11 +233,12 @@ export const RUNNER_LANGUAGES: RunnerLanguage[] = [
   },
   {
     id: "sql",
-    label: "SQL (MySQL)",
+    label: "SQL",
     short: "SQL",
     extension: "sql",
     paiza: "mysql",
-    local: false,
+    local: true,
+    note: "CREATE / INSERT / UPDATE / DELETE / SELECT run locally against a real in-memory table engine.",
   },
   {
     id: "scheme",
@@ -284,6 +288,22 @@ export const RUNNER_LANGUAGES: RunnerLanguage[] = [
     paiza: "cobol",
     local: false,
   },
+  {
+    id: "powershell",
+    label: "PowerShell",
+    short: "PS",
+    extension: "ps1",
+    paiza: "powershell",
+    local: false,
+  },
+  {
+    id: "lua",
+    label: "Lua",
+    short: "LUA",
+    extension: "lua",
+    paiza: "lua",
+    local: false,
+  },
 ];
 
 const BY_ID = new Map<string, RunnerLanguage>(
@@ -315,6 +335,8 @@ BY_EXTENSION.set("mysql", "sql");
 BY_EXTENSION.set("cl", "commonlisp");
 BY_EXTENSION.set("lsp", "commonlisp");
 BY_EXTENSION.set("mm", "objectivec");
+BY_EXTENSION.set("ps1", "powershell");
+BY_EXTENSION.set("psm1", "powershell");
 
 export const DEFAULT_LANGUAGE: LanguageId = "javascript";
 

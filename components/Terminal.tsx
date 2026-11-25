@@ -8,7 +8,7 @@ import { diffLines, diffStats, type DiffLine } from "@/lib/diff";
 import { checkRuntimeMatch, findLanguage } from "@/lib/languages";
 import { buildAutopsyReport, buildUnifiedPatch, HEALTH_WEIGHTS, type HealthTier, healthTier, patchPath } from "@/lib/report";
 import { buildSmokeHarness, type SmokeHarness, smokeLabel, smokePassed } from "@/lib/smokeTest";
-import { type SandboxLineKind, useCodeSandbox } from "@/lib/useCodeSandbox";
+import { type SandboxLineKind, useCodeSandbox } from "@/hooks/useCodeSandbox";
 import type { AgentEvent, AppliedFix, BugFinding, EngineInfo, ExorcismSummary, LogLevel } from "@/lib/types";
 
 const LEVEL_COLOR: Record<LogLevel, string> = {
