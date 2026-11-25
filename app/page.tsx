@@ -54,17 +54,37 @@ export default function Home() {
   const [apiOpen, setApiOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [autoDemoNonce, setAutoDemoNonce] = useState(0);
+  const [autoRunNonce, setAutoRunNonce] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>("spellbook");
   const [fxFlash, setFxFlash] = useState(false);
   const [fxShake, setFxShake] = useState(false);
   const mobileTabMounted = useRef(false);
   const lastSonifiedSeq = useRef<number>(-1);
   const lastHistoryFingerprint = useRef<string | null>(null);
+  const lastAutoRunFingerprint = useRef<string | null>(null);
   const aura = auraFromState(state.phase, state.bugCount, state.summary);
   const bgmSurge = state.running && state.activeStage !== "clean_code_output";
   const liveEngineActive = liveKeys && (state.phase === "idle" || state.running || state.engine.name !== "Heuristic");
 
   useHorrorAudio(bgmRef, settings.bgmOn, bgmSurge);
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (state.phase !== "purified" || !state.finalCode) return;
+    const fingerprint = `${language}::${state.finalCode}`;
+    if (lastAutoRunFingerprint.current === fingerprint) return;
+    lastAutoRunFingerprint.current = fingerprint;
+    setAutoRunNonce((n) => n + 1);
+    if (!window.matchMedia("(min-width: 1024px)").matches) setMobileTab("grimoire");
+  }, [language, state.finalCode, state.phase]);
 
   useEffect(() => {
     if (!mobileTabMounted.current) { mobileTabMounted.current = true; return; }
@@ -203,7 +223,7 @@ export default function Home() {
             <AgentCanvas nodes={state.nodes} activeStage={state.activeStage} bugCount={state.bugCount} aura={aura} progress={state.progress} running={state.running} phase={state.phase} summary={state.summary} logs={state.logs} engine={state.engine} scanlines={settings.scanlinesOn} graphMode={settings.graphMode} fxEnabled={settings.soundOn} />
           </div>
           <div className="pointer-events-auto hidden min-h-0 lg:block">
-            <Terminal logs={state.logs} running={state.running} scanlines={settings.scanlinesOn} summary={state.summary} finalCode={state.finalCode} originalCode={state.originalCode} findings={state.findings} appliedFixes={state.appliedFixes} engine={state.engine} language={language} filename={filename} onCopied={() => play("copy")} onExported={() => play("click")} onSandbox={() => play("click")} autoDemoNonce={autoDemoNonce} />
+            <Terminal logs={state.logs} running={state.running} scanlines={settings.scanlinesOn} summary={state.summary} finalCode={state.finalCode} originalCode={state.originalCode} findings={state.findings} appliedFixes={state.appliedFixes} engine={state.engine} language={language} filename={filename} onCopied={() => play("copy")} onExported={() => play("click")} onSandbox={() => play("click")} autoDemoNonce={autoDemoNonce} autoRunNonce={isDesktop ? autoRunNonce : 0} />
           </div>
           <div className="pointer-events-auto col-span-full flex min-h-0 flex-col lg:hidden">
             <div role="tablist" aria-label="Studio panel" className="mb-3 flex gap-1.5 rounded-xl border border-white/10 bg-[#07050a]/70 p-1.5 backdrop-blur-xl">
@@ -222,7 +242,7 @@ export default function Home() {
               </div>
             </div>
             <div id="panel-grimoire" className={mobilePanel("grimoire")}>
-              <Terminal logs={state.logs} running={state.running} scanlines={settings.scanlinesOn} summary={state.summary} finalCode={state.finalCode} originalCode={state.originalCode} findings={state.findings} appliedFixes={state.appliedFixes} engine={state.engine} language={language} filename={filename} onCopied={() => play("copy")} onExported={() => play("click")} onSandbox={() => play("click")} autoDemoNonce={autoDemoNonce} />
+              <Terminal logs={state.logs} running={state.running} scanlines={settings.scanlinesOn} summary={state.summary} finalCode={state.finalCode} originalCode={state.originalCode} findings={state.findings} appliedFixes={state.appliedFixes} engine={state.engine} language={language} filename={filename} onCopied={() => play("copy")} onExported={() => play("click")} onSandbox={() => play("click")} autoDemoNonce={autoDemoNonce} autoRunNonce={isDesktop ? 0 : autoRunNonce} />
             </div>
           </div>
         </div>

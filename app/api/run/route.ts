@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { executeLocal } from "@/lib/hostRunner";
+import { evaluateOffline } from "@/lib/offlineEvaluator";
 import { executePaiza, executePiston, type RemoteRunResult } from "@/lib/runner";
 
 export const dynamic = "force-dynamic";
@@ -59,22 +60,28 @@ export async function POST(req: NextRequest): Promise<Response> {
   const selected = language.trim();
   const source = code;
 
-  // Step A · Paiza first.
-  const paiza = await executePaiza(selected, source);
+  // Every layer is bounded to 4s and starts together, so the browser never
+  // waits longer than its own strict 5s deadline. Selection order still
+  // prefers Paiza, then Piston, then the real host toolchain.
+  const [paiza, piston, local] = await Promise.all([
+    executePaiza(selected, source),
+    executePiston(selected, source),
+    executeLocal(selected, source),
+  ]);
+
   if (paiza.ok) return json(paiza);
+  if (piston.ok) return json(piston);
+  if (local.ok) return json(local);
 
-  // Step A fallback · Piston.
-  const piston = await executePiston(selected, source);
-  if (piston.ran || piston.ok) return json(piston);
-
-  // Step B · Real host toolchain in an isolated temp directory.
-  const local = await executeLocal(selected, source);
+  // A compiler that really ran is truth, even when it reported a failure.
+  if (paiza.ran) return json(paiza);
+  if (piston.ran) return json(piston);
   if (local.ran) return json(local);
 
-  // Step C · Strict no-hallucination guard.
-  // If a remote compiler really ran and reported a failure, return that real
-  // output rather than pretending the machine is offline.
-  if (paiza.ran) return json(paiza);
+  // Step C · Deterministic offline statement evaluator. It only evaluates
+  // statements it can actually parse and tags every line it produces.
+  const evaluated = evaluateOffline(selected, source);
+  if (evaluated) return json(evaluated);
 
   const label = paiza.languageLabel;
   const remoteOffline = paiza.networkError && (piston.networkError || !piston.ran);

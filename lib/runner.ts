@@ -15,7 +15,7 @@ const API_KEY = process.env.PAIZA_API_KEY ?? "guest";
 const PISTON_BASE = (process.env.PISTON_API_BASE ?? "https://emkc.org/api/v2/piston").replace(/\/+$/, "");
 const MAX_CODE_CHARS = 24_000;
 const MAX_OUTPUT_CHARS = 24_000;
-const RUN_DEADLINE_MS = 20_000;
+const RUN_DEADLINE_MS = 4_000;
 const POLL_INTERVAL_MS = 450;
 
 export type RemoteRunStatus = "success" | "error" | "timeout";
@@ -195,7 +195,7 @@ export async function executePaiza(rawLanguage: string, rawCode: string): Promis
       return normalizePaiza(language, details);
     }
 
-    return fail(language, "Paiza.IO did not answer before the 20-second deadline.", "timeout", "paiza", true);
+    return fail(language, "Paiza.IO did not answer before the 4-second deadline.", "timeout", "paiza", true);
   } catch (error) {
     const network = isNetworkError(error);
     const timedOut = error instanceof Error && error.name === "AbortError";

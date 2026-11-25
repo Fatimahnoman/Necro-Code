@@ -67,6 +67,7 @@ const PHASE_LABEL: Record<AgentPhase, string> = {
   thinking: "Channelling",
   tool_call: "Scanning",
   executing: "Exorcising",
+  purified: "Verifying",
   complete: "Purified",
 };
 

@@ -55,12 +55,13 @@ function DiffRow({ line }: { line: DiffLine }) {
   );
 }
 
-export function Terminal({ logs, running, scanlines = true, summary, finalCode, originalCode, findings, appliedFixes, engine, language, filename, onCopied, onExported, onSandbox, autoDemoNonce }: {
+export function Terminal({ logs, running, scanlines = true, summary, finalCode, originalCode, findings, appliedFixes, engine, language, filename, onCopied, onExported, onSandbox, autoDemoNonce, autoRunNonce }: {
   logs: AgentEvent[]; running: boolean; scanlines?: boolean; summary: ExorcismSummary | null; finalCode: string | null; originalCode: string | null;
   findings: BugFinding[]; appliedFixes: AppliedFix[]; engine: EngineInfo; language: string; filename: string;
-  onCopied?: () => void; onExported?: () => void; onSandbox?: () => void; autoDemoNonce?: number;
+  onCopied?: () => void; onExported?: () => void; onSandbox?: () => void; autoDemoNonce?: number; autoRunNonce?: number;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const autoRunSeenRef = useRef<number>(-1);
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState<GrimoireTab>("logs");
   const [testStatus, setTestStatus] = useState<"idle" | "running" | "passed" | "failed">("idle");
@@ -141,7 +142,16 @@ export function Terminal({ logs, running, scanlines = true, summary, finalCode, 
     if (!preflight(finalCode)) { setTestStatus("idle"); setTestHarness(null); return; }
     const harness = buildSmokeHarness(finalCode, language); setTestHarness(harness); setTestStatus("running"); runSandbox(harness.source, language);
   }, [finalCode, language, preflight, runSandbox]);
-  useEffect(() => { if (!autoDemoNonce || !finalCode || running || !summary) return; setView("diff"); startSandbox(false); }, [autoDemoNonce, finalCode, running, summary, startSandbox]);
+  useEffect(() => { if (!autoDemoNonce || !finalCode || running || !summary) return; setView("diff"); }, [autoDemoNonce, finalCode, running, summary]);
+  useEffect(() => {
+    if (!autoRunNonce || autoRunSeenRef.current === autoRunNonce || !finalCode) return;
+    autoRunSeenRef.current = autoRunNonce;
+    setView("sandbox");
+    setTestStatus("idle");
+    setTestHarness(null);
+    if (!preflight(finalCode)) return;
+    runSandbox(finalCode, language);
+  }, [autoRunNonce, finalCode, language, preflight, runSandbox]);
   useEffect(() => { if (running) setView("logs"); }, [running]);
 
   return (

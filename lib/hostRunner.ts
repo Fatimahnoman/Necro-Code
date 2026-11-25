@@ -8,7 +8,7 @@ import type { RemoteRunResult } from "@/lib/runner";
 
 /** Offline, zero-hallucination fallback: real host toolchain in a temp dir. */
 const execFileAsync = promisify(execFile);
-const TIMEOUT_MS = 5_000;
+const TIMEOUT_MS = 4_000;
 
 interface Step { command: string; args: string[] }
 interface Spec { filename?: string; tools: string[]; steps: Step[] }
@@ -239,7 +239,7 @@ export async function executeLocal(rawLanguage: string, rawCode: string): Promis
       exitCode: String(exitCode),
       duration: ((Date.now() - started) / 1000).toFixed(2),
       ran: true,
-      message: timedOut ? "Local " + language.label + " run exceeded the 5000ms limit." : undefined,
+      message: timedOut ? "Local " + language.label + " run exceeded the 4000ms limit." : undefined,
     };
   } catch (error) {
     return {

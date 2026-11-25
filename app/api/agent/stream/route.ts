@@ -333,13 +333,18 @@ function buildScript(
     });
   }
   push({
-    phase: "executing",
+    phase: "purified",
     stage: "clean_code_output",
     nodeStatus: "done",
     level: "success",
     message: `[purified_output] ✓ ${fixedLines.length} lines emitted · ${summary.unresolved} residual warning(s)`,
     delay: 300,
     advance: true,
+    summary,
+    finalCode: fixed,
+    originalCode: report.original,
+    findings,
+    appliedFixes,
   });
 
   if (summary.unresolved > 0) {

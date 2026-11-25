@@ -31,6 +31,12 @@ const PHASE_META: Record<
     text: "text-crimson",
     ring: "border-crimson/40",
   },
+  purified: {
+    label: "Verifying",
+    dot: "bg-neon",
+    text: "text-neon",
+    ring: "border-neon/40",
+  },
   complete: {
     label: "Purified",
     dot: "bg-neon",

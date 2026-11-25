@@ -38,8 +38,8 @@ export interface SandboxState {
 }
 
 const LOCAL_TIMEOUT_MS = 5_000;
-const PYODIDE_TIMEOUT_MS = 60_000;
-const REMOTE_TIMEOUT_MS = 25_000;
+const PYODIDE_TIMEOUT_MS = 5_000;
+const REMOTE_TIMEOUT_MS = 5_000;
 const MAX_LINES = 120;
 
 const BROWSER_JS = new Set(["javascript", "typescript", "tsx"]);
@@ -389,7 +389,7 @@ export function useCodeSandbox() {
       timerRef.current = window.setTimeout(() => {
         controller.abort();
         appendMany(
-          [{ kind: "system", text: "⏱ 25.0s remote limit reached — the run was abandoned." }],
+          [{ kind: "system", text: "⏱ 5.0s remote limit reached — the request was aborted." }],
           "timeout",
         );
       }, REMOTE_TIMEOUT_MS);
@@ -645,12 +645,17 @@ export function useCodeSandbox() {
         };
 
         timerRef.current = window.setTimeout(() => {
-          append({
-            kind: "system",
-            text: `⏱ ${PYODIDE_TIMEOUT_MS / 1000}.0s limit reached — the Python worker was terminated.`,
-          });
-          setState((prev) => ({ ...prev, status: "timeout" }));
-          stop();
+          if (workerRef.current === worker) cleanupWorker();
+          appendMany(
+            [
+              {
+                kind: "system",
+                text: `⏱ ${PYODIDE_TIMEOUT_MS / 1000}.0s limit reached — the Python worker was terminated; using the server runner.`,
+              },
+            ],
+            "running",
+          );
+          startRemote(code, language, false);
         }, PYODIDE_TIMEOUT_MS);
 
         worker.postMessage({ code });

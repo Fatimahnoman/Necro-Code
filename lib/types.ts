@@ -8,6 +8,7 @@ export type AgentPhase =
   | "thinking"
   | "tool_call"
   | "executing"
+  | "purified"
   | "complete";
 
 /** The four haunted stages of the exorcism ritual. */
