@@ -338,6 +338,7 @@ function executePrint(text: string, scope: Scope, context: Context): boolean {
     { pattern: /^System\.out\.print(?:ln)?\s*\((.*)\)$/ },
     { pattern: /^fmt\.Print(?:ln|f)?\s*\((.*)\)$/ },
     { pattern: /^println!\s*\((.*)\)$/ },
+    { pattern: /^println\s*\((.*)\)$/ },
     { pattern: /^Console\.WriteLine\s*\((.*)\)$/ },
     { pattern: /^console\.log\s*\((.*)\)$/ },
     { pattern: /^puts\s*\((.*)\)$/ },
